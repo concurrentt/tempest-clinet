@@ -60,6 +60,10 @@ public class TempestMenuScreen extends Screen {
     }
 
     // ---------------------------------------------------------------- render
+    /** No vanilla blur: it re-renders the whole screen several times per frame, and this menu draws its own wash. */
+    @Override
+    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) { }
+
     @Override
     public void render(DrawContext ctx, int mx, int my, float delta) {
         TextRenderer tr = textRenderer;

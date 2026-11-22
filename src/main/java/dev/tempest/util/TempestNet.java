@@ -40,7 +40,7 @@ public final class TempestNet {
      * Your Railway address, e.g. "https://tempest-backend-production.up.railway.app". Can be overridden in
      * config/tempest.json ("backendUrl"). Empty = the online feature is off.
      */
-    public static final String DEFAULT_URL = "";
+    public static final String DEFAULT_URL = "https://tempest-backend.imamunchlmaoii.workers.dev";
 
     private static final String MOJANG_JOIN = "https://sessionserver.mojang.com/session/minecraft/join";
     private static final long HEARTBEAT_MS = 60_000, LOOKUP_MS = 10_000, CACHE_MS = 120_000;

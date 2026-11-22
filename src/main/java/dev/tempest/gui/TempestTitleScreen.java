@@ -30,6 +30,7 @@ public class TempestTitleScreen extends Screen {
     // ---------------------------------------------------------------- layout
     @Override
     protected void init() {
+        dev.tempest.util.Updater.checkIfStale();
         buttons.clear();
         int bw = Math.min(260, width - 40);
         int bh = height >= 300 ? 24 : 20;

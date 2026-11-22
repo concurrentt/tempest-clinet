@@ -40,7 +40,7 @@ import java.util.Optional;
  */
 public final class Updater {
     /** owner/name of the public GitHub repository that publishes Tempest releases. */
-    public static final String REPO = "edrfvgtbhynjm/tempest-clinet";
+    public static final String REPO = "concurrentt/tempest-clinet";
 
     public enum State { IDLE, CHECKING, UP_TO_DATE, AVAILABLE, DOWNLOADING, READY, FAILED }
 
@@ -76,9 +76,20 @@ public final class Updater {
     }
 
     // ------------------------------------------------------------------ check
+    private static volatile long lastCheck;
+
+    /** Re-check when returning to the main menu, at most every 10 minutes (no-op if the setting is off). */
+    public static void checkIfStale() {
+        if (!dev.tempest.modules.ClientSettingsModule.checkUpdatesOn()) return;
+        if (System.currentTimeMillis() - lastCheck < 10 * 60_000L) return;
+        if (state == State.AVAILABLE) return;
+        checkAsync();
+    }
+
     public static void checkAsync() {
         if (state == State.CHECKING || state == State.DOWNLOADING || state == State.READY) return;
         state = State.CHECKING;
+        lastCheck = System.currentTimeMillis();
         HttpRequest req = HttpRequest.newBuilder(URI.create("https://api.github.com/repos/" + REPO + "/releases/latest"))
                 .timeout(Duration.ofSeconds(10))
                 .header("Accept", "application/vnd.github+json")

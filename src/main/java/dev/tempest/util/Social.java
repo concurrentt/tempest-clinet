@@ -102,10 +102,10 @@ public final class Social {
 
     /** Name -> account -> friend request. */
     public static void requestByName(String name, Consumer<String> done) {
+        MinecraftClient mc = MinecraftClient.getInstance();
         PlayerHeads.lookup(name).thenAccept(id -> {
-            if (id == null) { done.accept("No Minecraft account called \"" + name.trim() + "\""); return; }
-            MinecraftClient mc = MinecraftClient.getInstance();
-            if (mc.getSession() != null && id.equals(mc.getSession().getUuidOrNull())) { done.accept("That's you!"); return; }
+            if (id == null) { mc.execute(() -> done.accept("No Minecraft account called \"" + name.trim() + "\"")); return; }
+            if (mc.getSession() != null && id.equals(mc.getSession().getUuidOrNull())) { mc.execute(() -> done.accept("That's you!")); return; }
             request(id, done);
         });
     }

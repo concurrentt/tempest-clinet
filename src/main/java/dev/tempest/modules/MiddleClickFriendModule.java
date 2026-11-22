@@ -4,16 +4,17 @@ import dev.tempest.module.Category;
 import dev.tempest.module.Module;
 import dev.tempest.module.ModuleManager;
 import dev.tempest.util.Chat;
-import dev.tempest.util.FriendManager;
+import dev.tempest.util.Social;
+import dev.tempest.util.TempestNet;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 
-/** Middle click a player to add/remove them as a friend. */
+/** Middle click a player to send them a Tempest friend request (they glow once they accept). */
 public final class MiddleClickFriendModule extends Module {
     public MiddleClickFriendModule() {
-        super("middle_click_friend", "Middle Click Friend", "Middle click a player to add or remove them as a friend.", Category.UTILITY, false);
+        super("middle_click_friend", "Middle Click Friend", "Middle click a player to send them a Tempest friend request.", Category.UTILITY, false);
     }
 
     public static boolean onMiddleClick(MinecraftClient c) {
@@ -25,12 +26,14 @@ public final class MiddleClickFriendModule extends Module {
         if (player == c.player) return false;
 
         String name = player.getName().getString();
-        if (FriendManager.isFriend(name)) {
-            FriendManager.removeFriend(name);
-            Chat.info("Removed " + name + " from friends.");
+        if (Social.isFriend(player.getUuid())) {
+            Chat.info(name + " is already your friend.");
+        } else if (player.getUuid().version() != 4) {
+            Chat.info(name + " isn't a Microsoft account, so they can't be added.");
+        } else if (!TempestNet.signedIn()) {
+            Chat.info("Not connected to Tempest yet - try again in a moment.");
         } else {
-            FriendManager.addFriend(name);
-            Chat.info("Added " + name + " as a friend.");
+            Social.request(player.getUuid(), msg -> { if (msg != null) Chat.info(msg); });
         }
         return true;
     }

@@ -3,13 +3,33 @@
   "id": "tempest",
   "version": "${version}",
   "name": "Tempest",
-  "description": "All-in-one client mod: anti-leak, mouse tweaks, shulker preview, PvP HUD, AppleSkin-style food info and more.",
-  "authors": ["You"],
+  "description": "A PvP client for Fabric with a custom menu and HUD. Includes 1.7 animations, hitboxes, motion blur, kill effects, totem tweaks, zoom, freelook, keystrokes, CPS and FPS displays, capes and cosmetics, a social menu with friends, and one-click updates.",
+  "authors": [
+    "concurrentt"
+  ],
+  "contact": {
+    "homepage": "https://github.com/concurrentt/tempest-clinet",
+    "sources": "https://github.com/concurrentt/tempest-clinet",
+    "issues": "https://github.com/concurrentt/tempest-clinet/issues"
+  },
   "license": "MIT",
+  "icon": "assets/tempest/icon.png",
   "environment": "client",
-  "entrypoints": { "client": ["dev.tempest.TempestClient"] },
-  "mixins": [ { "config": "tempest.mixins.json", "environment": "client" },
-    { "config": "tempest.extras.mixins.json", "environment": "client" } ],
+  "entrypoints": {
+    "client": [
+      "dev.tempest.TempestClient"
+    ]
+  },
+  "mixins": [
+    {
+      "config": "tempest.mixins.json",
+      "environment": "client"
+    },
+    {
+      "config": "tempest.extras.mixins.json",
+      "environment": "client"
+    }
+  ],
   "depends": {
     "fabricloader": ">=0.18.0",
     "minecraft": "1.21.11",

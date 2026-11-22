@@ -71,7 +71,7 @@ public final class NametagsModule extends Module {
         boolean self = mc.player != null && p == mc.player;
 
         boolean addLogo = m != null && m.logo.get()
-                && (self || (m.logoFriends.get() && FriendsModule.isFriend(p.getName().getString()))
+                && (self || (m.logoFriends.get() && dev.tempest.util.Social.isFriend(p.getUuid()))
                     || (m.showOnline.get() && dev.tempest.util.TempestNet.isTempestUser(p.getUuid())));
         int pops = TotemPopModule.onNametag() ? TotemPopModule.getPops(p.getUuid()) : 0;
         Text shield = ShieldStatusModule.badge(p);

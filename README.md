@@ -376,7 +376,9 @@ Build from the project directory with: gradle build
   online status and the server they're on, friend requests (accept / decline / cancel), and adding people by name or from
   players near you.
 - Friends are stored by account (proven at sign-in); names come from Mojang, so nobody can pose as someone else.
-- Social settings: show friends you're online, show friends your server, friend request alerts. Tempest friends glow too.
+- Social settings: show friends you're online, show friends your server, friend request alerts.
+- Glow (and the friend logo) is now only for friends who accepted your request; Middle Click Friend and
+  /tempest friend add <name> send a friend request instead of adding to a private list.
 - Your status shows "In menus" when you're on the main menu; you go offline when the game closes.
 
 ## 0.18.0 — Auto-updater

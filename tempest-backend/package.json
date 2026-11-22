@@ -1,0 +1,14 @@
+{
+  "name": "tempest-backend",
+  "version": "1.0.0",
+  "description": "Tempest online service: tells Tempest clients which players also use Tempest.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}

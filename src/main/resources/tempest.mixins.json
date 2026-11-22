@@ -1,0 +1,17 @@
+{
+  "required": false,
+  "package": "dev.tempest.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "AbstractClientPlayerEntityMixin",
+    "ChatHudMixin",
+    "ClientPlayNetworkHandlerMixin",
+    "GameRendererMixin",
+    "HandledScreenMixin",
+    "InGameHudMixin",
+    "MinecraftClientMixin",
+    "MouseMixin",
+    "SpriteContentsMixin"
+  ],
+  "injectors": { "defaultRequire": 0 }
+}

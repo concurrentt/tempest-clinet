@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "tempest",
+  "version": "${version}",
+  "name": "Tempest",
+  "description": "All-in-one client mod: anti-leak, mouse tweaks, shulker preview, PvP HUD, AppleSkin-style food info and more.",
+  "authors": ["You"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": { "client": ["dev.tempest.TempestClient"] },
+  "mixins": [ { "config": "tempest.mixins.json", "environment": "client" },
+    { "config": "tempest.extras.mixins.json", "environment": "client" } ],
+  "depends": {
+    "fabricloader": ">=0.18.0",
+    "minecraft": "1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

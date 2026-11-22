@@ -2,7 +2,10 @@
 
 Same API as `tempest-backend` (the Railway version), so the mod needs no code changes besides the address.
 
-- Sign-in is checked with Mojang exactly like before. Your Minecraft access token only ever goes to Mojang.
+- Sign-in: the game signs a one-time code with its Mojang-issued player key (the one that signs chat); the Worker checks
+  Mojang's certificate for that key using Mojang's published keys (`src/mojang-keys.json`, refreshed automatically
+  when Mojang is reachable). Your Minecraft access token is never used.
+- Get or refresh the key file: `curl -o src\mojang-keys.json https://api.minecraftservices.com/publickeys`
 - Login codes and tokens are signed with a secret (`TOKEN_SECRET`), so nothing is stored in a database.
 - "Who is online" lives in memory in one Durable Object. If Cloudflare restarts it, it refills from heartbeats within a minute.
 

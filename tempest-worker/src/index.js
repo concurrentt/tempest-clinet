@@ -3,19 +3,23 @@
 // Same API as tempest-backend/server.js, so the mod needs no changes:
 //   GET  /health                      -> { ok, service, online }
 //   POST /v1/auth/start   {name}      -> { serverId }
-//   POST /v1/auth/finish  {name, serverId} -> { token, uuid, expiresIn }
+//   POST /v1/auth/finish  {name, serverId, uuid, publicKey, expiresAt, keySignature, signature} -> { token, uuid, expiresIn }
 //   POST /v1/heartbeat    (Bearer)    -> { ok }
 //   POST /v1/lookup       {uuids}     -> { tempest: [...] }
 //   POST /v1/logout       (Bearer)    -> { ok }
 //
 // How it fits Cloudflare's free plan:
-// - Sign-in needs no storage: the one-time code and the login token are signed with TOKEN_SECRET (HMAC), so any
-//   Worker anywhere can check them. Your Minecraft access token still only ever goes to Mojang.
+// - Proving who you are: every real Minecraft account has a key pair issued by Mojang (the one that signs chat).
+//   The game signs our one-time code with it and sends the public half plus Mojang's certificate for it. We check
+//   Mojang's certificate with Mojang's published keys, then the signature. Mojang's servers block Cloudflare, so
+//   nothing here calls them during sign-in, and your Minecraft access token is never used or sent anywhere.
+// - Sign-in needs no storage: the one-time code and the login token are signed with TOKEN_SECRET (HMAC).
 // - "Who is online" lives in memory inside ONE Durable Object (Presence). No database writes at all, so the
 //   free plan's write limits never come into play. If Cloudflare restarts it, the list refills from heartbeats
 //   within a minute.
 
 import { DurableObject } from "cloudflare:workers";
+import BUNDLED_KEYS from "./mojang-keys.json";
 
 const ONLINE_TTL_MS = 150_000;       // online for 2.5 min after the last heartbeat
 const TOKEN_TTL_MS = 24 * 3600_000;  // sign in again once a day
@@ -69,17 +73,18 @@ function same(a, b) {
   return d === 0;
 }
 
-/** One-time code for the Mojang step: 8 hex chars of expiry (seconds) + 32 hex chars of signature. */
+/** One-time code: 8 hex expiry (seconds) + 8 hex random + 24 hex signature = 40 hex chars. */
 async function makeChallenge(secret, name, now) {
   const exp = Math.floor((now + CHALLENGE_TTL_MS) / 1000).toString(16).padStart(8, "0");
-  return exp + hex(await mac(secret, `challenge|${name}|${exp}`)).slice(0, 32);
+  const nonce = hex(crypto.getRandomValues(new Uint8Array(4)));
+  return exp + nonce + hex(await mac(secret, `challenge|${name}|${exp}|${nonce}`)).slice(0, 24);
 }
 
 async function checkChallenge(secret, name, serverId, now) {
   if (typeof serverId !== "string" || !/^[0-9a-f]{40}$/.test(serverId)) return false;
-  const exp = serverId.slice(0, 8);
+  const exp = serverId.slice(0, 8), nonce = serverId.slice(8, 16);
   if (parseInt(exp, 16) * 1000 < now) return false;
-  return same(serverId.slice(8), hex(await mac(secret, `challenge|${name}|${exp}`)).slice(0, 32));
+  return same(serverId.slice(16), hex(await mac(secret, `challenge|${name}|${exp}|${nonce}`)).slice(0, 24));
 }
 
 /** Login token: "<uuid without dashes><expiry ms, base 36>_<signature>" - URL-safe, no storage needed. */
@@ -96,14 +101,80 @@ async function checkToken(secret, token, now) {
   return normUuid(m[1]);
 }
 
-// ------------------------------------------------------------------ Mojang
-async function mojangHasJoined(name, serverId) {
-  const url = "https://sessionserver.mojang.com/session/minecraft/hasJoined?username="
-    + encodeURIComponent(name) + "&serverId=" + encodeURIComponent(serverId);
-  const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-  if (res.status !== 200) return null; // 204 = did not join
-  const body = await res.json();
-  return normUuid(body && body.id);
+// ------------------------------------------------------------------ Mojang player certificates
+const b64bytes = (s) => Uint8Array.from(atob(String(s).replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+
+let mojangKeys = null, mojangKeysAt = 0;
+
+/** Mojang's player-certificate keys (CryptoKeys): bundled list, refreshed from Mojang once a day when reachable. */
+async function certificateKeys(override) {
+  if (override) return override;
+  const now = Date.now();
+  if (mojangKeys && now - mojangKeysAt < 24 * 3600_000) return mojangKeys;
+  let list = (BUNDLED_KEYS && BUNDLED_KEYS.playerCertificateKeys) || [];
+  try {
+    const res = await fetch("https://api.minecraftservices.com/publickeys", {
+      headers: { "User-Agent": "TempestClient-Auth/1.0" }, signal: AbortSignal.timeout(5000),
+    });
+    if (res.ok) {
+      const j = await res.json();
+      if (Array.isArray(j.playerCertificateKeys) && j.playerCertificateKeys.length) list = j.playerCertificateKeys;
+    }
+  } catch { /* keep the bundled list */ }
+  const keys = [];
+  for (const k of list) {
+    try {
+      keys.push(await crypto.subtle.importKey("spki", b64bytes(k.publicKey), { name: "RSASSA-PKCS1-v1_5", hash: "SHA-1" }, false, ["verify"]));
+    } catch { /* skip a bad entry */ }
+  }
+  mojangKeys = keys;
+  mojangKeysAt = now;
+  return keys;
+}
+
+/** Bytes Mojang signs for a player key (same as Minecraft's PublicKeyData): uuid (16) + expiry ms (8) + key DER. */
+function certificatePayload(uuid, expiresAt, keyDer) {
+  const out = new Uint8Array(24 + keyDer.length);
+  const hexs = uuid.replace(/-/g, "");
+  for (let i = 0; i < 16; i++) out[i] = parseInt(hexs.slice(i * 2, i * 2 + 2), 16);
+  new DataView(out.buffer).setBigUint64(16, BigInt(expiresAt));
+  out.set(keyDer, 24);
+  return out;
+}
+
+/**
+ * Checks a sign-in proof. Returns the verified uuid, or { why } if it fails.
+ * body: { uuid, publicKey (base64 DER), expiresAt (ms), keySignature (base64), signature (base64) }
+ */
+export async function verifyProof(body, serverId, now, keysOverride) {
+  const uuid = normUuid(body.uuid);
+  if (!uuid) return { why: "bad uuid" };
+  const expiresAt = Number(body.expiresAt);
+  if (!Number.isSafeInteger(expiresAt) || expiresAt < now) return { why: "player key expired" };
+  let keyDer, keySig, sig;
+  try {
+    keyDer = b64bytes(body.publicKey);
+    keySig = b64bytes(body.keySignature);
+    sig = b64bytes(body.signature);
+  } catch { return { why: "bad base64" }; }
+  if (keyDer.length > 1024 || keySig.length > 1024 || sig.length > 1024) return { why: "too large" };
+
+  // 1) Mojang issued this key to this player
+  const payload = certificatePayload(uuid, expiresAt, keyDer);
+  let certified = false;
+  for (const k of await certificateKeys(keysOverride)) {
+    if (await crypto.subtle.verify("RSASSA-PKCS1-v1_5", k, keySig, payload)) { certified = true; break; }
+  }
+  if (!certified) return { why: "player key not signed by Mojang" };
+
+  // 2) the player signed our one-time code with it
+  let playerKey;
+  try {
+    playerKey = await crypto.subtle.importKey("spki", keyDer, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
+  } catch { return { why: "bad player key" }; }
+  const msg = enc.encode(`tempest-auth|${serverId}|${uuid.replace(/-/g, "")}`);
+  if (!(await crypto.subtle.verify("RSASSA-PKCS1-v1_5", playerKey, sig, msg))) return { why: "bad signature" };
+  return uuid;
 }
 
 // ------------------------------------------------------------------ rate limit (best effort, per Worker instance)
@@ -157,7 +228,7 @@ function presence(env) {
 }
 
 // ------------------------------------------------------------------ routes
-export async function handle(req, env, hasJoined = mojangHasJoined) {
+export async function handle(req, env, keysOverride = null) {
   const url = new URL(req.url);
   const path = url.pathname;
   const now = Date.now();
@@ -185,9 +256,12 @@ export async function handle(req, env, hasJoined = mojangHasJoined) {
     if (typeof name !== "string" || !NAME_RE.test(name) || !(await checkChallenge(secret, name, serverId, now))) {
       return json(400, { error: "bad or expired code" });
     }
-    let uuid;
-    try { uuid = await hasJoined(name, serverId); } catch { return json(502, { error: "mojang unavailable" }); }
-    if (!uuid) return json(403, { error: "could not verify account" });
+    const r = await verifyProof(body, serverId, now, keysOverride);
+    if (typeof r !== "string") {
+      console.log(`auth/finish: refused ${name}: ${r.why}`);
+      return json(403, { error: "could not verify account", why: r.why });
+    }
+    const uuid = r;
     await presence(env).heartbeat(uuid);
     return json(200, { token: await makeToken(secret, uuid, now), uuid, expiresIn: TOKEN_TTL_MS / 1000 });
   }

@@ -23,12 +23,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Talks to the Tempest online service (tempest-backend/, hosted on Railway) so Tempest users can see each other.
+ * Talks to the Tempest online service (tempest-worker/, hosted on Cloudflare) so Tempest users can see each other.
  *
  * <ul>
- *   <li>Sign-in: once, using Mojang's session check. The client "joins" a one-time code at Mojang's session server
- *       (the same call Minecraft makes when you join a server); the service then asks Mojang whether you did.
- *       Your Minecraft access token only ever goes to Mojang, never to the Tempest service.</li>
+ *   <li>Sign-in: the service hands out a one-time code; the game signs it with your Mojang-issued player key (the
+ *       same key that signs your chat) and sends the public half plus Mojang's certificate for it. The service
+ *       checks both. Your Minecraft access token is never used or sent anywhere.</li>
  *   <li>Heartbeat every 60 s while you are in a world ("I'm online with Tempest").</li>
  *   <li>Lookup every 10 s for players near you, in one batch, cached for 2 minutes.</li>
  * </ul>
@@ -42,7 +42,6 @@ public final class TempestNet {
      */
     public static final String DEFAULT_URL = "https://tempest-backend.imamunchlmaoii.workers.dev";
 
-    private static final String MOJANG_JOIN = "https://sessionserver.mojang.com/session/minecraft/join";
     private static final long HEARTBEAT_MS = 60_000, LOOKUP_MS = 10_000, CACHE_MS = 120_000;
 
     private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8)).build();
@@ -55,6 +54,7 @@ public final class TempestNet {
     private static volatile String token;
     private static volatile long tokenExpires;
     private static volatile boolean busy;
+    private static volatile String lastError = "";
     private static long lastHeartbeat, lastLookup, retryAt;
     private static long backoff = 60_000;
 
@@ -107,32 +107,41 @@ public final class TempestNet {
         Session s = c.getSession();
         UUID id = s == null ? null : s.getUuidOrNull();
         String name = s == null ? null : s.getUsername();
-        String access = s == null ? null : s.getAccessToken();
-        if (id == null || name == null || access == null || access.isBlank()) { fail("no Minecraft account session"); return; }
+        if (id == null || name == null) { fail("no Minecraft account session"); return; }
         busy = true;
         JsonObject start = new JsonObject();
         start.addProperty("name", name);
-        post("/v1/auth/start", start, false).thenCompose(r -> {
+        CompletableFuture<String> code = post("/v1/auth/start", start, false).thenApply(r -> {
             if (r == null || !r.has("serverId")) throw new IllegalStateException("start refused");
-            String serverId = r.get("serverId").getAsString();
-            JsonObject join = new JsonObject();
-            join.addProperty("accessToken", access);
-            join.addProperty("selectedProfile", id.toString().replace("-", ""));
-            join.addProperty("serverId", serverId);
-            HttpRequest req = HttpRequest.newBuilder(URI.create(MOJANG_JOIN)).timeout(Duration.ofSeconds(10))
-                    .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(join.toString())).build();
-            return HTTP.sendAsync(req, HttpResponse.BodyHandlers.discarding()).thenCompose(mojang -> {
-                if (mojang.statusCode() != 204) throw new IllegalStateException("Mojang join refused (" + mojang.statusCode() + ")");
+            return r.get("serverId").getAsString();
+        });
+        // the player key pair Mojang issues to every real account (offline / cracked accounts don't have one)
+        code.thenCombine(c.getProfileKeys().fetchKeyPair(), (serverId, keys) -> {
+            if (keys.isEmpty()) throw new IllegalStateException("no Mojang player key (offline account or chat keys unavailable)");
+            var pair = keys.get();
+            var data = pair.publicKey().data();
+            try {
+                java.security.Signature sig = java.security.Signature.getInstance("SHA256withRSA");
+                sig.initSign(pair.privateKey());
+                sig.update(("tempest-auth|" + serverId + "|" + id.toString().replace("-", "")).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                java.util.Base64.Encoder b64 = java.util.Base64.getEncoder();
                 JsonObject finish = new JsonObject();
                 finish.addProperty("name", name);
                 finish.addProperty("serverId", serverId);
-                return post("/v1/auth/finish", finish, false);
-            });
-        }).whenComplete((r, err) -> {
+                finish.addProperty("uuid", id.toString());
+                finish.addProperty("publicKey", b64.encodeToString(data.key().getEncoded()));
+                finish.addProperty("expiresAt", data.expiresAt().toEpochMilli());
+                finish.addProperty("keySignature", b64.encodeToString(data.keySignature()));
+                finish.addProperty("signature", b64.encodeToString(sig.sign()));
+                return finish;
+            } catch (java.security.GeneralSecurityException e) {
+                throw new IllegalStateException("could not sign: " + e.getMessage());
+            }
+        }).thenCompose(finish -> post("/v1/auth/finish", finish, false)).whenComplete((r, err) -> {
             busy = false;
             if (err != null || r == null || !r.has("token")) {
                 Throwable cause = err != null && err.getCause() != null ? err.getCause() : err;
-                fail(cause != null ? "sign-in failed: " + cause.getMessage() : "sign-in refused");
+                fail(cause != null ? "sign-in failed: " + cause.getMessage() : "sign-in refused (" + lastError + ")");
                 return;
             }
             token = r.get("token").getAsString();
@@ -178,7 +187,7 @@ public final class TempestNet {
             return HTTP.sendAsync(b.build(), HttpResponse.BodyHandlers.ofString()).thenApply(res -> {
                 if (res.statusCode() == 401) { token = null; return null; }   // signed out on the service: sign in again
                 if (res.statusCode() == 429) { fail("rate limited"); return null; }
-                if (res.statusCode() != 200) return null;
+                if (res.statusCode() != 200) { lastError = res.statusCode() + " " + res.body(); return null; }
                 return JsonParser.parseString(res.body()).getAsJsonObject();
             }).exceptionally(e -> { fail("service unreachable"); return null; });
         } catch (Exception e) {

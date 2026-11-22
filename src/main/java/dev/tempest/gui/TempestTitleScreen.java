@@ -299,7 +299,8 @@ public class TempestTitleScreen extends Screen {
         ctx.fill(x + 10, y + 54, x + profW - 10, y + 55, MenuKit.fa(Draw.border(), e));
         int bx = x + 10, bw = (profW - 28) / 2;
         smallButton(ctx, tr, "title_cust", bx, y + 64, bw, 20, "Customize", mx, my, e);
-        smallButton(ctx, tr, "title_friends", bx + bw + 8, y + 64, bw, 20, "Friends", mx, my, e);
+        smallButton(ctx, tr, "title_friends", bx + bw + 8, y + 64, bw, 20,
+                dev.tempest.util.Social.pendingCount() > 0 ? "Friends (" + dev.tempest.util.Social.pendingCount() + ")" : "Friends", mx, my, e);
         smallButton(ctx, tr, "title_hud", bx, y + 88, bw, 20, "Edit HUD", mx, my, e);
         smallButton(ctx, tr, "title_theme", bx + bw + 8, y + 88, bw, 20, "Theme", mx, my, e);
     }
@@ -381,7 +382,7 @@ public class TempestTitleScreen extends Screen {
             }
             int bx = profX + 10, bw = (profW - 28) / 2;
             if (Draw.hit(mx, my, bx, profY + 64, bw, 20)) { client.setScreen(new TempestMenuScreen(this)); return true; }
-            if (Draw.hit(mx, my, bx + bw + 8, profY + 64, bw, 20)) { client.setScreen(new FriendsScreen(this)); return true; }
+            if (Draw.hit(mx, my, bx + bw + 8, profY + 64, bw, 20)) { client.setScreen(new SocialScreen(this)); return true; }
             if (Draw.hit(mx, my, bx, profY + 88, bw, 20)) { client.setScreen(new HudEditorScreen(this)); return true; }
             if (Draw.hit(mx, my, bx + bw + 8, profY + 88, bw, 20)) { client.setScreen(new ThemeScreen(this)); return true; }
         }

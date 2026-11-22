@@ -4,9 +4,15 @@
 //   GET  /health                      -> { ok, service, online }
 //   POST /v1/auth/start   {name}      -> { serverId }
 //   POST /v1/auth/finish  {name, serverId, uuid, publicKey, expiresAt, keySignature, signature} -> { token, uuid, expiresIn }
-//   POST /v1/heartbeat    (Bearer)    -> { ok }
+//   POST /v1/heartbeat    (Bearer) {server?, public?, friends?} -> { ok, incoming }
 //   POST /v1/lookup       {uuids}     -> { tempest: [...] }
 //   POST /v1/logout       (Bearer)    -> { ok }
+//   POST /v1/friends/list    (Bearer)          -> { friends: [{uuid, online, server}], incoming: [uuid], outgoing: [uuid] }
+//   POST /v1/friends/request (Bearer) {uuid}   -> { result: "sent" | "accepted" | "already" }
+//   POST /v1/friends/accept | decline | remove (Bearer) {uuid} -> { ok }
+//
+// Friendships are stored by account UUID only (the UUID is proven at sign-in; names are not), and the game shows
+// names it looks up from Mojang itself, so nobody can pose as someone else in a friend request.
 //
 // How it fits Cloudflare's free plan:
 // - Proving who you are: every real Minecraft account has a key pair issued by Mojang (the one that signs chat).
@@ -197,29 +203,111 @@ async function readJson(req) {
 }
 
 // ------------------------------------------------------------------ who is online (one shared Durable Object)
+const MAX_FRIENDS = 200;
+const MAX_OUTGOING = 30;
+const MAX_INCOMING = 100;
+
+/** Cleans the server address a player reports (shown to their friends only). */
+function cleanServer(s) {
+  if (typeof s !== "string") return null;
+  const t = s.replace(/[^\x20-\x7E]/g, "").trim().slice(0, 64);
+  return t || null;
+}
+
+// One shared Durable Object: who is online (memory) + friendships and requests (its built-in SQLite database).
 export class Presence extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
-    this.online = new Map(); // uuid -> last heartbeat (ms)
+    this.online = new Map(); // uuid -> { seen, server, pub, fr }
+    this.sql = ctx.storage.sql;
+    this.sql.exec("CREATE TABLE IF NOT EXISTS friends (a TEXT NOT NULL, b TEXT NOT NULL, since INTEGER NOT NULL, PRIMARY KEY (a, b))");
+    this.sql.exec("CREATE TABLE IF NOT EXISTS requests (src TEXT NOT NULL, dst TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (src, dst))");
+    this.sql.exec("CREATE INDEX IF NOT EXISTS requests_dst ON requests (dst)");
   }
+
+  rows(q, ...args) { return this.sql.exec(q, ...args).toArray(); }
+  num(q, ...args) { const r = this.rows(q, ...args); return r.length ? Number(Object.values(r[0])[0]) : 0; }
 
   prune(now) {
-    for (const [k, v] of this.online) if (now - v > ONLINE_TTL_MS) this.online.delete(k);
+    for (const [k, v] of this.online) if (now - v.seen > ONLINE_TTL_MS) this.online.delete(k);
   }
 
-  heartbeat(uuid) { this.online.set(uuid, Date.now()); }
+  /** opts: { server, pub (show logo to everyone), fr (show online to friends) }. Returns pending incoming count. */
+  heartbeat(uuid, opts = {}) {
+    const pub = opts.pub !== false, fr = opts.fr !== false;
+    if (!pub && !fr) this.online.delete(uuid);
+    else this.online.set(uuid, { seen: Date.now(), server: cleanServer(opts.server), pub, fr });
+    return this.num("SELECT COUNT(*) AS n FROM requests WHERE dst = ?", uuid);
+  }
 
   logout(uuid) { this.online.delete(uuid); }
 
   lookup(uuids) {
     const now = Date.now();
     this.prune(now);
-    return uuids.filter((u) => this.online.has(u));
+    return uuids.filter((u) => { const o = this.online.get(u); return o && o.pub; });
   }
 
   count() {
     this.prune(Date.now());
     return this.online.size;
+  }
+
+  friendsState(me) {
+    this.prune(Date.now());
+    const friends = this.rows("SELECT b FROM friends WHERE a = ? ORDER BY since", me).map((r) => {
+      const o = this.online.get(r.b);
+      const on = !!(o && o.fr);
+      return { uuid: r.b, online: on, server: on ? o.server : null };
+    });
+    const incoming = this.rows("SELECT src FROM requests WHERE dst = ? ORDER BY at DESC", me).map((r) => r.src);
+    const outgoing = this.rows("SELECT dst FROM requests WHERE src = ? ORDER BY at DESC", me).map((r) => r.dst);
+    return { friends, incoming, outgoing };
+  }
+
+  isFriend(a, b) { return this.num("SELECT COUNT(*) AS n FROM friends WHERE a = ? AND b = ?", a, b) > 0; }
+
+  link(a, b) {
+    const now = Date.now();
+    this.sql.exec("INSERT OR IGNORE INTO friends (a, b, since) VALUES (?, ?, ?)", a, b, now);
+    this.sql.exec("INSERT OR IGNORE INTO friends (a, b, since) VALUES (?, ?, ?)", b, a, now);
+    this.sql.exec("DELETE FROM requests WHERE (src = ? AND dst = ?) OR (src = ? AND dst = ?)", a, b, b, a);
+  }
+
+  request(me, other) {
+    if (me === other) return { error: "you can't add yourself" };
+    if (this.isFriend(me, other)) return { result: "already" };
+    // they already asked you: that's a yes from both sides
+    if (this.num("SELECT COUNT(*) AS n FROM requests WHERE src = ? AND dst = ?", other, me) > 0) {
+      if (this.num("SELECT COUNT(*) AS n FROM friends WHERE a = ?", me) >= MAX_FRIENDS) return { error: "your friend list is full" };
+      if (this.num("SELECT COUNT(*) AS n FROM friends WHERE a = ?", other) >= MAX_FRIENDS) return { error: "their friend list is full" };
+      this.link(me, other);
+      return { result: "accepted" };
+    }
+    if (this.num("SELECT COUNT(*) AS n FROM requests WHERE src = ? AND dst = ?", me, other) > 0) return { result: "sent" };
+    if (this.num("SELECT COUNT(*) AS n FROM requests WHERE src = ?", me) >= MAX_OUTGOING) return { error: "too many pending requests - cancel some first" };
+    if (this.num("SELECT COUNT(*) AS n FROM requests WHERE dst = ?", other) >= MAX_INCOMING) return { error: "they have too many pending requests" };
+    this.sql.exec("INSERT INTO requests (src, dst, at) VALUES (?, ?, ?)", me, other, Date.now());
+    return { result: "sent" };
+  }
+
+  accept(me, other) {
+    if (this.num("SELECT COUNT(*) AS n FROM requests WHERE src = ? AND dst = ?", other, me) === 0) return { error: "no request from that player" };
+    if (this.num("SELECT COUNT(*) AS n FROM friends WHERE a = ?", me) >= MAX_FRIENDS) return { error: "your friend list is full" };
+    if (this.num("SELECT COUNT(*) AS n FROM friends WHERE a = ?", other) >= MAX_FRIENDS) return { error: "their friend list is full" };
+    this.link(me, other);
+    return { ok: true };
+  }
+
+  /** Declines an incoming request or cancels an outgoing one. */
+  decline(me, other) {
+    this.sql.exec("DELETE FROM requests WHERE (src = ? AND dst = ?) OR (src = ? AND dst = ?)", me, other, other, me);
+    return { ok: true };
+  }
+
+  remove(me, other) {
+    this.sql.exec("DELETE FROM friends WHERE (a = ? AND b = ?) OR (a = ? AND b = ?)", me, other, other, me);
+    return { ok: true };
   }
 }
 
@@ -262,7 +350,6 @@ export async function handle(req, env, keysOverride = null) {
       return json(403, { error: "could not verify account", why: r.why });
     }
     const uuid = r;
-    await presence(env).heartbeat(uuid);
     return json(200, { token: await makeToken(secret, uuid, now), uuid, expiresIn: TOKEN_TTL_MS / 1000 });
   }
 
@@ -271,8 +358,23 @@ export async function handle(req, env, keysOverride = null) {
   if (!me) return json(401, { error: "sign in first" });
 
   if (path === "/v1/heartbeat") {
-    await presence(env).heartbeat(me);
-    return json(200, { ok: true });
+    const incoming = await presence(env).heartbeat(me, { server: body.server, pub: body.public, fr: body.friends });
+    return json(200, { ok: true, incoming });
+  }
+
+  if (path === "/v1/friends/list") return json(200, await presence(env).friendsState(me));
+
+  if (path.startsWith("/v1/friends/")) {
+    const other = normUuid(body.uuid);
+    if (!other) return json(400, { error: "bad uuid" });
+    const p = presence(env);
+    let r;
+    if (path === "/v1/friends/request") r = await p.request(me, other);
+    else if (path === "/v1/friends/accept") r = await p.accept(me, other);
+    else if (path === "/v1/friends/decline") r = await p.decline(me, other);
+    else if (path === "/v1/friends/remove") r = await p.remove(me, other);
+    else return json(404, { error: "not found" });
+    return json(r.error ? 400 : 200, r);
   }
 
   if (path === "/v1/lookup") {

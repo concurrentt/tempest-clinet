@@ -2,6 +2,7 @@ package dev.tempest.modules;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import dev.tempest.gui.FriendsScreen;
+import dev.tempest.gui.SocialScreen;
 import dev.tempest.module.ActionSetting;
 import dev.tempest.module.BoolSetting;
 import dev.tempest.module.Category;
@@ -19,7 +20,10 @@ import net.minecraft.client.util.InputUtil;
 
 /** Friends who also run Tempest. Confirmed friends get a colored glow (default green) that you can change. */
 public class FriendsModule extends Module {
-    private final KeyBinding openKey = bindKey("friends", "Friends Menu Key", InputUtil.UNKNOWN_KEY.getCode());
+    private final KeyBinding openKey = bindKey("social", "Social Menu Key", org.lwjgl.glfw.GLFW.GLFW_KEY_U);
+    private final BoolSetting onlineToFriends = add(new BoolSetting("online_to_friends", "Show Friends I'm Online", true));
+    private final BoolSetting shareServer = add(new BoolSetting("share_server", "Show Friends My Server", true));
+    private final BoolSetting alerts = add(new BoolSetting("request_alerts", "Friend Request Alerts", true));
     private final BoolSetting glow = add(new BoolSetting("glow", "Glow Friends", true));
     private final ColorSetting glowColor = add(new ColorSetting("glow_color", "Glow Color", 0xFF55FF55));
 
@@ -27,8 +31,12 @@ public class FriendsModule extends Module {
     public boolean alwaysOn() { return true; }
 
     public FriendsModule() {
-        super("friends", "Friends", "Add players as friends and they glow in the color you pick (only on your screen).", Category.UTILITY, true);
-        add(new ActionSetting("manage", "Manage Friends", "Open", () -> {
+        super("friends", "Social", "Tempest friends: requests, who's online and which server they're on. Friends can glow too.", Category.UTILITY, true);
+        add(new ActionSetting("open_social", "Social Menu", "Open", () -> {
+            MinecraftClient c = MinecraftClient.getInstance();
+            c.setScreen(new SocialScreen(c.currentScreen));
+        }));
+        add(new ActionSetting("manage", "Glow List (any player, only on your screen)", "Open", () -> {
             MinecraftClient c = MinecraftClient.getInstance();
             c.setScreen(new FriendsScreen(c.currentScreen));
         }));
@@ -57,7 +65,7 @@ public class FriendsModule extends Module {
 
     @Override
     public void onTick(MinecraftClient c) {
-        while (openKey.wasPressed()) if (c.currentScreen == null) c.setScreen(new FriendsScreen(null));
+        while (openKey.wasPressed()) if (c.currentScreen == null) c.setScreen(new SocialScreen(null));
     }
 
     public static boolean isFriend(String name) { return FriendManager.isFriend(name); }
@@ -65,7 +73,18 @@ public class FriendsModule extends Module {
     public static boolean glows(AbstractClientPlayerEntity p) {
         FriendsModule m = ModuleManager.get(FriendsModule.class);
         MinecraftClient c = MinecraftClient.getInstance();
-        return m != null && m.isEnabled() && m.glow.get() && p != c.player && FriendManager.isFriend(p.getName().getString());
+        return m != null && m.isEnabled() && m.glow.get() && p != c.player
+                && (FriendManager.isFriend(p.getName().getString()) || dev.tempest.util.Social.isFriend(p.getUuid()));
+    }
+
+    private static FriendsModule get() { return ModuleManager.get(FriendsModule.class); }
+
+    public static boolean onlineToFriends() { FriendsModule m = get(); return m != null && m.isEnabled() && m.onlineToFriends.get(); }
+    public static boolean shareServer() { FriendsModule m = get(); return m != null && m.shareServer.get(); }
+    public static boolean requestAlerts() { FriendsModule m = get(); return m == null || m.alerts.get(); }
+    public static String keyName() {
+        FriendsModule m = get();
+        return m == null ? "U" : m.openKey.getBoundKeyLocalizedText().getString();
     }
 
     public static int glowColor() {

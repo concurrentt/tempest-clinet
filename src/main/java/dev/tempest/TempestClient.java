@@ -122,6 +122,9 @@ public class TempestClient implements ClientModInitializer {
             dev.tempest.util.Updater.resumePending();
             if (dev.tempest.modules.ClientSettingsModule.checkUpdatesOn()) dev.tempest.util.Updater.checkAsync();
         });
-        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> TempestConfig.save());
+        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
+            TempestConfig.save();
+            dev.tempest.util.TempestNet.shutdown();
+        });
     }
 }

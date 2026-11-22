@@ -370,6 +370,15 @@ Changes:
 
 Build from the project directory with: gradle build
 
+
+## 0.18.7 - Social menu
+- New Social menu (U, the Friends button on the main menu, or the Social chip in the Right Shift menu): Tempest friends with
+  online status and the server they're on, friend requests (accept / decline / cancel), and adding people by name or from
+  players near you.
+- Friends are stored by account (proven at sign-in); names come from Mojang, so nobody can pose as someone else.
+- Social settings: show friends you're online, show friends your server, friend request alerts. Tempest friends glow too.
+- Your status shows "In menus" when you're on the main menu; you go offline when the game closes.
+
 ## 0.18.0 — Auto-updater
 - Tempest checks GitHub Releases (edrfvgtbhynjm/tempest-clinet) in the background on launch. A newer release shows an "Update available" pill on the main menu.
 - The update window shows the release notes, with Update / Later / Skip this version. Nothing downloads until you click Update.

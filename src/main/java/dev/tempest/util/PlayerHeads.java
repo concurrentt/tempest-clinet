@@ -31,6 +31,8 @@ public final class PlayerHeads {
             .followRedirects(HttpClient.Redirect.NORMAL).build();
     private static final Map<UUID, Identifier> READY = new ConcurrentHashMap<>();
     private static final Map<UUID, Boolean> STARTED = new ConcurrentHashMap<>();
+    /** Names as Mojang reports them for a UUID (never taken from the Tempest service, so nobody can fake one). */
+    private static final Map<UUID, String> NAMES = new ConcurrentHashMap<>();
 
     private PlayerHeads() { }
 
@@ -42,12 +44,38 @@ public final class PlayerHeads {
         return null;
     }
 
+    /** The player's current name from Mojang, or null until it has arrived. Starts the lookup if needed. */
+    public static String name(UUID id) {
+        if (id == null) return null;
+        String n = NAMES.get(id);
+        if (n == null) get(id);
+        return n;
+    }
+
+    /** Name -> UUID through Mojang (null if no such account). */
+    public static java.util.concurrent.CompletableFuture<UUID> lookup(String name) {
+        String n = name == null ? "" : name.trim();
+        if (!n.matches("[A-Za-z0-9_]{1,16}")) return java.util.concurrent.CompletableFuture.completedFuture(null);
+        return HTTP.sendAsync(HttpRequest.newBuilder(URI.create("https://api.mojang.com/users/profiles/minecraft/" + n))
+                        .timeout(Duration.ofSeconds(8)).build(), HttpResponse.BodyHandlers.ofString())
+                .thenApply(res -> {
+                    if (res.statusCode() != 200) return null;
+                    JsonObject o = JsonParser.parseString(res.body()).getAsJsonObject();
+                    String h = o.get("id").getAsString();
+                    UUID id = UUID.fromString(h.replaceFirst("(\\p{XDigit}{8})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}+)", "$1-$2-$3-$4-$5"));
+                    if (o.has("name")) NAMES.put(id, o.get("name").getAsString());
+                    return id;
+                })
+                .exceptionally(e -> null);
+    }
+
     private static void fetch(UUID id) {
         String url = "https://sessionserver.mojang.com/session/minecraft/profile/" + id.toString().replace("-", "");
         HTTP.sendAsync(HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8)).build(), HttpResponse.BodyHandlers.ofString())
                 .thenCompose(res -> {
                     if (res.statusCode() != 200) throw new IllegalStateException("profile " + res.statusCode());
                     JsonObject o = JsonParser.parseString(res.body()).getAsJsonObject();
+                    if (o.has("name")) NAMES.put(id, o.get("name").getAsString());
                     String value = o.getAsJsonArray("properties").get(0).getAsJsonObject().get("value").getAsString();
                     JsonObject tex = JsonParser.parseString(new String(Base64.getDecoder().decode(value), StandardCharsets.UTF_8)).getAsJsonObject();
                     String skin = tex.getAsJsonObject("textures").getAsJsonObject("SKIN").get("url").getAsString();

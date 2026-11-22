@@ -55,6 +55,8 @@ public final class TempestNet {
     private static volatile long tokenExpires;
     private static volatile boolean busy;
     private static volatile String lastError = "";
+    private static volatile String lastProblem;
+    private static volatile boolean loggedOut;
     private static long lastHeartbeat, lastLookup, retryAt;
     private static long backoff = 60_000;
 
@@ -75,9 +77,14 @@ public final class TempestNet {
 
     // ------------------------------------------------------------------ driven from the client tick
     public static void tick(MinecraftClient c) {
-        if (c.world == null || c.player == null || base().isEmpty()) return;
+        if (base().isEmpty()) return;
         boolean share = NametagsModule.shareOnline(), show = NametagsModule.showOnline();
-        if (!share && !show) return;
+        boolean friends = dev.tempest.modules.FriendsModule.onlineToFriends();
+        boolean wanted = share || friends || show || Social.wanted();
+        if (!wanted) {
+            if (token != null && !loggedOut) { post("/v1/logout", new JsonObject(), true); loggedOut = true; }
+            return;
+        }
         long now = System.currentTimeMillis();
         if (busy || now < retryAt) return;
 
@@ -85,21 +92,74 @@ public final class TempestNet {
             signIn(c);
             return;
         }
-        if (share && now - lastHeartbeat >= HEARTBEAT_MS) {
+        if ((share || friends) && now - lastHeartbeat >= HEARTBEAT_MS) {
             lastHeartbeat = now;
-            post("/v1/heartbeat", new JsonObject(), true).thenAccept(r -> { });
+            loggedOut = false;
+            JsonObject hb = new JsonObject();
+            hb.addProperty("public", share);
+            hb.addProperty("friends", friends);
+            String server = currentServer(c);
+            if (server != null) hb.addProperty("server", server);
+            post("/v1/heartbeat", hb, true).thenAccept(r -> {
+                if (r != null && r.has("incoming")) Social.onIncomingCount(r.get("incoming").getAsInt());
+            });
             return;
         }
-        if (show && now - lastLookup >= LOOKUP_MS) {
+        if (show && c.world != null && c.player != null && now - lastLookup >= LOOKUP_MS) {
             lastLookup = now;
             lookup(c, now);
         }
     }
 
-    /** Leaving a world: stop showing as online right away. */
+    /** What your friends see: the server address, "Singleplayer", "In game" (if you hide it), or nothing (menus). */
+    private static String currentServer(MinecraftClient c) {
+        if (c.world == null) return null;
+        if (!dev.tempest.modules.FriendsModule.shareServer()) return "In game";
+        if (c.isInSingleplayer()) return "Singleplayer";
+        var entry = c.getCurrentServerEntry();
+        return entry != null ? entry.address : "In game";
+    }
+
+    /** Leaving a world: tell friends you're back in the menus on the next tick. */
     public static void onLeave() {
-        if (token != null && !base().isEmpty()) post("/v1/logout", new JsonObject(), true);
         lastHeartbeat = 0;
+    }
+
+    /** Game closing: drop off the online list straight away (best effort, short wait). */
+    public static void shutdown() {
+        if (token == null || base().isEmpty()) return;
+        try { post("/v1/logout", new JsonObject(), true).get(2, java.util.concurrent.TimeUnit.SECONDS); } catch (Exception ignored) { }
+    }
+
+    public static boolean signedIn() { return token != null && System.currentTimeMillis() < tokenExpires; }
+
+    /** Short status for menus. */
+    public static String status() {
+        if (base().isEmpty()) return "Online features are off";
+        if (signedIn()) return null;
+        if (busy) return "Connecting\u2026";
+        if (lastProblem != null) return lastProblem;
+        return "Connecting\u2026";
+    }
+
+    /**
+     * Signed-in call for the social features. Completes with the reply (which has "error" when the service said no),
+     * or null if it couldn't be reached / you're not signed in yet.
+     */
+    public static CompletableFuture<JsonObject> api(String path, JsonObject body) {
+        if (!signedIn()) return CompletableFuture.completedFuture(null);
+        try {
+            HttpRequest req = HttpRequest.newBuilder(URI.create(base() + path)).timeout(Duration.ofSeconds(10))
+                    .header("Content-Type", "application/json").header("Authorization", "Bearer " + token)
+                    .POST(HttpRequest.BodyPublishers.ofString(body.toString())).build();
+            return HTTP.sendAsync(req, HttpResponse.BodyHandlers.ofString()).thenApply(res -> {
+                if (res.statusCode() == 401) { token = null; return null; }
+                if (res.statusCode() != 200 && res.statusCode() != 400) return null;
+                try { return JsonParser.parseString(res.body()).getAsJsonObject(); } catch (Exception e) { return null; }
+            }).exceptionally(e -> null);
+        } catch (Exception e) {
+            return CompletableFuture.completedFuture(null);
+        }
     }
 
     // ------------------------------------------------------------------ sign-in
@@ -148,7 +208,8 @@ public final class TempestNet {
             long ttl = r.has("expiresIn") ? r.get("expiresIn").getAsLong() * 1000 : 3_600_000;
             tokenExpires = System.currentTimeMillis() + ttl;
             backoff = 60_000;
-            lastHeartbeat = System.currentTimeMillis();   // signing in already counts as online
+            lastProblem = null;
+            lastHeartbeat = 0;   // send a heartbeat (with your server and privacy choices) right away
         });
     }
 
@@ -197,6 +258,8 @@ public final class TempestNet {
     }
 
     private static void fail(String why) {
+        lastProblem = why.contains("no Mojang player key") ? "Needs a Microsoft account (online mode)"
+                : why.contains("unreachable") ? "Can't reach the Tempest service" : "Couldn't sign in - retrying";
         retryAt = System.currentTimeMillis() + backoff;
         backoff = Math.min(backoff * 2, 600_000);
         if (LOGGED.add(why)) System.err.println("[Tempest] Online service: " + why + " (retrying later)");

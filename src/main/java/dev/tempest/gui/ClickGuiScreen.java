@@ -798,7 +798,7 @@ public class ClickGuiScreen extends Screen {
                 switch (e.label()) {
                     case "Edit HUD" -> client.setScreen(new HudEditorScreen(this));
                     case "Waypoints" -> client.setScreen(new WaypointScreen(this));
-                    case "Friends" -> client.setScreen(new FriendsScreen(this));
+                    case "Friends" -> client.setScreen(new SocialScreen(this));
                     default -> client.setScreen(new FavoritesScreen(this));
                 }
             }

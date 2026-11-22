@@ -237,25 +237,13 @@ public final class Draw {
     private static void rawRoundRect(DrawContext c, int x, int y, int w, int h, int r, int col) {
         r = Math.min(r, Math.min(w, h) / 2);
         if (r <= 0) { c.fill(x, y, x + w, y + h, col); return; }
-        c.fill(x, y + r, x + w, y + h - r, col);
-        for (int i = 0; i < r; i++) corner(c, x, y, w, h, r, i, col);
-    }
-
-    private static void corner(DrawContext c, int x, int y, int w, int h, int r, int i, int col) {
-        float in = insetF(r, i);
-        int full = (int) Math.ceil(in);
-        c.fill(x + full, y + i, x + w - full, y + i + 1, col);
-        c.fill(x + full, y + h - 1 - i, x + w - full, y + h - i, col);
-        if (full > 0) {
-            int a = (int) (((col >>> 24) & 255) * (full - in));
-            if (a > 0) {
-                int e = withAlpha(col, a);
-                c.fill(x + full - 1, y + i, x + full, y + i + 1, e);
-                c.fill(x + w - full, y + i, x + w - full + 1, y + i + 1, e);
-                c.fill(x + full - 1, y + h - 1 - i, x + full, y + h - i, e);
-                c.fill(x + w - full, y + h - 1 - i, x + w - full + 1, y + h - i, e);
-            }
+        net.minecraft.util.Identifier tex = Corners.disc(r);
+        if (w > 2 * r) {
+            c.fill(x + r, y, x + w - r, y + r, col);
+            c.fill(x + r, y + h - r, x + w - r, y + h, col);
         }
+        if (h > 2 * r) c.fill(x, y + r, x + w, y + h - r, col);
+        Corners.draw(c, tex, x, y, w, h, r, col, col);
     }
 
     /** Rounded rectangle with a vertical gradient. */
@@ -271,28 +259,17 @@ public final class Draw {
     }
 
     private static void rawRoundRectV(DrawContext c, int x, int y, int w, int h, int r, int top, int bottom) {
-        // straight middle part in one gradient, then the corner rows one by one
-        if (h - 2 * r > 0) {
-            c.fillGradient(x, y + r, x + w, y + h - r, lerpColor(top, bottom, r / (float) Math.max(1, h - 1)),
-                    lerpColor(top, bottom, (h - r) / (float) Math.max(1, h - 1)));
+        r = Math.min(r, Math.min(w, h) / 2);
+        if (r <= 0) { c.fillGradient(x, y, x + w, y + h, top, bottom); return; }
+        float span = Math.max(1, h - 1);
+        int atR = lerpColor(top, bottom, r / span), atHR = lerpColor(top, bottom, (h - r) / span);
+        if (w > 2 * r) {
+            c.fillGradient(x + r, y, x + w - r, y + r, top, atR);
+            c.fillGradient(x + r, y + h - r, x + w - r, y + h, atHR, bottom);
         }
-        for (int i = 0; i < r; i++) {
-            for (int side = 0; side < 2; side++) {
-                int row = side == 0 ? i : h - 1 - i;
-                float in = insetF(r, i);
-                int full = (int) Math.ceil(in);
-                int col = lerpColor(top, bottom, h <= 1 ? 0f : row / (float) (h - 1));
-                c.fill(x + full, y + row, x + w - full, y + row + 1, col);
-                if (full > 0) {
-                    int a = (int) (((col >>> 24) & 255) * (full - in));
-                    if (a > 0) {
-                        int e = withAlpha(col, a);
-                        c.fill(x + full - 1, y + row, x + full, y + row + 1, e);
-                        c.fill(x + w - full, y + row, x + w - full + 1, y + row + 1, e);
-                    }
-                }
-            }
-        }
+        if (h > 2 * r) c.fillGradient(x, y + r, x + w, y + h - r, atR, atHR);
+        Corners.draw(c, Corners.disc(r), x, y, w, h, r,
+                lerpColor(top, bottom, r * 0.5f / span), lerpColor(top, bottom, (h - r * 0.5f) / span));
     }
 
     /** Filled rounded panel with a 1px border. The border is a ring, so translucent fills stay clean (no bleed-through). */
@@ -315,39 +292,13 @@ public final class Draw {
         c.getMatrices().popMatrix();
     }
 
-    /** Ring of thickness t: straight edges as single fills, corners row by row with anti-aliased edges. */
+    /** Ring of thickness t: straight edges as fills, corners from a cached anti-aliased texture. */
     private static void rawRing(DrawContext c, int x, int y, int w, int h, int r, int t, int col) {
         c.fill(x + r, y, x + w - r, y + t, col);
         c.fill(x + r, y + h - t, x + w - r, y + h, col);
         c.fill(x, y + r, x + t, y + h - r, col);
         c.fill(x + w - t, y + r, x + w, y + h - r, col);
-        int alpha = (col >>> 24) & 255;
-        int ri = r - t;                                   // inner radius
-        for (int i = 0; i < r; i++) {
-            float outer = insetF(r, i);
-            float inner = i < t || ri <= 0 ? r : t + insetF(ri, i - t);   // where the inside of the ring starts
-            int o = (int) Math.ceil(outer);
-            int n = Math.max(o, Math.min(r, (int) Math.floor(inner)));
-            for (int side = 0; side < 2; side++) {
-                int row = side == 0 ? y + i : y + h - 1 - i;
-                if (n > o) {
-                    c.fill(x + o, row, x + n, row + 1, col);
-                    c.fill(x + w - n, row, x + w - o, row + 1, col);
-                }
-                int ao = (int) (alpha * (o - outer));         // soft outer edge
-                if (o > 0 && ao > 0) {
-                    int e = withAlpha(col, ao);
-                    c.fill(x + o - 1, row, x + o, row + 1, e);
-                    c.fill(x + w - o, row, x + w - o + 1, row + 1, e);
-                }
-                int ai = (int) (alpha * (inner - n));         // soft inner edge
-                if (n < r && ai > 0) {
-                    int e = withAlpha(col, ai);
-                    c.fill(x + n, row, x + n + 1, row + 1, e);
-                    c.fill(x + w - n - 1, row, x + w - n, row + 1, e);
-                }
-            }
-        }
+        Corners.draw(c, Corners.ring(r, t), x, y, w, h, r, col, col);
     }
 
     /** Filled rounded surface with no border: the quiet default for rows and cards. */

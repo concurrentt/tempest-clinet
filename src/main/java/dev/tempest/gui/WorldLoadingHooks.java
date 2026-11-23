@@ -80,6 +80,12 @@ public final class WorldLoadingHooks {
         if (s == null || !ClientSettingsModule.worldLoadingOn()) return null;
         if (s instanceof ConnectScreen) return Phase.CONNECTING;
         if (isMenu(s)) return null;
+        // Loading / saving screens can't be closed with Esc. Anything that can (the pause menu, inventory, options...)
+        // is a real screen: never paint over it, and if it shows up, joining is clearly over.
+        if (s.shouldCloseOnEsc()) {
+            if (c.world != null) joinPending = false;
+            return null;
+        }
         if (leaving) return Phase.LEAVING;
         if (joinPending && c.world != null) return Phase.JOINING;
         // Singleplayer: the integrated server is starting but the client has no world yet.

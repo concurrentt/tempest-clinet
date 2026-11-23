@@ -48,8 +48,15 @@ public final class PlayerHeads {
     public static String name(UUID id) {
         if (id == null) return null;
         String n = NAMES.get(id);
-        if (n == null) get(id);
+        if (n == null) { get(id); n = HINTS.get(id); }
         return n;
+    }
+
+    /** Names other Tempest players gave for themselves: shown only until Mojang's answer arrives. */
+    private static final Map<UUID, String> HINTS = new ConcurrentHashMap<>();
+
+    public static void rememberName(UUID id, String name) {
+        if (id != null && name != null && HINTS.size() < 2000) HINTS.put(id, name);
     }
 
     /** Name -> UUID through Mojang (null if no such account). */

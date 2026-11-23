@@ -14,7 +14,16 @@
 //        client -> {"t":"emote","id":"wave"|null}              play / stop an emote
 //        server -> {"t":"emote","uuid":"...","id":"wave"|null}  a watched player emoted
 //        server -> {"t":"cos","uuid":"...","c":{...}}           a watched player changed cosmetics
+//        client -> {"t":"msg","to":"<uuid>","text":"hi","n":"MyName"}   private message to a friend
+//        client -> {"t":"msg","g":"<group id>","text":"hi","n":"MyName"} message to your party / a group
+//        server -> {"t":"msg","from":"...","n":"Name","to"?|"g"?,"gn"?,"text":"...","at":ms}
+//        server -> {"t":"msgfail","to"|"g","reason":"offline"|"not friends"|"no such group"}
+//        server -> {"t":"group","g":{id,name,kind,owner,members}} / {"t":"group_gone","id":"..."}
 //        "ping" -> "pong" (answered without waking anything)
+//   POST /v1/chat/groups       (Bearer)                         -> { groups: [{id,name,kind,owner,members}] }
+//   POST /v1/chat/group/create (Bearer) {name, kind, members}   -> { ok, g }   kind "group" or "party" (one each)
+//   POST /v1/chat/group/update (Bearer) {id, name?, add?, remove?} (owner only) -> { ok, g }
+//   POST /v1/chat/group/leave  (Bearer) {id}                    -> { ok }   (the owner leaving ends it)
 //   POST /v1/friends/request (Bearer) {uuid}   -> { result: "sent" | "accepted" | "already" }
 //   POST /v1/friends/accept | decline | remove (Bearer) {uuid} -> { ok }
 //
@@ -38,6 +47,14 @@ const ONLINE_TTL_MS = 150_000;       // online for 2.5 min after the last heartb
 const TOKEN_TTL_MS = 24 * 3600_000;  // sign in again once a day
 const CHALLENGE_TTL_MS = 60_000;     // time to finish the Mojang step
 const MAX_LOOKUP = 200;
+const MAX_GROUP = 16;                // people in one party / group, you included
+const MAX_GROUPS = 10;               // groups one person can make
+
+function cleanGroupName(s) {
+  if (typeof s !== "string") return null;
+  const t = s.replace(/\s+/g, " ").trim();
+  return /^[A-Za-z0-9 _'.!-]{1,24}$/.test(t) ? t : null;
+}
 const MAX_BODY = 16 * 1024;
 const RATE_PER_MIN = 120;
 
@@ -247,6 +264,7 @@ export class Presence extends DurableObject {
     this.sql.exec("CREATE INDEX IF NOT EXISTS requests_dst ON requests (dst)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS presence (uuid TEXT PRIMARY KEY, seen INTEGER NOT NULL, server TEXT, pub INTEGER NOT NULL, fr INTEGER NOT NULL)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS cosmetics (uuid TEXT PRIMARY KEY, data TEXT NOT NULL, at INTEGER NOT NULL)");
+    this.sql.exec("CREATE TABLE IF NOT EXISTS chatgroups (id TEXT PRIMARY KEY, name TEXT NOT NULL, kind TEXT NOT NULL, owner TEXT NOT NULL, members TEXT NOT NULL, at INTEGER NOT NULL)");
     this.msgRate = new Map();   // socket rate limiting (memory only)
     // "ping" is answered by Cloudflare itself, so keep-alives never wake this object or count as requests
     if (typeof WebSocketRequestResponsePair !== "undefined" && ctx.setWebSocketAutoResponse) {
@@ -355,9 +373,143 @@ export class Presence extends DurableObject {
     if (m.t === "watch" && typeof m.u === "string") {
       const w = m.u.toLowerCase().replace(/[^0-9a-f]/g, "").slice(0, 48 * 32);
       ws.serializeAttachment({ u: a.u, w: w.slice(0, w.length - (w.length % 32)) });
+    } else if (m.t === "msg") {
+      this.chat(ws, a.u, m);
     } else if (m.t === "emote") {
       const id = typeof m.id === "string" && /^[a-z_]{1,16}$/.test(m.id) ? m.id : null;
       this.broadcast(a.u, { t: "emote", uuid: a.u, id });
+    }
+  }
+
+  // ------------------------------------------------------------------ chat: private messages, party, groups
+  socketsOf(uuid) {
+    const out = [];
+    for (const ws of this.ctx.getWebSockets ? this.ctx.getWebSockets() : []) {
+      const a = ws.deserializeAttachment();
+      if (a && a.u === uuid) out.push(ws);
+    }
+    return out;
+  }
+
+  sendTo(uuid, msg) {
+    const text = JSON.stringify(msg);
+    let n = 0;
+    for (const ws of this.socketsOf(uuid)) { try { ws.send(text); n++; } catch { /* closed */ } }
+    return n;
+  }
+
+  group(id) {
+    const r = this.rows("SELECT id, name, kind, owner, members FROM chatgroups WHERE id = ?", id)[0];
+    if (!r) return null;
+    let members = [];
+    try { members = JSON.parse(r.members); } catch { /* broken row */ }
+    return { id: r.id, name: r.name, kind: r.kind, owner: r.owner, members };
+  }
+
+  groupsOf(me) {
+    return this.rows("SELECT id FROM chatgroups WHERE EXISTS (SELECT 1 FROM json_each(chatgroups.members) WHERE value = ?) ORDER BY at", me)
+      .map((r) => this.group(r.id)).filter(Boolean);
+  }
+
+  saveGroup(g) {
+    this.sql.exec("INSERT OR REPLACE INTO chatgroups (id, name, kind, owner, members, at) VALUES (?, ?, ?, ?, ?, ?)",
+      g.id, g.name, g.kind, g.owner, JSON.stringify(g.members), Date.now());
+    for (const m of g.members) this.sendTo(m, { t: "group", g });
+  }
+
+  cleanMembers(me, list) {
+    if (!Array.isArray(list)) return { error: "members must be a list" };
+    const out = [];
+    for (const x of list) {
+      const u = normUuid(x);
+      if (!u || u === me || out.includes(u)) continue;
+      if (!this.isFriend(me, u)) return { error: "you can only add friends" };
+      out.push(u);
+    }
+    if (out.length > MAX_GROUP - 1) return { error: `at most ${MAX_GROUP} people` };
+    return { list: out };
+  }
+
+  createGroup(me, body) {
+    const kind = body.kind === "party" ? "party" : "group";
+    const name = kind === "party" ? "Party" : cleanGroupName(body.name);
+    if (!name) return { error: "give the group a name (letters, numbers, spaces)" };
+    const m = this.cleanMembers(me, body.members);
+    if (m.error) return m;
+    if (kind === "party") {
+      // one party per person: inviting more people grows the party you already lead
+      const mine = this.groupsOf(me).find((g) => g.kind === "party" && g.owner === me);
+      if (mine) {
+        for (const u of m.list) if (!mine.members.includes(u)) mine.members.push(u);
+        if (mine.members.length > MAX_GROUP) return { error: `at most ${MAX_GROUP} people` };
+        this.saveGroup(mine);
+        return { ok: true, g: mine };
+      }
+    } else if (this.num("SELECT COUNT(*) AS n FROM chatgroups WHERE owner = ? AND kind = 'group'", me) >= MAX_GROUPS) {
+      return { error: `you can have up to ${MAX_GROUPS} groups` };
+    }
+    const g = { id: crypto.randomUUID(), name, kind, owner: me, members: [me, ...m.list] };
+    this.saveGroup(g);
+    return { ok: true, g };
+  }
+
+  updateGroup(me, body) {
+    const g = this.group(String(body.id || ""));
+    if (!g || !g.members.includes(me)) return { error: "no such group" };
+    if (g.owner !== me) return { error: "only the person who made it can change it" };
+    if (body.name !== undefined && g.kind === "group") {
+      const n = cleanGroupName(body.name);
+      if (!n) return { error: "bad name" };
+      g.name = n;
+    }
+    if (body.add !== undefined) {
+      const m = this.cleanMembers(me, body.add);
+      if (m.error) return m;
+      for (const u of m.list) if (!g.members.includes(u)) g.members.push(u);
+    }
+    if (Array.isArray(body.remove)) {
+      for (const x of body.remove) {
+        const u = normUuid(x);
+        if (!u || u === me || !g.members.includes(u)) continue;
+        g.members = g.members.filter((v) => v !== u);
+        this.sendTo(u, { t: "group_gone", id: g.id });
+      }
+    }
+    if (g.members.length > MAX_GROUP) return { error: `at most ${MAX_GROUP} people` };
+    this.saveGroup(g);
+    return { ok: true, g };
+  }
+
+  leaveGroup(me, body) {
+    const g = this.group(String(body.id || ""));
+    if (!g || !g.members.includes(me)) return { error: "no such group" };
+    if (g.owner === me) {
+      this.sql.exec("DELETE FROM chatgroups WHERE id = ?", g.id);
+      for (const m of g.members) this.sendTo(m, { t: "group_gone", id: g.id });
+    } else {
+      g.members = g.members.filter((v) => v !== me);
+      this.saveGroup(g);
+      this.sendTo(me, { t: "group_gone", id: g.id });
+    }
+    return { ok: true };
+  }
+
+  chat(ws, from, m) {
+    const text = typeof m.text === "string" ? m.text.replace(/[\u0000-\u001f\u007f\u00a7]/g, "").trim().slice(0, 256) : "";
+    if (!text) return;
+    const n = typeof m.n === "string" && /^[A-Za-z0-9_]{1,16}$/.test(m.n) ? m.n : null;
+    const at = Date.now();
+    if (typeof m.to === "string") {
+      const to = normUuid(m.to);
+      if (!to || !this.isFriend(from, to)) { ws.send(JSON.stringify({ t: "msgfail", to: m.to, reason: "not friends" })); return; }
+      const got = this.sendTo(to, { t: "msg", from, n, to, text, at });
+      if (!got) ws.send(JSON.stringify({ t: "msgfail", to, reason: "offline" }));
+    } else if (typeof m.g === "string") {
+      const g = this.group(m.g);
+      if (!g || !g.members.includes(from)) { ws.send(JSON.stringify({ t: "msgfail", g: m.g, reason: "no such group" })); return; }
+      let got = 0;
+      for (const u of g.members) if (u !== from) got += this.sendTo(u, { t: "msg", from, n, g: g.id, gn: g.name, text, at });
+      if (!got) ws.send(JSON.stringify({ t: "msgfail", g: g.id, reason: "offline" }));
     }
   }
 
@@ -493,6 +645,17 @@ export async function handle(req, env, keysOverride = null) {
   if (path === "/v1/friends/list") return json(200, await presence(env).friendsState(me));
 
   if (path === "/v1/cosmetics") return json(200, { ok: true, c: await presence(env).setCosmetics(me, body) });
+
+  if (path.startsWith("/v1/chat/")) {
+    const p = presence(env);
+    let r;
+    if (path === "/v1/chat/groups") r = { groups: await p.groupsOf(me) };
+    else if (path === "/v1/chat/group/create") r = await p.createGroup(me, body);
+    else if (path === "/v1/chat/group/update") r = await p.updateGroup(me, body);
+    else if (path === "/v1/chat/group/leave") r = await p.leaveGroup(me, body);
+    else return json(404, { error: "not found" });
+    return json(r.error ? 400 : 200, r);
+  }
 
   if (path.startsWith("/v1/friends/")) {
     const other = normUuid(body.uuid);

@@ -31,6 +31,7 @@ public class ModuleManager {
         register(new ServerAddressModule());
         register(new ReplayModModule());
         register(new PackDisplayModule());
+        register(new SpotifyModule());
         // PvP
         register(new TotemPopModule());
         register(new AutoGgModule());
@@ -61,6 +62,7 @@ public class ModuleManager {
         register(new BlockOutlineModule());
         register(new MotionBlurModule());
         register(new XrayModule());
+        register(new FakeChunksModule());
 
         register(new CustomSkyModule());
         register(new CinematicModule());

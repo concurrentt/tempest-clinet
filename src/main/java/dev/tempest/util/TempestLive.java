@@ -42,7 +42,8 @@ public final class TempestLive {
 
     /** Called every client tick by TempestNet with the current token (null = not signed in). */
     static void tick(MinecraftClient c, String base, String token) {
-        boolean want = token != null && c.world != null && c.player != null && (Emotes.wanted() || RemoteCosmetics.seeOthers());
+        boolean want = token != null && c.world != null && c.player != null
+                && (Emotes.wanted() || RemoteCosmetics.seeOthers() || dev.tempest.modules.ChatTabsModule.tempestChatOn());
         if (!want) { close(); return; }
         long now = System.currentTimeMillis();
         WebSocket w = ws;
@@ -82,6 +83,9 @@ public final class TempestLive {
         send(o.toString());
     }
 
+    /** Sends one raw message (Tempest chat). */
+    static void sendRaw(String text) { send(text); }
+
     private static synchronized void send(String text) {
         WebSocket w = ws;
         if (w == null) return;
@@ -102,6 +106,7 @@ public final class TempestLive {
                         lastWatch = "";
                         lastWatchCheck = 0;
                         lastPing = System.currentTimeMillis();
+                        TempestChat.refreshGroups();
                     });
         } catch (Exception e) {
             connecting = false;
@@ -130,6 +135,7 @@ public final class TempestLive {
         try {
             JsonObject m = JsonParser.parseString(text).getAsJsonObject();
             String t = m.has("t") ? m.get("t").getAsString() : "";
+            if (t.equals("msg") || t.equals("msgfail") || t.equals("group") || t.equals("group_gone")) { TempestChat.onLive(m); return; }
             UUID id = m.has("uuid") ? UUID.fromString(m.get("uuid").getAsString()) : null;
             if (id == null) return;
             switch (t) {

@@ -41,7 +41,7 @@ public final class Icons {
                 {"low_fire", "flame"}, {"smooth_hotbar", "hotbar"}, {"particle_filter", "sparkles"}, {"custom_fov", "fov"},
                 {"fast_screens", "layout"}, {"clumps", "orbs"}, {"nametags", "idcard"}, {"chat_mentions", "at"},
                 {"message_stacking", "stack"}, {"chat_upgrades", "chat"}, {"client", "gear"},
-                {"custom_sky", "planet_stars"}, {"cosmetics", "wings"}, {"emotes", "emote_wave"}, {"texture_painter", "brush"}, {"fireflies", "fireflies"}, {"cinematic_grade", "aperture"},
+                {"custom_sky", "planet_stars"}, {"cosmetics", "wings"}, {"emotes", "emote_wave"}, {"fake_chunks", "cube"}, {"spotify", "note"}, {"texture_painter", "brush"}, {"fireflies", "fireflies"}, {"cinematic_grade", "aperture"},
         };
         for (String[] e : m) MODULES.put(e[0], e[1]);
     }

@@ -154,5 +154,40 @@ await call("/v1/cosmetics", { wings: "Demon" }, tA);
 assert.deepEqual(wsB.sent.at(-1), { t: "cos", uuid: A, c: { wings: "Demon" } }, "cosmetic change pushed live");
 for (let i = 0; i < 40; i++) obj.webSocketMessage(wsC, JSON.stringify({ t: "emote", id: "dance" }));
 assert.ok(wsB.sent.filter((m) => m.uuid === C).length <= 30, "socket rate limit");
+
+// ---- chat: private messages only between friends (A and C are friends; A and B are not any more)
+await new Promise((r) => setTimeout(r, 10_100));       // let the socket rate limit window pass
+wsA.sent.length = 0; wsB.sent.length = 0; wsC.sent.length = 0;
+obj.webSocketMessage(wsA, JSON.stringify({ t: "msg", to: C, text: " hi\u00a7c there ", n: "Steve" }));
+assert.equal(wsC.sent.at(-1).t, "msg"); assert.equal(wsC.sent.at(-1).text, "hic there"); assert.equal(wsC.sent.at(-1).from, A);
+assert.equal(wsC.sent.at(-1).n, "Steve");
+obj.webSocketMessage(wsA, JSON.stringify({ t: "msg", to: B, text: "psst" }));
+assert.equal(wsB.sent.length, 0, "no messages to non-friends"); assert.deepEqual(wsA.sent.at(-1), { t: "msgfail", to: B, reason: "not friends" });
+obj.webSocketMessage(wsA, JSON.stringify({ t: "msg", to: C, text: "x".repeat(999), n: "bad name!" }));
+assert.equal(wsC.sent.at(-1).text.length, 256); assert.equal(wsC.sent.at(-1).n, null);
+
+// ---- groups and party
+[s, b] = await call("/v1/chat/group/create", { name: "PvP Squad", members: [C] }, tA); assert.equal(s, 200);
+const g = b.g; assert.deepEqual(g.members, [A, C]); assert.equal(g.kind, "group");
+assert.equal(wsC.sent.at(-1).t, "group", "members hear about the new group");
+[s, b] = await call("/v1/chat/group/create", { name: "x", members: [B] }, tA); assert.equal(s, 400, "only friends");
+[s, b] = await call("/v1/chat/group/create", { name: "<script>", members: [C] }, tA); assert.equal(s, 400, "bad name");
+[s, b] = await call("/v1/chat/groups", {}, tC); assert.deepEqual(b.groups.map((x) => x.id), [g.id]);
+[s, b] = await call("/v1/chat/groups", {}, tB); assert.deepEqual(b.groups, []);
+obj.webSocketMessage(wsC, JSON.stringify({ t: "msg", g: g.id, text: "gg", n: "Alex" }));
+assert.deepEqual({ ...wsA.sent.at(-1), at: 0 }, { t: "msg", from: C, n: "Alex", g: g.id, gn: "PvP Squad", text: "gg", at: 0 });
+obj.webSocketMessage(wsB, JSON.stringify({ t: "msg", g: g.id, text: "let me in" }));
+assert.deepEqual(wsB.sent.at(-1), { t: "msgfail", g: g.id, reason: "no such group" }, "outsiders can't post");
+[s, b] = await call("/v1/chat/group/update", { id: g.id, name: "Renamed" }, tC); assert.equal(s, 400, "only the owner edits");
+[s, b] = await call("/v1/chat/group/update", { id: g.id, name: "Squad 2" }, tA); assert.equal(b.g.name, "Squad 2");
+[s, b] = await call("/v1/chat/group/create", { kind: "party", members: [C] }, tA); assert.equal(b.g.kind, "party"); assert.equal(b.g.name, "Party");
+const party = b.g;
+[s, b] = await call("/v1/chat/group/create", { kind: "party", members: [C] }, tA); assert.equal(b.g.id, party.id, "one party each");
+[s, b] = await call("/v1/chat/group/leave", { id: party.id }, tC); assert.equal(s, 200);
+assert.deepEqual(wsC.sent.at(-1), { t: "group_gone", id: party.id });
+[s, b] = await call("/v1/chat/groups", {}, tA); assert.deepEqual(b.groups.find((x) => x.id === party.id).members, [A]);
+[s, b] = await call("/v1/chat/group/leave", { id: g.id }, tA); assert.equal(s, 200, "owner leaving ends it");
+[s, b] = await call("/v1/chat/groups", {}, tC); assert.deepEqual(b.groups, []);
+
 console.log = quiet;
 console.log("all worker tests passed");

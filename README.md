@@ -372,6 +372,15 @@ Build from the project directory with: gradle build
 
 
 
+
+## 0.19.2 - Kill effects remastered, key bind fix
+- Kill effects rebuilt: smooth light fall-off, three theme tones plus white-hot cores, physics sparks with motion
+  streaks that land on the ground, a light pool under every kill and lens-flare stars.
+  Soul Spiral gets a rising soul wisp and comet-headed strands; Shockwave a shock dome and skidding debris; Storm
+  Strike re-strikes with forks and electric arcs over the ground; Starburst twinkles and drops glitter; Ascension adds
+  turning god rays, a golden halo and drifting feathers. Detail setting still scales it down.
+- Key binds: clicking a bind while the search box was active typed the key into the search instead of binding it.
+
 ## 0.19.1 - Social redesign, tab list logo, totem icons
 - Tempest logo in the tab list for Tempest users and friends (Nametags > Logo In Tab List). The online lookup now covers
   everyone in the tab list, not just nearby players.

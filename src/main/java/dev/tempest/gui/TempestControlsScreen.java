@@ -352,7 +352,7 @@ public class TempestControlsScreen extends Screen {
                     if (!k.isDefault() && Draw.hit(mx, my, lx + lw - 20, y + 2, 16, ROW - 4)) { bind(k, k.getDefaultKey()); return true; }
                     if (Draw.hit(mx, my, kx, y + 2, kw, ROW - 4)) {
                         if (click.button() == 1) bind(k, k.getDefaultKey());
-                        else binding = k;
+                        else startBinding(k);
                         return true;
                     }
                 }
@@ -360,6 +360,16 @@ public class TempestControlsScreen extends Screen {
             }
         }
         return super.mouseClicked(click, doubled);
+    }
+
+    /**
+     * Waits for a key for this bind. The search box gives up keyboard focus first: a key press also produces a
+     * typed character, which would otherwise land in the search bar instead of only setting the bind.
+     */
+    private void startBinding(KeyBinding k) {
+        binding = k;
+        search.setFocused(false);
+        setFocused(null);
     }
 
     @Override

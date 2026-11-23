@@ -1,3 +1,14 @@
+## 0.20.0 - Tempest Editor icons
+- Tempest Editor's main page has its own hand-drawn, full-colour icons for PvP, Blocks, Gear, HUD, Misc, Effects and
+  Sounds and for the Configs / My Packs / Cosmetics / Painter buttons, and each tile glows in its own colour on hover
+  (tools/make_editor_icons.py).
+
+## 0.19.9 - Spotify HUD, Tempest chat, Fake Chunks
+- Spotify HUD: cover, title, artist, album, progress and synced lyrics (lrclib.net); the card takes the album's colours.
+- Chat Tabs is Tempest chat: Private messages with friends, Party, and your own group chats.
+- Fake Chunks (singleplayer): generates the land around your spawn in the background, like Chunky.
+- Fix: the world-loading overlay no longer covers the pause menu.
+
 ## 0.19.8 - Hitboxes, emote camera
 - Combat Hitboxes: a hitbox only turns red while your crosshair is on it and it's within your reach (a block in the
   way doesn't count).

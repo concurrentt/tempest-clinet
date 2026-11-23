@@ -194,7 +194,21 @@ public class TempestEditorScreen extends Screen {
 
     // ----- hub
     private static final int TILE = 84, TILE_GAP = 8;
-    private static final String[][] SHORTCUTS = {{"gear", "Configs"}, {"layers", "My Packs"}, {"wings", "Cosmetics"}, {"brush", "Painter"}};
+    private static final String[][] SHORTCUTS = {{"short_configs", "Configs"}, {"short_packs", "My Packs"}, {"short_cosmetics", "Cosmetics"}, {"short_painter", "Painter"}};
+
+    /** Full-colour icons for this page (textures/gui/editor_icons.png, made by tools/make_editor_icons.py). */
+    private static final Identifier HUB_ICONS = Identifier.of("tempest", "textures/gui/editor_icons.png");
+    private static final String[] HUB_NAMES = {"group_pvp", "group_blocks", "group_gear", "group_hud", "group_misc", "group_effects",
+            "group_sounds", "short_configs", "short_packs", "short_cosmetics", "short_painter"};
+    /** Each group's colour (tile glow on hover). */
+    private static final int[] GROUP_GLOW = {0xFF5C6C, 0x7BD651, 0x5EE6FF, 0xFFD34D, 0xB06CFF, 0xFFB347, 0x5AB4FF};
+
+    private static void hubIcon(DrawContext ctx, String name, int x, int y, int size, float alpha) {
+        int i = java.util.Arrays.asList(HUB_NAMES).indexOf(name);
+        if (i < 0) return;
+        ctx.drawTexture(RenderPipelines.GUI_TEXTURED, HUB_ICONS, x, y, (i % 8) * 64f, (i / 8) * 64f, size, size, 64, 64, 512, 128,
+                MenuKit.fa(0xFFFFFFFF, alpha));
+    }
 
     private int tilesX() { return width / 2 - (PackLooks.GROUPS.length * (TILE + TILE_GAP) - TILE_GAP) / 2; }
     private int tilesY() { return height / 2 - TILE / 2 - 14; }
@@ -215,7 +229,9 @@ public class TempestEditorScreen extends Screen {
             if (p > 0.02f) Draw.shadow(ctx, x, yy, ts, ts, 8, Math.round(6 * p));
             Draw.panel(ctx, x, yy, ts, ts, 8, MenuKit.fa(Draw.lerpColor(0x90181A22, 0xC0262A38, p), e),
                     MenuKit.fa(Draw.lerpColor(0x40FFFFFF, Draw.withAlpha(Draw.accent(), 0xC0), p), e));
-            item(ctx, PackLooks.GROUP_ICONS[i], x + ts / 2, yy + ts / 2 - 8, 2f + 0.25f * p);
+            if (p > 0.02f) TempestLoading.drawGlow(ctx, x + ts / 2, yy + ts / 2 - 8, Math.round(ts * 1.3f), GROUP_GLOW[i], 0.35f * p * e);
+            int is = Math.round(ts * 0.46f + 4 * p);
+            hubIcon(ctx, HUB_NAMES[i], x + (ts - is) / 2, yy + ts / 2 - 8 - is / 2, is, e);
             String label = PackLooks.GROUPS[i];
             Draw.centered(ctx, tr, label, x + ts / 2, yy + ts - 22, MenuKit.fa(0xFFFFFFFF, e));
             ctx.fill(x + ts / 2 - 8, yy + ts - 11, x + ts / 2 + 8, yy + ts - 10, MenuKit.fa(Draw.lerpColor(0x50FFFFFF, Draw.accent(), p), e));
@@ -229,7 +245,7 @@ public class TempestEditorScreen extends Screen {
             boolean hv = Draw.hit(mx, my, x, by, bw, bh);
             float p = Draw.hoverProgress("ed_short" + i, hv);
             Draw.panel(ctx, x, by, bw, bh, 6, MenuKit.fa(Draw.lerpColor(0x90181A22, 0xC0262A38, p), e), MenuKit.fa(Draw.lerpColor(0x40FFFFFF, 0x90FFFFFF, p), e));
-            Icons.draw(ctx, SHORTCUTS[i][0], x + bw / 2 - 5, by + 5, 10, MenuKit.fa(0xFFFFFFFF, e));
+            hubIcon(ctx, SHORTCUTS[i][0], x + bw / 2 - 7, by + 3, 14, e);
             Draw.centered(ctx, tr, SHORTCUTS[i][1], x + bw / 2, by + 19, MenuKit.fa(0xFFE4E6EC, e));
         }
         String info = dirty() ? "You have looks that aren't applied yet" : "Looks are saved into the \"" + CustomPack.NAME + "\" pack";
@@ -257,7 +273,7 @@ public class TempestEditorScreen extends Screen {
         boolean backHv = Draw.hit(mx, my, x + 10, y + 7, 46, 18);
         Draw.panel(ctx, x + 10, y + 7, 46, 18, 5, backHv ? 0xEC2A2C33 : 0xD81A1B20, 0x40FFFFFF);
         Draw.centered(ctx, tr, "< Back", x + 33, y + 12, 0xFFE4E6EC);
-        item(ctx, PackLooks.GROUP_ICONS[group], x + 72, y + 16, 1f);
+        hubIcon(ctx, HUB_NAMES[group], x + 63, y + 7, 18, 1f);
         Draw.text(ctx, tr, Draw.bold(PackLooks.GROUPS[group]), x + 84, y + 7, 0xFFFFFFFF, false);
         Draw.text(ctx, tr, "Pick a look, then press Apply", x + 84, y + 17, 0xFF8B90A0, false);
         boolean dirty = dirty();

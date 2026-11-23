@@ -374,6 +374,16 @@ Build from the project directory with: gradle build
 
 
 
+
+## 0.19.4 - Shulker icons, HD menu backgrounds
+- Shulker Preview (like Simple Shulker Preview): shulker boxes in any slot show an icon of what's inside and a fullness
+  bar (green, amber at 75%, red when full). Icon shows the most common item, first or last slot; a shulker named after
+  an item ("diamond", "minecraft:tnt") shows that item. Icon size Small/Medium/Large. The hover preview still works.
+- Main menu backgrounds re-rendered at 1920x1080 (1.5x supersampled): soft round stars in several colours with sparkles
+  on the brightest, wispy detail in nebulae and the Milky Way, layered mountain ridges with haze, bloom, no banding.
+  Regenerate with tools/make_menu_hq.py.
+- Main menu: more space between the buttons; favourite servers moved to the top-left corner, profile card to the top-right.
+
 ## 0.19.3 - Configs, Low Shields, presence fix
 - Friends seeing you offline: the online list is now saved by the service (so restarts don't wipe it), heartbeats
   every 45 s, one sent as soon as Social opens, and your status in Social only says Online once the service confirmed it.

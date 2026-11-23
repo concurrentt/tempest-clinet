@@ -34,7 +34,7 @@ public class TempestTitleScreen extends Screen {
         buttons.clear();
         int bw = Math.min(260, width - 40);
         int bh = height >= 300 ? 24 : 20;
-        int gap = 5;
+        int gap = height >= 320 ? 9 : 6;                 // breathing room between the buttons
         int promoH = height >= 340 ? 62 : 0;            // the feature card only shows when there is room
         logoSize = Math.max(40, Math.min(80, Math.round(height * 0.15f)));
         int titleH = height >= 300 ? 26 : 16;
@@ -64,8 +64,9 @@ public class TempestTitleScreen extends Screen {
         buttons.add(new Btn("quit", x + half + gap, y, bw - half - gap, 20, "power", "Quit", null, 0, 0.24f));
 
         sideCards = width >= 720;
-        favW = 196; favH = 146; favX = 18; favY = Math.max(14, height / 2 - favH / 2);
-        profW = 176; profH = 116; profX = width - profW - 18; profY = Math.max(14, height / 2 - profH / 2);
+        // favourite servers in the top-left corner, your profile card in the top-right corner
+        favW = 196; favH = 146; favX = 14; favY = 14;
+        profW = 176; profH = 116; profX = width - profW - 14; profY = 14;
     }
 
     private float entrance(float delay) {
@@ -82,7 +83,7 @@ public class TempestTitleScreen extends Screen {
     private static final net.minecraft.util.Identifier BG_BLOODMOON = net.minecraft.util.Identifier.of("tempest", "textures/gui/menu_bg_bloodmoon.png");
     private static final net.minecraft.util.Identifier WORDMARK = net.minecraft.util.Identifier.of("tempest", "textures/gui/wordmark.png");
     private static final net.minecraft.util.Identifier PROMO = net.minecraft.util.Identifier.of("tempest", "textures/gui/promo_sky.png");
-    private static final int BG_W = 1280, BG_H = 720, WM_W = 594, WM_H = 91, PROMO_W = 1040, PROMO_H = 300;
+    private static final int BG_W = 1920, BG_H = 1080, WM_W = 594, WM_H = 91, PROMO_W = 1040, PROMO_H = 300;
 
     /** Picture that fills the screen (cover fit), drifting very slowly so the menu feels alive. */
     public static void drawBackdrop(DrawContext ctx, int width, int height, float time) {

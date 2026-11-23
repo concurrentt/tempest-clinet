@@ -21,9 +21,92 @@ import net.minecraft.util.collection.DefaultedList;
 public class ShulkerPreviewModule extends Module {
     private final BoolSetting requireShift = add(new BoolSetting("shift", "Require Shift", true));
     private final ModeSetting style = add(new ModeSetting("style", "Style", "Grid", "Grid", "Simple"));
+    private final BoolSetting slotIcon = add(new BoolSetting("slot_icon", "Item Icon On Shulker", true));
+    private final ModeSetting displayItem = add(new ModeSetting("display_item", "Icon Shows", "Most Items", "Most Items", "First Slot", "Last Slot"));
+    private final BoolSetting nameIcon = add(new BoolSetting("name_icon", "Use Name As Icon (e.g. \"diamond\")", true));
+    private final ModeSetting iconSize = add(new ModeSetting("icon_size", "Icon Size", "Medium", "Small", "Medium", "Large"));
+    private final BoolSetting capacityBar = add(new BoolSetting("capacity_bar", "Fullness Bar", true));
 
     public ShulkerPreviewModule() {
-        super("shulker_preview", "Shulker Preview", "Preview shulker contents in inventory. Grid or simple compact style.", Category.UTILITY, true);
+        super("shulker_preview", "Shulker Preview", "See what's in a shulker without opening it: an icon of its contents on the item, a fullness bar, and a preview on hover.", Category.UTILITY, true);
+    }
+
+    private static boolean drawingIcon;   // the icon itself goes through the same item drawing - never recurse
+
+    private static boolean isShulker(ItemStack st) {
+        return !st.isEmpty() && st.getItem() instanceof BlockItem bi && bi.getBlock() instanceof ShulkerBoxBlock;
+    }
+
+    /**
+     * Called for every item drawn in a slot (inventories, hotbar, chests): on a shulker box, draws an icon of what's
+     * inside over it and a bar showing how full it is.
+     */
+    public static void drawSlotIcon(DrawContext ctx, ItemStack st, int x, int y) {
+        if (drawingIcon || !isShulker(st)) return;
+        ShulkerPreviewModule m = ModuleManager.get(ShulkerPreviewModule.class);
+        if (m == null || !m.isEnabled() || (!m.slotIcon.get() && !m.capacityBar.get())) return;
+        ContainerComponent comp = st.get(DataComponentTypes.CONTAINER);
+        DefaultedList<ItemStack> items = DefaultedList.ofSize(27, ItemStack.EMPTY);
+        if (comp != null) comp.copyTo(items);
+
+        float fill = 0f;
+        for (ItemStack s : items) if (!s.isEmpty()) fill += s.getCount() / (float) Math.max(1, s.getMaxCount());
+        fill /= 27f;
+
+        if (m.slotIcon.get()) {
+            ItemStack icon = m.pickIcon(st, items);
+            if (!icon.isEmpty()) {
+                float scale = switch (m.iconSize.get()) { case "Small" -> 0.5f; case "Large" -> 0.75f; default -> 0.625f; };
+                float size = 16 * scale;
+                drawingIcon = true;
+                try {
+                    ctx.getMatrices().pushMatrix();
+                    ctx.getMatrices().translate(x + 16 - size + 0.5f, y + 16 - size - (m.capacityBar.get() && fill > 0 ? 1.5f : 0f));
+                    ctx.getMatrices().scale(scale, scale);
+                    ctx.drawItem(icon, 0, 0);
+                    ctx.getMatrices().popMatrix();
+                } finally {
+                    drawingIcon = false;
+                }
+            }
+        }
+        if (m.capacityBar.get() && fill > 0f) {
+            int w = Math.max(1, Math.round(13 * fill));
+            int col = fill >= 0.999f ? 0xFFFF5A5A : fill >= 0.75f ? 0xFFFFC857 : 0xFF5BE38A;
+            ctx.fill(x + 2, y + 13, x + 15, y + 15, 0xFF000000);
+            ctx.fill(x + 2, y + 13, x + 2 + w, y + 14, col);
+        }
+    }
+
+    /** Which item to show: the shulker's name if it names an item, else by the "Icon Shows" setting. */
+    private ItemStack pickIcon(ItemStack shulker, DefaultedList<ItemStack> items) {
+        if (nameIcon.get()) {
+            net.minecraft.text.Text custom = shulker.get(DataComponentTypes.CUSTOM_NAME);
+            if (custom != null) {
+                String n = custom.getString().trim().toLowerCase(java.util.Locale.ROOT).replace(' ', '_');
+                net.minecraft.util.Identifier id = net.minecraft.util.Identifier.tryParse(n.contains(":") ? n : "minecraft:" + n);
+                if (id != null && net.minecraft.registry.Registries.ITEM.containsId(id)) {
+                    net.minecraft.item.Item it = net.minecraft.registry.Registries.ITEM.get(id);
+                    if (it != net.minecraft.item.Items.AIR) return new ItemStack(it);
+                }
+            }
+        }
+        switch (displayItem.get()) {
+            case "First Slot" -> { for (ItemStack s : items) if (!s.isEmpty()) return s; }
+            case "Last Slot" -> { for (int i = items.size() - 1; i >= 0; i--) if (!items.get(i).isEmpty()) return items.get(i); }
+            default -> {
+                java.util.Map<net.minecraft.item.Item, Integer> totals = new java.util.HashMap<>();
+                ItemStack best = ItemStack.EMPTY;
+                int bestCount = 0;
+                for (ItemStack s : items) {
+                    if (s.isEmpty()) continue;
+                    int t = totals.merge(s.getItem(), s.getCount(), Integer::sum);
+                    if (t > bestCount) { bestCount = t; best = s; }
+                }
+                return best;
+            }
+        }
+        return ItemStack.EMPTY;
     }
 
     /** @return true if a preview was drawn (the vanilla tooltip should be cancelled). */

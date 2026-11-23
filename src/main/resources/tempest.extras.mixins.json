@@ -42,7 +42,8 @@
     "ChatScreenMixin",
     "WorldRendererEffectsMixin",
     "GameOptionsSaveMixin",
-    "PlayerListHudMixin"
+    "PlayerListHudMixin",
+    "ShulkerSlotIconMixin"
   ],
   "injectors": {
     "defaultRequire": 0

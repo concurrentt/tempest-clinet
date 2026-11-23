@@ -90,7 +90,7 @@ public class ThemeScreen extends Screen {
             ctx.enableScissor(tx, ty, tx + THUMB_W, ty + THUMB_H);
             if (BG_FILES[i] != null) {
                 Identifier id = Identifier.of("tempest", "textures/gui/" + BG_FILES[i] + ".png");
-                ctx.drawTexture(RenderPipelines.GUI_TEXTURED, id, tx, ty, 0f, 0f, THUMB_W, THUMB_H, 1280, 720, 1280, 720, 0xFFFFFFFF);
+                ctx.drawTexture(RenderPipelines.GUI_TEXTURED, id, tx, ty, 0f, 0f, THUMB_W, THUMB_H, 1920, 1080, 1920, 1080, 0xFFFFFFFF);
             } else if (BACKGROUNDS[i].equals("Animated")) {
                 ctx.getMatrices().pushMatrix();
                 ctx.getMatrices().translate(tx, ty);

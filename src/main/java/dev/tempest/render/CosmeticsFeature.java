@@ -151,15 +151,20 @@ public class CosmeticsFeature extends FeatureRenderer<PlayerEntityRenderState, B
             if (k < 3) dir += Math.toRadians(st[k + 1]) * (0.6 + 0.4 * Math.sin(ph - k * 0.6));
         }
         RenderLayer layer = RenderLayers.entityTranslucent(texture);
+        Extrude.Mask mask = Extrude.mask(texture, 64, 64);
+        // a little thicker at the root than at the tip, like a real wing
+        float[] thick = {0.065f * size, 0.05f * size, 0.035f * size};
         for (int side = -1; side <= 1; side += 2) {
             final int sd = side;
             queue.submitCustom(matrices, layer, (entry, vc) -> {
                 for (int k = 0; k < 3; k++) {
                     float u0 = SPLIT[k], u1 = SPLIT[k + 1];
-                    vert(vc, entry, sd * jx[k], rootY + top + jy[k], jz[k], u0, 0, 0xFFFFFFFF, light);
-                    vert(vc, entry, sd * jx[k + 1], rootY + top + jy[k + 1], jz[k + 1], u1, 0, 0xFFFFFFFF, light);
-                    vert(vc, entry, sd * jx[k + 1], rootY + bottom + jy[k + 1], jz[k + 1], u1, 1, 0xFFFFFFFF, light);
-                    vert(vc, entry, sd * jx[k], rootY + bottom + jy[k], jz[k], u0, 1, 0xFFFFFFFF, light);
+                    Extrude.sheet(vc, entry, mask,
+                            Extrude.p(sd * jx[k], rootY + top + jy[k], jz[k]),
+                            Extrude.p(sd * jx[k + 1], rootY + top + jy[k + 1], jz[k + 1]),
+                            Extrude.p(sd * jx[k + 1], rootY + bottom + jy[k + 1], jz[k + 1]),
+                            Extrude.p(sd * jx[k], rootY + bottom + jy[k], jz[k]),
+                            u0, 0, u1, 1, thick[k], 0xFFFFFFFF, light);
                 }
             });
         }
@@ -190,6 +195,8 @@ public class CosmeticsFeature extends FeatureRenderer<PlayerEntityRenderState, B
                     vert(vc, entry, r, y, -r, 1, 0, col, FULL_BRIGHT);
                     vert(vc, entry, r, y, r, 1, 1, col, FULL_BRIGHT);
                     vert(vc, entry, -r, y, r, 0, 1, col, FULL_BRIGHT);
+                    // the solid ring: a tube with a square cross-section along the texture's bright band
+                    tube(vc, entry, 0.755f * r, 0.06f * r, 0.022f * k, y, col, FULL_BRIGHT);
                 });
             }
             case "Devil Horns" -> {
@@ -197,27 +204,25 @@ public class CosmeticsFeature extends FeatureRenderer<PlayerEntityRenderState, B
                     crossed(matrices, queue, HORN, side * H * 0.55f, T + 0.03f, -0.08f * k, 0.13f * k, 0.30f * k, side * 0.07f * k, light);
             }
             case "Cat Ears" -> {
+                Extrude.Mask m = Extrude.mask(CAT_EAR, 24, 24);
                 for (int side = -1; side <= 1; side += 2) {
                     final int sd = side;
                     queue.submitCustom(matrices, RenderLayers.entityTranslucent(CAT_EAR), (entry, vc) -> {
                         float bx = sd * H * 0.62f, by = T + 0.03f, z = -0.04f * k, hw = 0.10f * k, hh = 0.20f * k, lean = sd * 0.04f * k;
-                        vert(vc, entry, bx - hw, by, z, 0, 1, 0xFFFFFFFF, light);
-                        vert(vc, entry, bx + hw, by, z, 1, 1, 0xFFFFFFFF, light);
-                        vert(vc, entry, bx + hw + lean, by - hh, z, 1, 0, 0xFFFFFFFF, light);
-                        vert(vc, entry, bx - hw + lean, by - hh, z, 0, 0, 0xFFFFFFFF, light);
+                        Extrude.sheet(vc, entry, m, Extrude.p(bx - hw + lean, by - hh, z), Extrude.p(bx + hw + lean, by - hh, z),
+                                Extrude.p(bx + hw, by, z), Extrude.p(bx - hw, by, z), 0, 0, 1, 1, 0.06f * k, 0xFFFFFFFF, light);
                     });
                 }
             }
-            case "Crown" -> band(matrices, queue, CROWN, H + 0.012f, T + 0.07f, T - 0.15f, 1, FULL_BRIGHT);
+            case "Crown" -> band(matrices, queue, CROWN, H + 0.028f, T + 0.07f, T - 0.15f, 1, 0.035f, FULL_BRIGHT);
             case "Bunny Ears" -> {
                 for (int side = -1; side <= 1; side += 2) {
                     final int sd = side;
+                    Extrude.Mask m = Extrude.mask(BUNNY, 16, 32);
                     queue.submitCustom(matrices, RenderLayers.entityTranslucent(BUNNY), (entry, vc) -> {
                         float bx = sd * H * 0.43f, by = T + 0.03f, z = 0.02f * k, hw = 0.075f * k, hh = 0.40f * k, lean = sd * 0.06f * k;
-                        vert(vc, entry, bx - hw, by, z, 0, 1, 0xFFFFFFFF, light);
-                        vert(vc, entry, bx + hw, by, z, 1, 1, 0xFFFFFFFF, light);
-                        vert(vc, entry, bx + hw + lean, by - hh, z + 0.06f * k, 1, 0, 0xFFFFFFFF, light);
-                        vert(vc, entry, bx - hw + lean, by - hh, z + 0.06f * k, 0, 0, 0xFFFFFFFF, light);
+                        Extrude.sheet(vc, entry, m, Extrude.p(bx - hw + lean, by - hh, z + 0.06f * k), Extrude.p(bx + hw + lean, by - hh, z + 0.06f * k),
+                                Extrude.p(bx + hw, by, z), Extrude.p(bx - hw, by, z), 0, 0, 1, 1, 0.065f * k, 0xFFFFFFFF, light);
                     });
                 }
             }
@@ -225,13 +230,13 @@ public class CosmeticsFeature extends FeatureRenderer<PlayerEntityRenderState, B
                 for (int side = -1; side <= 1; side += 2)
                     crossed(matrices, queue, ANTLER, side * H * 0.6f, T + 0.03f, 0.0f, 0.21f * k, 0.42f * k, side * 0.10f * k, light);
             }
-            case "Flower Crown" -> band(matrices, queue, FLOWERS, H + 0.016f, T + 0.08f, T - 0.06f, 2, light);
+            case "Flower Crown" -> band(matrices, queue, FLOWERS, H + 0.03f, T + 0.08f, T - 0.06f, 2, 0.04f, light);
             case "Witch Hat" -> {
-                brim(matrices, queue, WITCH, 0.50f * k, T - 0.003f, light);
+                brim(matrices, queue, WITCH, 0.50f * k, T - 0.003f, 0.045f * k, light);
                 cone(matrices, queue, WITCH, 0.30f * k, T - 0.003f, T - 0.70f * k, 0.16f * k, light);
             }
             case "Top Hat" -> {
-                brim(matrices, queue, TOP_HAT, 0.42f * k, T - 0.003f, light);
+                brim(matrices, queue, TOP_HAT, 0.42f * k, T - 0.003f, 0.04f * k, light);
                 ring(matrices, queue, TOP_HAT, 0.27f * k, T - 0.003f, T - 0.50f * k, 16, 1, light);
                 cap(matrices, queue, TOP_HAT, 0.27f * k, T - 0.50f * k, light);
             }
@@ -240,12 +245,13 @@ public class CosmeticsFeature extends FeatureRenderer<PlayerEntityRenderState, B
     }
 
     /**
-     * A square band hugging the head just outside it (crowns): four double-sided walls at +-h, the texture repeated
-     * `perSide` times along each wall. Being outside the head/helmet box, nothing can poke through it.
+     * A square band hugging the head just outside it (crowns): four solid walls at +-h (`thick` deep, kept outside
+     * the head), the texture repeated `perSide` times along each wall, its outline (crown points, flowers) walled.
      */
     private static void band(MatrixStack matrices, OrderedRenderCommandQueue queue, Identifier texture, float h, float y0, float y1,
-                             int perSide, int light) {
+                             int perSide, float thick, int light) {
         float[][] c = {{-h, -h}, {h, -h}, {h, h}, {-h, h}};
+        Extrude.Mask m = Extrude.mask(texture, 64, 16);
         queue.submitCustom(matrices, RenderLayers.entityTranslucent(texture), (entry, vc) -> {
             for (int i = 0; i < 4; i++) {
                 float[] a = c[i], b = c[(i + 1) % 4];
@@ -253,17 +259,40 @@ public class CosmeticsFeature extends FeatureRenderer<PlayerEntityRenderState, B
                     float t0 = (float) j / perSide, t1 = (float) (j + 1) / perSide;
                     float xa = a[0] + (b[0] - a[0]) * t0, za = a[1] + (b[1] - a[1]) * t0;
                     float xb = a[0] + (b[0] - a[0]) * t1, zb = a[1] + (b[1] - a[1]) * t1;
-                    vert(vc, entry, xa, y0, za, 0, 1, 0xFFFFFFFF, light);
-                    vert(vc, entry, xb, y0, zb, 1, 1, 0xFFFFFFFF, light);
-                    vert(vc, entry, xb, y1, zb, 1, 0, 0xFFFFFFFF, light);
-                    vert(vc, entry, xa, y1, za, 0, 0, 0xFFFFFFFF, light);
-                    vert(vc, entry, xa, y1, za, 0, 0, 0xFFFFFFFF, light);
-                    vert(vc, entry, xb, y1, zb, 1, 0, 0xFFFFFFFF, light);
-                    vert(vc, entry, xb, y0, zb, 1, 1, 0xFFFFFFFF, light);
-                    vert(vc, entry, xa, y0, za, 0, 1, 0xFFFFFFFF, light);
+                    Extrude.sheet(vc, entry, m, Extrude.p(xa, y1, za), Extrude.p(xb, y1, zb), Extrude.p(xb, y0, zb), Extrude.p(xa, y0, za),
+                            0, 0, 1, 1, thick, 0xFFFFFFFF, light);
                 }
             }
         });
+    }
+
+    /** A ring with a square cross-section (radius r, half-width w, half-height hh) lying flat at height y: the halo. */
+    private static void tube(VertexConsumer vc, MatrixStack.Entry entry, float r, float w, float hh, float y, int col, int light) {
+        final int segs = 28;
+        float ri = r - w, ro = r + w, ya = y - hh, yb = y + hh;
+        float u = 16f / 128f, v = 0.5f;                       // a solid, bright pixel of the halo texture
+        for (int i = 0; i < segs; i++) {
+            double a0 = i * Math.PI * 2 / segs, a1 = (i + 1) * Math.PI * 2 / segs;
+            float c0 = (float) Math.cos(a0), s0 = (float) Math.sin(a0), c1 = (float) Math.cos(a1), s1 = (float) Math.sin(a1);
+            float cm = (float) Math.cos((a0 + a1) / 2), sm = (float) Math.sin((a0 + a1) / 2);
+            // outer wall, inner wall, top, bottom
+            Extrude.vn(vc, entry, c0 * ro, ya, s0 * ro, u, v, col, light, cm, 0, sm);
+            Extrude.vn(vc, entry, c1 * ro, ya, s1 * ro, u, v, col, light, cm, 0, sm);
+            Extrude.vn(vc, entry, c1 * ro, yb, s1 * ro, u, v, col, light, cm, 0, sm);
+            Extrude.vn(vc, entry, c0 * ro, yb, s0 * ro, u, v, col, light, cm, 0, sm);
+            Extrude.vn(vc, entry, c0 * ri, yb, s0 * ri, u, v, col, light, -cm, 0, -sm);
+            Extrude.vn(vc, entry, c1 * ri, yb, s1 * ri, u, v, col, light, -cm, 0, -sm);
+            Extrude.vn(vc, entry, c1 * ri, ya, s1 * ri, u, v, col, light, -cm, 0, -sm);
+            Extrude.vn(vc, entry, c0 * ri, ya, s0 * ri, u, v, col, light, -cm, 0, -sm);
+            Extrude.vn(vc, entry, c0 * ri, ya, s0 * ri, u, v, col, light, 0, -1, 0);
+            Extrude.vn(vc, entry, c1 * ri, ya, s1 * ri, u, v, col, light, 0, -1, 0);
+            Extrude.vn(vc, entry, c1 * ro, ya, s1 * ro, u, v, col, light, 0, -1, 0);
+            Extrude.vn(vc, entry, c0 * ro, ya, s0 * ro, u, v, col, light, 0, -1, 0);
+            Extrude.vn(vc, entry, c0 * ro, yb, s0 * ro, u, v, col, light, 0, 1, 0);
+            Extrude.vn(vc, entry, c1 * ro, yb, s1 * ro, u, v, col, light, 0, 1, 0);
+            Extrude.vn(vc, entry, c1 * ri, yb, s1 * ri, u, v, col, light, 0, 1, 0);
+            Extrude.vn(vc, entry, c0 * ri, yb, s0 * ri, u, v, col, light, 0, 1, 0);
+        }
     }
 
     /** An open cylinder around the head (both sides drawn), the texture repeated `repeats` times around it. */
@@ -276,34 +305,43 @@ public class CosmeticsFeature extends FeatureRenderer<PlayerEntityRenderState, B
                 float x1 = (float) Math.cos(a1) * r, z1 = (float) Math.sin(a1) * r;
                 float u0 = (float) i * repeats / segs, u1 = (float) (i + 1) * repeats / segs;
                 u0 -= (float) Math.floor(u0); u1 = u0 + (float) repeats / segs;
-                vert(vc, entry, x0, y0, z0, u0, 1, 0xFFFFFFFF, light);
-                vert(vc, entry, x1, y0, z1, u1, 1, 0xFFFFFFFF, light);
-                vert(vc, entry, x1, y1, z1, u1, 0, 0xFFFFFFFF, light);
-                vert(vc, entry, x0, y1, z0, u0, 0, 0xFFFFFFFF, light);
-                vert(vc, entry, x0, y1, z0, u0, 0, 0xFFFFFFFF, light);
-                vert(vc, entry, x1, y1, z1, u1, 0, 0xFFFFFFFF, light);
-                vert(vc, entry, x1, y0, z1, u1, 1, 0xFFFFFFFF, light);
-                vert(vc, entry, x0, y0, z0, u0, 1, 0xFFFFFFFF, light);
+                float nx0 = (float) Math.cos(a0), nz0 = (float) Math.sin(a0), nx1 = (float) Math.cos(a1), nz1 = (float) Math.sin(a1);
+                Extrude.vn(vc, entry, x0, y0, z0, u0, 1, 0xFFFFFFFF, light, nx0, 0, nz0);
+                Extrude.vn(vc, entry, x1, y0, z1, u1, 1, 0xFFFFFFFF, light, nx1, 0, nz1);
+                Extrude.vn(vc, entry, x1, y1, z1, u1, 0, 0xFFFFFFFF, light, nx1, 0, nz1);
+                Extrude.vn(vc, entry, x0, y1, z0, u0, 0, 0xFFFFFFFF, light, nx0, 0, nz0);
+                Extrude.vn(vc, entry, x0, y1, z0, u0, 0, 0xFFFFFFFF, light, -nx0, 0, -nz0);
+                Extrude.vn(vc, entry, x1, y1, z1, u1, 0, 0xFFFFFFFF, light, -nx1, 0, -nz1);
+                Extrude.vn(vc, entry, x1, y0, z1, u1, 1, 0xFFFFFFFF, light, -nx1, 0, -nz1);
+                Extrude.vn(vc, entry, x0, y0, z0, u0, 1, 0xFFFFFFFF, light, -nx0, 0, -nz0);
             }
         });
     }
 
-    /** A flat disc (hat brim), both faces, using the texture's lower (band-free) colour. */
-    private static void brim(MatrixStack matrices, OrderedRenderCommandQueue queue, Identifier texture, float r, float y, int light) {
+    /** A hat brim: a disc `thick` deep (top, underside and rim), using the texture's lower (band-free) colour. */
+    private static void brim(MatrixStack matrices, OrderedRenderCommandQueue queue, Identifier texture, float r, float y, float thick, int light) {
         queue.submitCustom(matrices, RenderLayers.entityTranslucent(texture), (entry, vc) -> {
-            final int segs = 16;
+            final int segs = 20;
+            float yt = y - thick, yb = y;                          // up is -y: the brim's top face is at y - thick
             for (int i = 0; i < segs; i++) {
                 double a0 = i * Math.PI * 2 / segs, a1 = (i + 1) * Math.PI * 2 / segs;
-                float x0 = (float) Math.cos(a0) * r, z0 = (float) Math.sin(a0) * r;
-                float x1 = (float) Math.cos(a1) * r, z1 = (float) Math.sin(a1) * r;
-                vert(vc, entry, 0, y, 0, 0.5f, 0.97f, 0xFFFFFFFF, light);
-                vert(vc, entry, x0, y, z0, 0.2f, 0.98f, 0xFFFFFFFF, light);
-                vert(vc, entry, x1, y, z1, 0.8f, 0.98f, 0xFFFFFFFF, light);
-                vert(vc, entry, 0, y, 0, 0.5f, 0.97f, 0xFFFFFFFF, light);
-                vert(vc, entry, 0, y, 0, 0.5f, 0.97f, 0xFFFFFFFF, light);
-                vert(vc, entry, x1, y, z1, 0.8f, 0.98f, 0xFFFFFFFF, light);
-                vert(vc, entry, x0, y, z0, 0.2f, 0.98f, 0xFFFFFFFF, light);
-                vert(vc, entry, 0, y, 0, 0.5f, 0.97f, 0xFFFFFFFF, light);
+                float c0 = (float) Math.cos(a0), s0 = (float) Math.sin(a0), c1 = (float) Math.cos(a1), s1 = (float) Math.sin(a1);
+                float x0 = c0 * r, z0 = s0 * r, x1 = c1 * r, z1 = s1 * r;
+                // top
+                Extrude.vn(vc, entry, 0, yt, 0, 0.5f, 0.97f, 0xFFFFFFFF, light, 0, -1, 0);
+                Extrude.vn(vc, entry, x1, yt, z1, 0.8f, 0.98f, 0xFFFFFFFF, light, 0, -1, 0);
+                Extrude.vn(vc, entry, x0, yt, z0, 0.2f, 0.98f, 0xFFFFFFFF, light, 0, -1, 0);
+                Extrude.vn(vc, entry, 0, yt, 0, 0.5f, 0.97f, 0xFFFFFFFF, light, 0, -1, 0);
+                // underside
+                Extrude.vn(vc, entry, 0, yb, 0, 0.5f, 0.97f, 0xFFFFFFFF, light, 0, 1, 0);
+                Extrude.vn(vc, entry, x0, yb, z0, 0.2f, 0.98f, 0xFFFFFFFF, light, 0, 1, 0);
+                Extrude.vn(vc, entry, x1, yb, z1, 0.8f, 0.98f, 0xFFFFFFFF, light, 0, 1, 0);
+                Extrude.vn(vc, entry, 0, yb, 0, 0.5f, 0.97f, 0xFFFFFFFF, light, 0, 1, 0);
+                // rim
+                Extrude.vn(vc, entry, x0, yt, z0, 0.2f, 0.98f, 0xFFFFFFFF, light, c0, 0, s0);
+                Extrude.vn(vc, entry, x1, yt, z1, 0.8f, 0.98f, 0xFFFFFFFF, light, c1, 0, s1);
+                Extrude.vn(vc, entry, x1, yb, z1, 0.8f, 0.98f, 0xFFFFFFFF, light, c1, 0, s1);
+                Extrude.vn(vc, entry, x0, yb, z0, 0.2f, 0.98f, 0xFFFFFFFF, light, c0, 0, s0);
             }
         });
     }
@@ -316,10 +354,10 @@ public class CosmeticsFeature extends FeatureRenderer<PlayerEntityRenderState, B
                 double a0 = i * Math.PI * 2 / segs, a1 = (i + 1) * Math.PI * 2 / segs;
                 float x0 = (float) Math.cos(a0) * r, z0 = (float) Math.sin(a0) * r;
                 float x1 = (float) Math.cos(a1) * r, z1 = (float) Math.sin(a1) * r;
-                vert(vc, entry, 0, y, 0, 0.5f, 0.05f, 0xFFFFFFFF, light);
-                vert(vc, entry, x1, y, z1, 0.6f, 0.08f, 0xFFFFFFFF, light);
-                vert(vc, entry, x0, y, z0, 0.4f, 0.08f, 0xFFFFFFFF, light);
-                vert(vc, entry, 0, y, 0, 0.5f, 0.05f, 0xFFFFFFFF, light);
+                Extrude.vn(vc, entry, 0, y, 0, 0.5f, 0.05f, 0xFFFFFFFF, light, 0, -1, 0);
+                Extrude.vn(vc, entry, x1, y, z1, 0.6f, 0.08f, 0xFFFFFFFF, light, 0, -1, 0);
+                Extrude.vn(vc, entry, x0, y, z0, 0.4f, 0.08f, 0xFFFFFFFF, light, 0, -1, 0);
+                Extrude.vn(vc, entry, 0, y, 0, 0.5f, 0.05f, 0xFFFFFFFF, light, 0, -1, 0);
             }
         });
     }
@@ -340,32 +378,35 @@ public class CosmeticsFeature extends FeatureRenderer<PlayerEntityRenderState, B
                     float c0 = (float) Math.cos(a0), s0 = (float) Math.sin(a0), c1 = (float) Math.cos(a1), s1 = (float) Math.sin(a1);
                     float u0 = (float) i / segs, u1 = (float) (i + 1) / segs;
                     float va = 1 - t0 * 0.95f, vb = 1 - t1 * 0.95f;
-                    vert(vc, entry, c0 * ra, ya, s0 * ra + za, u0, va, 0xFFFFFFFF, light);
-                    vert(vc, entry, c1 * ra, ya, s1 * ra + za, u1, va, 0xFFFFFFFF, light);
-                    vert(vc, entry, c1 * rb, yb, s1 * rb + zb, u1, vb, 0xFFFFFFFF, light);
-                    vert(vc, entry, c0 * rb, yb, s0 * rb + zb, u0, vb, 0xFFFFFFFF, light);
-                    vert(vc, entry, c0 * rb, yb, s0 * rb + zb, u0, vb, 0xFFFFFFFF, light);
-                    vert(vc, entry, c1 * rb, yb, s1 * rb + zb, u1, vb, 0xFFFFFFFF, light);
-                    vert(vc, entry, c1 * ra, ya, s1 * ra + za, u1, va, 0xFFFFFFFF, light);
-                    vert(vc, entry, c0 * ra, ya, s0 * ra + za, u0, va, 0xFFFFFFFF, light);
+                    // outward normal tilted up by the cone's slope
+                    float slope = r / Math.max(0.01f, Math.abs(tipY - y0));
+                    float ny = -slope / (float) Math.sqrt(1 + slope * slope), nh = 1f / (float) Math.sqrt(1 + slope * slope);
+                    Extrude.vn(vc, entry, c0 * ra, ya, s0 * ra + za, u0, va, 0xFFFFFFFF, light, c0 * nh, ny, s0 * nh);
+                    Extrude.vn(vc, entry, c1 * ra, ya, s1 * ra + za, u1, va, 0xFFFFFFFF, light, c1 * nh, ny, s1 * nh);
+                    Extrude.vn(vc, entry, c1 * rb, yb, s1 * rb + zb, u1, vb, 0xFFFFFFFF, light, c1 * nh, ny, s1 * nh);
+                    Extrude.vn(vc, entry, c0 * rb, yb, s0 * rb + zb, u0, vb, 0xFFFFFFFF, light, c0 * nh, ny, s0 * nh);
+                    Extrude.vn(vc, entry, c0 * rb, yb, s0 * rb + zb, u0, vb, 0xFFFFFFFF, light, -c0 * nh, -ny, -s0 * nh);
+                    Extrude.vn(vc, entry, c1 * rb, yb, s1 * rb + zb, u1, vb, 0xFFFFFFFF, light, -c1 * nh, -ny, -s1 * nh);
+                    Extrude.vn(vc, entry, c1 * ra, ya, s1 * ra + za, u1, va, 0xFFFFFFFF, light, -c1 * nh, -ny, -s1 * nh);
+                    Extrude.vn(vc, entry, c0 * ra, ya, s0 * ra + za, u0, va, 0xFFFFFFFF, light, -c0 * nh, -ny, -s0 * nh);
                 }
             }
         });
     }
 
-    /** Two quads crossed at right angles, standing up from (x, y, z), so the piece looks solid from any side. */
+    /**
+     * Two solid sheets crossed at right angles, standing up from (x, y, z) - horns and antlers - so the piece has
+     * real depth from any side.
+     */
     private static void crossed(MatrixStack matrices, OrderedRenderCommandQueue queue, Identifier texture,
                                 float x, float y, float z, float halfW, float height, float lean, int light) {
+        Extrude.Mask m = Extrude.mask(texture, 24, 48);
+        float th = Math.max(0.035f, halfW * 0.32f);
         queue.submitCustom(matrices, RenderLayers.entityTranslucent(texture), (entry, vc) -> {
-            vert(vc, entry, x - halfW, y, z, 0, 1, 0xFFFFFFFF, light);
-            vert(vc, entry, x + halfW, y, z, 1, 1, 0xFFFFFFFF, light);
-            vert(vc, entry, x + halfW + lean, y - height, z, 1, 0, 0xFFFFFFFF, light);
-            vert(vc, entry, x - halfW + lean, y - height, z, 0, 0, 0xFFFFFFFF, light);
-
-            vert(vc, entry, x, y, z - halfW, 0, 1, 0xFFFFFFFF, light);
-            vert(vc, entry, x, y, z + halfW, 1, 1, 0xFFFFFFFF, light);
-            vert(vc, entry, x + lean, y - height, z + halfW, 1, 0, 0xFFFFFFFF, light);
-            vert(vc, entry, x + lean, y - height, z - halfW, 0, 0, 0xFFFFFFFF, light);
+            Extrude.sheet(vc, entry, m, Extrude.p(x - halfW + lean, y - height, z), Extrude.p(x + halfW + lean, y - height, z),
+                    Extrude.p(x + halfW, y, z), Extrude.p(x - halfW, y, z), 0, 0, 1, 1, th, 0xFFFFFFFF, light);
+            Extrude.sheet(vc, entry, m, Extrude.p(x + lean, y - height, z - halfW), Extrude.p(x + lean, y - height, z + halfW),
+                    Extrude.p(x, y, z + halfW), Extrude.p(x, y, z - halfW), 0, 0, 1, 1, th, 0xFFFFFFFF, light);
         });
     }
 

@@ -1,3 +1,8 @@
+## 0.21.1 - 3D cosmetics
+- Cosmetics are 3D: wings, ears, horns, antlers and crowns are solid pieces with real thickness and pixel-shaped
+  sides (like held items), the halo has a solid ring, hat brims have depth, and everything is shaded by the way
+  each face points instead of looking like flat paper.
+
 ## 0.21.0 - In-game account switcher
 - Kill Effects: "Preview" opens a small window that plays the chosen effect on a loop (works from the menus too),
   with < > to switch effects, Replay, and "In world" to see it for real.

@@ -85,6 +85,7 @@ public class TempestClient implements ClientModInitializer {
             MinecraftClient c = MinecraftClient.getInstance();
             if (c.player == null || c.world == null || c.options.hudHidden) return;
             if (c.currentScreen instanceof HudEditorScreen) return;
+            dev.tempest.modules.SpotifyModule.renderSky(ctx, tickCounter.getTickProgress(false));
             SmoothHotbarModule.render(ctx, tickCounter.getTickProgress(false));
             TotemPopModule.render(ctx, tickCounter.getTickProgress(false));
             for (HudModule m : ModuleManager.huds()) {

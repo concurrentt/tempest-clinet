@@ -1,3 +1,13 @@
+## 0.21.2 - Tier Tagger MCTiers fix, new Spotify card
+- Tier Tagger: MCTiers tiers now show. It looks players up the same way the TierTagger mod does (the rankings
+  endpoint); if a list can't be reached, the reason is written to the game log once.
+- Spotify HUD redesigned: darker glass card with a soft wash of the cover's colour, bigger cover with a clean
+  pause sign, thin progress bar with time left, lyrics in their own panel (current line bright, the others fading,
+  no bold/shadow). Covers load reliably: if Spotify doesn't hand one over, it's looked up online by song + artist.
+- Spotify: lyrics can float in the sky (Lyrics Display: Card / Sky / Both). Sky lyrics hang above the horizon
+  where you look, drift after you when you turn, glow in the song's colour, show the next line underneath, and fade
+  out where you can't see the sky. Height and size are adjustable.
+
 ## 0.21.1 - 3D cosmetics
 - Cosmetics are 3D: wings, ears, horns, antlers and crowns are solid pieces with real thickness and pixel-shaped
   sides (like held items), the halo has a solid ring, hat brims have depth, and everything is shaded by the way

@@ -117,6 +117,7 @@ public final class TierLists {
         try {
             p = j.source() == Source.MCTIERS ? fetchMcTiers(j.id()) : fetchNova(j.id());
         } catch (Exception ex) {
+            problem(j.source() == Source.MCTIERS ? "MCTiers" : "NovaTiers", ex.getClass().getSimpleName() + " " + ex.getMessage());
             p = null;
         }
         long now = System.currentTimeMillis();
@@ -127,13 +128,22 @@ public final class TierLists {
 
     // ------------------------------------------------------------------ MCTiers (same API as the TierTagger mod)
     private static Profile fetchMcTiers(UUID id) throws Exception {
-        HttpResponse<String> r = get("https://mctiers.net/api/v2/profile/" + id);
+        // TierTagger looks players up with the rankings endpoint, which answers with just {mode: ranking};
+        // the full profile (with "rankings" inside) is the fallback
+        HttpResponse<String> r = get("https://mctiers.net/api/v2/profile/" + id + "/rankings");
+        if (r.statusCode() != 200 && r.statusCode() != 404) r = get("https://mctiers.net/api/v2/profile/" + id);
         if (r.statusCode() == 404) return Profile.NONE;
-        if (r.statusCode() != 200) throw new IllegalStateException("MCTiers " + r.statusCode());
-        JsonObject o = JsonParser.parseString(r.body()).getAsJsonObject();
-        if (!o.has("rankings") || !o.get("rankings").isJsonObject()) return Profile.NONE;
+        if (r.statusCode() != 200) {
+            problem("MCTiers", "HTTP " + r.statusCode());
+            throw new IllegalStateException("MCTiers " + r.statusCode());
+        }
+        JsonElement root;
+        try { root = JsonParser.parseString(r.body()); } catch (Exception ex) { problem("MCTiers", "not JSON"); throw ex; }
+        if (!root.isJsonObject()) return Profile.NONE;
+        JsonObject o = root.getAsJsonObject();
+        JsonObject rankings = o.has("rankings") && o.get("rankings").isJsonObject() ? o.getAsJsonObject("rankings") : o;
         Map<String, Rank> out = new LinkedHashMap<>();
-        for (Map.Entry<String, JsonElement> m : o.getAsJsonObject("rankings").entrySet()) {
+        for (Map.Entry<String, JsonElement> m : rankings.entrySet()) {
             if (!m.getValue().isJsonObject()) continue;
             JsonObject k = m.getValue().getAsJsonObject();
             int tier = intOr(k, "tier", 0);
@@ -178,9 +188,16 @@ public final class TierLists {
     }
 
     // ------------------------------------------------------------------ helpers
+    private static final Set<String> REPORTED = ConcurrentHashMap.newKeySet();
+
+    /** Writes why a list can't be read to the game log, once per kind of problem (so it can be diagnosed). */
+    private static void problem(String list, String why) {
+        if (REPORTED.add(list + why)) System.err.println("[Tempest] Tier Tagger: " + list + " look-up failed: " + why);
+    }
+
     private static HttpResponse<String> get(String url) throws Exception {
         HttpRequest req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8))
-                .header("Accept", "application/json").header("User-Agent", "TempestClient-TierTagger/1.0").GET().build();
+                .header("Accept", "application/json").header("User-Agent", "TierTagger/1.0 (Tempest client)").GET().build();
         return HTTP.send(req, HttpResponse.BodyHandlers.ofString());
     }
 

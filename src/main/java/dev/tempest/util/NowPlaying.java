@@ -41,6 +41,10 @@ public final class NowPlaying {
     private static volatile Identifier art;
     private static volatile int artColor = 0x1DB954;
     private static volatile String artKey = "";
+    /** Which song the loaded cover belongs to (so a new song never shows the last one's cover). */
+    private static volatile String artFor = "";
+    private static final java.util.concurrent.ScheduledExecutorService LATER =
+            java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> { Thread t = new Thread(r, "Tempest cover lookup"); t.setDaemon(true); return t; });
     private static volatile long lastWanted;
     private static volatile Thread thread;
     private static volatile Process process;
@@ -53,7 +57,12 @@ public final class NowPlaying {
 
     public static Track track() { return track; }
     public static boolean playing() { return playing; }
-    public static Identifier art() { return art; }
+    /** The current song's cover, or null while it hasn't loaded (never the previous song's). */
+    public static Identifier art() {
+        Track t = track;
+        return t != null && t.key.equals(artFor) ? art : null;
+    }
+    public static boolean hasArt() { return art() != null; }
     public static int artColor() { return artColor; }
 
     /** Current position, moved on smoothly between updates while playing. */
@@ -126,13 +135,15 @@ public final class NowPlaying {
             "        at = [long]$tl.LastUpdatedTime.ToUnixTimeMilliseconds(); playing = ($pb.PlaybackStatus.ToString() -eq 'Playing') }",
             "      $key = \"$($p.Title)|$($p.Artist)|$($p.AlbumTitle)\"",
             "      if ($key -ne $last -and $p.Thumbnail -ne $null) {",
-            "        $st = Await ($p.Thumbnail.OpenReadAsync()) ([Windows.Storage.Streams.IRandomAccessStreamWithContentType])",
-            "        if ($st -ne $null -and $st.Size -gt 0 -and $st.Size -lt 4000000) {",
-            "          $r = [Windows.Storage.Streams.DataReader]::new($st.GetInputStreamAt(0))",
-            "          [void](Await ($r.LoadAsync([uint32]$st.Size)) ([uint32]))",
-            "          $b = New-Object byte[] ([int]$st.Size); $r.ReadBytes($b)",
-            "          $o.art = [Convert]::ToBase64String($b); $last = $key",
-            "        }",
+            "        try {",
+            "          $st = Await ($p.Thumbnail.OpenReadAsync()) ([Windows.Storage.Streams.IRandomAccessStreamWithContentType])",
+            "          if ($st -ne $null -and $st.Size -gt 0 -and $st.Size -lt 4000000) {",
+            "            $r = [Windows.Storage.Streams.DataReader]::new($st.GetInputStreamAt(0))",
+            "            [void](Await ($r.LoadAsync([uint32]$st.Size)) ([uint32]))",
+            "            $b = New-Object byte[] ([int]$st.Size); $r.ReadBytes($b)",
+            "            $o.art = [Convert]::ToBase64String($b); $last = $key",
+            "          }",
+            "        } catch { }",
             "      }",
             "      [Console]::Out.WriteLine(($o | ConvertTo-Json -Compress))",
             "    }",
@@ -245,11 +256,38 @@ public final class NowPlaying {
         String key = title + "|" + artist + "|" + album;
         Track old = track;
         if (old == null || !old.key.equals(key) || old.durationMs != durMs) track = new Track(title, artist == null ? "" : artist, album == null ? "" : album, durMs, key);
+        if (old == null || !old.key.equals(key)) {
+            // if the music player hasn't handed over a cover shortly after the song starts, look it up online
+            final String t0 = title, a0 = artist == null ? "" : artist;
+            LATER.schedule(() -> { Track now = track; if (now != null && now.key.equals(key) && !key.equals(artFor)) coverOnline(key, t0, a0); },
+                    2500, java.util.concurrent.TimeUnit.MILLISECONDS);
+        }
         // small jitter between reports is ignored so the progress bar never jumps backwards
         long predicted = position();
         if (!pl || old == null || !old.key.equals(key) || Math.abs(predicted - pos) > 1500 || playing != pl) { posMs = pos; posAt = at; }
         playing = pl;
         Lyrics.prefetch(track);
+    }
+
+    /** Cover from the iTunes search (no account needed): best match for "artist title", 600px. */
+    private static void coverOnline(String key, String title, String artist) {
+        try {
+            String q = java.net.URLEncoder.encode((artist + " " + title).trim(), StandardCharsets.UTF_8);
+            HttpResponse<String> r = HTTP.send(HttpRequest.newBuilder(URI.create(
+                    "https://itunes.apple.com/search?media=music&entity=song&limit=1&term=" + q)).timeout(Duration.ofSeconds(8)).build(),
+                    HttpResponse.BodyHandlers.ofString());
+            if (r.statusCode() != 200) return;
+            JsonObject o = JsonParser.parseString(r.body()).getAsJsonObject();
+            if (!o.has("results") || o.getAsJsonArray("results").isEmpty()) return;
+            JsonObject hit = o.getAsJsonArray("results").get(0).getAsJsonObject();
+            if (!hit.has("artworkUrl100")) return;
+            String url = hit.get("artworkUrl100").getAsString().replace("100x100bb", "600x600bb");
+            Track now = track;
+            if (now == null || !now.key.equals(key) || key.equals(artFor)) return;   // the player sent one meanwhile
+            HttpResponse<byte[]> img = HTTP.send(HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8)).build(),
+                    HttpResponse.BodyHandlers.ofByteArray());
+            if (img.statusCode() == 200) setArt(key, img.body());
+        } catch (Exception ignored) { }
     }
 
     private static void artFromUrl(String key, String url) {
@@ -301,6 +339,7 @@ public final class NowPlaying {
                 Identifier id = Identifier.of("tempest", "dynamic/spotify_art_" + (artCounter++));
                 MinecraftClient.getInstance().getTextureManager().registerTexture(id, new NativeImageBackedTexture(() -> "Tempest album cover", ni));
                 art = id;
+                artFor = key;
                 artColor = col;
                 if (old != null) MinecraftClient.getInstance().getTextureManager().destroyTexture(old);
             });

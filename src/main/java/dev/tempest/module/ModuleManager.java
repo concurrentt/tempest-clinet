@@ -51,6 +51,8 @@ public class ModuleManager {
         register(new WhoAmIModule());
         register(new CapesModule());
         register(new CosmeticsModule());
+        register(new EmotesModule());
+        register(new TexturePainterModule());
         register(new NametagsModule());
         register(new CinematicCameraModule());
         register(new WaypointsModule());

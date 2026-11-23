@@ -26,7 +26,13 @@ const sql = { exec: (q, ...args) => {
   const rows = /^\s*select/i.test(q) ? st.all(...args) : (st.run(...args), []);
   return { toArray: () => rows };
 } };
-const obj = new w.Presence({ storage: { sql } }, {});
+// stand-ins for Cloudflare's hibernating WebSockets
+const sockets = [];
+class FakeWs { constructor(tag) { this.tag = tag; this.att = null; this.sent = []; }
+  serializeAttachment(a) { this.att = JSON.parse(JSON.stringify(a)); } deserializeAttachment() { return this.att; }
+  send(t) { this.sent.push(JSON.parse(t)); } close() {} }
+const ctxFake = { storage: { sql }, getWebSockets: () => sockets, acceptWebSocket: (ws) => sockets.push(ws) };
+const obj = new w.Presence(ctxFake, {});
 const env = { TOKEN_SECRET: "x".repeat(40), PRESENCE: { idFromName: () => 1, get: () => obj } };
 const UUID = "0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0";
 const keys = [mojang.publicKey];
@@ -99,7 +105,7 @@ await call("/v1/heartbeat", {}, tA);
 assert.deepEqual(b.friends, [{ uuid: B, online: true, server: "crystalbox.org" }]); assert.deepEqual(b.outgoing, []);
 // the object restarts (eviction / deploy): presence comes back from storage, friends still see B online
 const before = env.PRESENCE.get;
-const restarted = new w.Presence({ storage: { sql } }, {});
+const restarted = new w.Presence(ctxFake, {});
 env.PRESENCE.get = () => restarted;
 [s, b] = await call("/v1/friends/list", {}, tA);
 assert.deepEqual(b.friends, [{ uuid: B, online: true, server: "crystalbox.org" }], "online survives a restart");
@@ -124,5 +130,29 @@ await call("/v1/heartbeat", { server: "weird\u0000server", friends: true, public
 [s, b] = await call("/v1/friends/remove", { uuid: A }, tB); assert.equal(s, 200);
 [s, b] = await call("/v1/friends/list", {}, tA); assert.deepEqual(b.friends.map((f) => f.uuid), [C], "removal is mutual");
 [s, b] = await call("/v1/friends/list", {}, null); assert.equal(s, 401, "needs sign-in");
+
+// ---- cosmetics: saved, cleaned, returned by lookup for online Tempest users
+[s, b] = await call("/v1/cosmetics", { cape: "Galaxy", wings: "Angel", head: "Halo", halo: "Gold", wingSize: 9, evil: "<script>" }, tA);
+assert.equal(s, 200); assert.deepEqual(b.c, { cape: "Galaxy", wings: "Angel", head: "Halo", halo: "Gold", wingSize: 1.6 });
+[s] = await call("/v1/cosmetics", { wings: "<img src=x>" }, tA); assert.equal(s, 200);
+[s, b] = await call("/v1/cosmetics", { cape: "Galaxy", wings: "Angel" }, tA);
+await call("/v1/heartbeat", {}, tA);
+[s, b] = await call("/v1/lookup", { uuids: [A, C] }, tC);
+assert.deepEqual(b.tempest, [A]); assert.deepEqual(b.cosmetics[A], { cape: "Galaxy", wings: "Angel" });
+
+// ---- live channel: emotes and cosmetic changes reach only connections watching that player
+const wsA = new FakeWs(A), wsB = new FakeWs(B), wsC = new FakeWs(C);
+for (const [ws, u] of [[wsA, A], [wsB, B], [wsC, C]]) { sockets.push(ws); ws.serializeAttachment({ u, w: "" }); }
+obj.webSocketMessage(wsB, JSON.stringify({ t: "watch", u: A.replace(/-/g, "") + C.replace(/-/g, "") }));   // B has A and C nearby
+obj.webSocketMessage(wsA, JSON.stringify({ t: "emote", id: "wave" }));
+assert.deepEqual(wsB.sent, [{ t: "emote", uuid: A, id: "wave" }], "B (watching A) gets it");
+assert.equal(wsC.sent.length, 0, "C (not watching A) gets nothing"); assert.equal(wsA.sent.length, 0, "not echoed to sender");
+obj.webSocketMessage(wsA, JSON.stringify({ t: "emote", id: "<bad id>" }));
+assert.deepEqual(wsB.sent.at(-1), { t: "emote", uuid: A, id: null }, "bad ids become stop");
+obj.webSocketMessage(wsA, "not json"); obj.webSocketMessage(wsA, JSON.stringify({ t: "watch", u: 5 }));
+await call("/v1/cosmetics", { wings: "Demon" }, tA);
+assert.deepEqual(wsB.sent.at(-1), { t: "cos", uuid: A, c: { wings: "Demon" } }, "cosmetic change pushed live");
+for (let i = 0; i < 40; i++) obj.webSocketMessage(wsC, JSON.stringify({ t: "emote", id: "dance" }));
+assert.ok(wsB.sent.filter((m) => m.uuid === C).length <= 30, "socket rate limit");
 console.log = quiet;
 console.log("all worker tests passed");

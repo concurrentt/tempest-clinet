@@ -16,7 +16,7 @@ public final class Icons {
     private static final Identifier ATLAS = Identifier.of("tempest", "textures/gui/icons.png");
     private static final int CELL = 64, COLS = 8;
     /** Same order as GLYPHS in tools/make_icons.py. */
-    private static final String[] NAMES = {"star_outline", "star_filled", "gear", "person", "people", "grid", "power", "globe", "arrow_circle", "runner", "shirt", "search", "gauge", "mouse", "keyboard", "ruler", "bolt", "heart", "potion", "apple", "chestplate", "hourglass", "shield", "pin", "signal", "backpack", "clock", "list", "board", "totem", "chat", "crystal", "bell", "cube", "person_plus", "magnifier", "crosshair", "sun", "eye", "idcard", "cape", "film_camera", "box", "moon", "sun_moon", "outline_square", "motion", "xray", "lock", "refresh", "swap", "info", "camera", "broadcast", "servers", "flame", "hotbar", "sparkles", "fov", "orbs", "layers", "at", "stack", "planet_stars", "galaxy", "cloud", "aurora", "black_hole", "ringed_planet", "shooting_star", "fireflies", "aperture", "palette", "layout", "compass", "play", "plus", "trash", "back", "pencil", "wings", "halo", "horns", "crown", "cat_ears", "bunny", "antlers", "flower", "witch_hat", "top_hat", "snowflake", "note"};
+    private static final String[] NAMES = {"star_outline", "star_filled", "gear", "person", "people", "grid", "power", "globe", "arrow_circle", "runner", "shirt", "search", "gauge", "mouse", "keyboard", "ruler", "bolt", "heart", "potion", "apple", "chestplate", "hourglass", "shield", "pin", "signal", "backpack", "clock", "list", "board", "totem", "chat", "crystal", "bell", "cube", "person_plus", "magnifier", "crosshair", "sun", "eye", "idcard", "cape", "film_camera", "box", "moon", "sun_moon", "outline_square", "motion", "xray", "lock", "refresh", "swap", "info", "camera", "broadcast", "servers", "flame", "hotbar", "sparkles", "fov", "orbs", "layers", "at", "stack", "planet_stars", "galaxy", "cloud", "aurora", "black_hole", "ringed_planet", "shooting_star", "fireflies", "aperture", "palette", "layout", "compass", "play", "plus", "trash", "back", "pencil", "wings", "halo", "horns", "crown", "cat_ears", "bunny", "antlers", "flower", "witch_hat", "top_hat", "snowflake", "note", "emote_wave", "emote_clap", "emote_dance", "emote_dab", "emote_salute", "emote_facepalm", "emote_cheer", "emote_shrug", "bucket", "eyedropper", "eraser", "undo", "redo", "brush"};
     private static final int ATLAS_W = COLS * CELL, ATLAS_H = ((NAMES.length + COLS - 1) / COLS) * CELL;
 
     private static final Map<String, Integer> INDEX = new HashMap<>();
@@ -41,7 +41,7 @@ public final class Icons {
                 {"low_fire", "flame"}, {"smooth_hotbar", "hotbar"}, {"particle_filter", "sparkles"}, {"custom_fov", "fov"},
                 {"fast_screens", "layout"}, {"clumps", "orbs"}, {"nametags", "idcard"}, {"chat_mentions", "at"},
                 {"message_stacking", "stack"}, {"chat_upgrades", "chat"}, {"client", "gear"},
-                {"custom_sky", "planet_stars"}, {"cosmetics", "wings"}, {"fireflies", "fireflies"}, {"cinematic_grade", "aperture"},
+                {"custom_sky", "planet_stars"}, {"cosmetics", "wings"}, {"emotes", "emote_wave"}, {"texture_painter", "brush"}, {"fireflies", "fireflies"}, {"cinematic_grade", "aperture"},
         };
         for (String[] e : m) MODULES.put(e[0], e[1]);
     }

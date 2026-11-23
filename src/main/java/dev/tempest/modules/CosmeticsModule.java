@@ -1,6 +1,7 @@
 package dev.tempest.modules;
 
 import dev.tempest.gui.Draw;
+import dev.tempest.module.BoolSetting;
 import dev.tempest.module.Category;
 import dev.tempest.module.ModeSetting;
 import dev.tempest.module.Module;
@@ -8,8 +9,8 @@ import dev.tempest.module.ModuleManager;
 import dev.tempest.module.NumberSetting;
 
 /**
- * Wings and head pieces drawn on your own player (render/CosmeticsFeature). Client-side: only you see them.
- * Pick them in the Right Shift menu (Cosmetics) or here.
+ * Wings and head pieces (render/CosmeticsFeature). Your choices are shared with other Tempest players through the
+ * Tempest service, and theirs are shown on them (util/RemoteCosmetics). Pick them in Right Shift -> Looks, or here.
  */
 public final class CosmeticsModule extends Module {
     public static final String[] WINGS = {"None", "Angel", "Demon", "Dragon", "Butterfly", "Phoenix", "Crystal", "Fairy"};
@@ -18,13 +19,20 @@ public final class CosmeticsModule extends Module {
 
     public final ModeSetting wings = add(new ModeSetting("wings", "Wings", "None", WINGS));
     public final ModeSetting head = add(new ModeSetting("head", "Head", "None", HEADS));
-    public final ModeSetting haloColor = add(new ModeSetting("halo_color", "Halo Color", "Gold", "Gold", "Holy White", "Void Purple", "Crimson", "Theme"));
+    public static final String[] HALO_COLORS = {"Gold", "Holy White", "Void Purple", "Crimson", "Theme"};
+    public final ModeSetting haloColor = add(new ModeSetting("halo_color", "Halo Color", "Gold", HALO_COLORS));
     public final NumberSetting wingSize = add(new NumberSetting("wing_size", "Wing Size", 1.0, 0.6, 1.6, 0.05));
     public final NumberSetting flapSpeed = add(new NumberSetting("flap_speed", "Flap Speed", 1.0, 0, 3, 0.1));
+    public final BoolSetting share = add(new BoolSetting("share", "Show Mine To Others", true));
+    public final BoolSetting seeOthers = add(new BoolSetting("see_others", "See Other Players' Cosmetics", true));
 
     public CosmeticsModule() {
-        super("cosmetics", "Cosmetics", "Wings and head pieces. Only you see them.",
+        super("cosmetics", "Cosmetics", "Wings and head pieces. Other Tempest players see yours, and you see theirs.",
                 Category.RENDER, true);
+        add(new dev.tempest.module.ActionSetting("open_menu", "Cosmetics Menu", "Open", () -> {
+            net.minecraft.client.MinecraftClient c = net.minecraft.client.MinecraftClient.getInstance();
+            c.setScreen(new dev.tempest.gui.CosmeticsScreen(c.currentScreen, dev.tempest.gui.CosmeticsScreen.CAPES));
+        }));
     }
 
     public static CosmeticsModule get() {
@@ -59,8 +67,10 @@ public final class CosmeticsModule extends Module {
         CapesModule.previewCape = null;
     }
 
-    public int haloRgb() {
-        return switch (haloColor.get()) {
+    public int haloRgb() { return haloRgb(haloColor.get()); }
+
+    public static int haloRgb(String name) {
+        return switch (name == null ? "" : name) {
             case "Holy White" -> 0xFFFFFF;
             case "Void Purple" -> 0xB47CFF;
             case "Crimson" -> 0xFF4A5A;

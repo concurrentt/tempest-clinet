@@ -375,6 +375,22 @@ Build from the project directory with: gradle build
 
 
 
+## 0.19.5 - Emotes, shared cosmetics, Texture Painter
+- Emotes: Wave, Clap, Dance, Dab, Salute, Facepalm, Cheer, Shrug. Hold B for the emote wheel (point and let go, or tap
+  and click; 1-8 pick directly). Tempest players near you see them through a live link to the Tempest service.
+  Moving cancels an emote; third person while emoting (optional).
+- Cosmetics are shared: other Tempest players see your cape, wings and head piece, and you see theirs
+  (Cosmetics > Show Mine To Others / See Other Players' Cosmetics).
+- Wings are three hinged panels that fold and ripple as they flap, with new 512px textures (tools/make_wings_hq.py).
+  Halo has a soft glow; the crown is solid from inside too.
+- New Cosmetics menu (Right Shift > Looks / Emotes): big turntable preview (drag to turn, scroll to zoom), tabs for
+  Capes, Wings, Head and Emotes, hover to try on, click to wear, wing size / flap and halo colour right there.
+- Texture Painter (Right Shift > Textures, or Utility > Texture Painter): pick any item or block texture, paint it with
+  brush, eraser, fill and colour picker (mirror, undo/redo, animated frames), and Save & Apply writes it into
+  resourcepacks/Tempest Custom and reloads so you see it straight away. "Use original" takes it back out.
+- Service (tempest-worker): GET /v1/live WebSocket (hibernating, 30 msgs/10 s limit), POST /v1/cosmetics, and
+  /v1/lookup now returns cosmetics. Deploy it before releasing the client.
+
 ## 0.19.4 - Shulker icons, HD menu backgrounds
 - Shulker Preview (like Simple Shulker Preview): shulker boxes in any slot show an icon of what's inside and a fullness
   bar (green, amber at 75%, red when full). Icon shows the most common item, first or last slot; a shulker named after

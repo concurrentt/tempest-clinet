@@ -5,9 +5,16 @@
 //   POST /v1/auth/start   {name}      -> { serverId }
 //   POST /v1/auth/finish  {name, serverId, uuid, publicKey, expiresAt, keySignature, signature} -> { token, uuid, expiresIn }
 //   POST /v1/heartbeat    (Bearer) {server?, public?, friends?} -> { ok, incoming }
-//   POST /v1/lookup       {uuids}     -> { tempest: [...] }
+//   POST /v1/lookup       {uuids}     -> { tempest: [...], cosmetics: {uuid: {...}} }
 //   POST /v1/logout       (Bearer)    -> { ok }
 //   POST /v1/friends/list    (Bearer)          -> { friends: [{uuid, online, server}], incoming: [uuid], outgoing: [uuid] }
+//   POST /v1/cosmetics    (Bearer) {cape, wings, head, halo, wingSize} -> { ok }   (shown to other Tempest players)
+//   GET  /v1/live         (Bearer, WebSocket) live channel:
+//        client -> {"t":"watch","u":"<uuid hex><uuid hex>..."}  players near me (up to 48)
+//        client -> {"t":"emote","id":"wave"|null}              play / stop an emote
+//        server -> {"t":"emote","uuid":"...","id":"wave"|null}  a watched player emoted
+//        server -> {"t":"cos","uuid":"...","c":{...}}           a watched player changed cosmetics
+//        "ping" -> "pong" (answered without waking anything)
 //   POST /v1/friends/request (Bearer) {uuid}   -> { result: "sent" | "accepted" | "already" }
 //   POST /v1/friends/accept | decline | remove (Bearer) {uuid} -> { ok }
 //
@@ -210,6 +217,18 @@ const PERSIST_EVERY_MS = 240_000;
 const MAX_OUTGOING = 30;
 const MAX_INCOMING = 100;
 
+/** Only known-shaped cosmetic choices are stored: short names and a wing size. */
+function cleanCosmetics(c) {
+  const out = {};
+  if (!c || typeof c !== "object") return out;
+  for (const k of ["cape", "wings", "head", "halo"]) {
+    if (typeof c[k] === "string" && /^[A-Za-z ]{1,24}$/.test(c[k])) out[k] = c[k];
+  }
+  const ws = Number(c.wingSize);
+  if (Number.isFinite(ws)) out.wingSize = Math.round(Math.min(1.6, Math.max(0.6, ws)) * 100) / 100;
+  return out;
+}
+
 /** Cleans the server address a player reports (shown to their friends only). */
 function cleanServer(s) {
   if (typeof s !== "string") return null;
@@ -227,6 +246,12 @@ export class Presence extends DurableObject {
     this.sql.exec("CREATE TABLE IF NOT EXISTS requests (src TEXT NOT NULL, dst TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (src, dst))");
     this.sql.exec("CREATE INDEX IF NOT EXISTS requests_dst ON requests (dst)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS presence (uuid TEXT PRIMARY KEY, seen INTEGER NOT NULL, server TEXT, pub INTEGER NOT NULL, fr INTEGER NOT NULL)");
+    this.sql.exec("CREATE TABLE IF NOT EXISTS cosmetics (uuid TEXT PRIMARY KEY, data TEXT NOT NULL, at INTEGER NOT NULL)");
+    this.msgRate = new Map();   // socket rate limiting (memory only)
+    // "ping" is answered by Cloudflare itself, so keep-alives never wake this object or count as requests
+    if (typeof WebSocketRequestResponsePair !== "undefined" && ctx.setWebSocketAutoResponse) {
+      ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
+    }
     this.persisted = new Map(); // uuid -> { at, key } last saved
     // restore players who were online before a restart; give them until their next heartbeat to check in
     const now = Date.now();
@@ -271,6 +296,73 @@ export class Presence extends DurableObject {
     const now = Date.now();
     this.prune(now);
     return uuids.filter((u) => { const o = this.online.get(u); return o && o.pub; });
+  }
+
+  /** Online Tempest users among uuids, plus their cosmetics. */
+  lookupFull(uuids) {
+    const tempest = this.lookup(uuids);
+    const cosmetics = {};
+    for (let i = 0; i < tempest.length; i += 50) {
+      const part = tempest.slice(i, i + 50);
+      const rows = this.rows(`SELECT uuid, data FROM cosmetics WHERE uuid IN (${part.map(() => "?").join(",")})`, ...part);
+      for (const r of rows) { try { cosmetics[r.uuid] = JSON.parse(r.data); } catch { /* skip */ } }
+    }
+    return { tempest, cosmetics };
+  }
+
+  /** Saves what someone wears and tells players currently near them. */
+  setCosmetics(uuid, c) {
+    const clean = cleanCosmetics(c);
+    this.sql.exec("INSERT OR REPLACE INTO cosmetics (uuid, data, at) VALUES (?, ?, ?)", uuid, JSON.stringify(clean), Date.now());
+    this.broadcast(uuid, { t: "cos", uuid, c: clean });
+    return clean;
+  }
+
+  // ---------------------------------------------------------------- live channel (WebSocket, hibernating)
+  async fetch(request) {
+    const uuid = request.headers.get("X-Tempest-User");
+    if (!uuid || request.headers.get("Upgrade") !== "websocket") return new Response("expected websocket", { status: 426 });
+    const pair = new WebSocketPair();
+    const [client, server] = Object.values(pair);
+    this.ctx.acceptWebSocket(server, [uuid]);
+    server.serializeAttachment({ u: uuid, w: "" });
+    return new Response(null, { status: 101, webSocket: client });
+  }
+
+  /** Sends msg to every connection that is watching `uuid` (i.e. has that player near them). */
+  broadcast(uuid, msg) {
+    const hex = uuid.replace(/-/g, "");
+    const text = JSON.stringify(msg);
+    for (const ws of this.ctx.getWebSockets ? this.ctx.getWebSockets() : []) {
+      const a = ws.deserializeAttachment();
+      if (!a || a.u === uuid || !a.w) continue;
+      for (let i = 0; i < a.w.length; i += 32) {
+        if (a.w.startsWith(hex, i)) { try { ws.send(text); } catch { /* closed */ } break; }
+      }
+    }
+  }
+
+  webSocketMessage(ws, message) {
+    const a = ws.deserializeAttachment();
+    if (!a || typeof message !== "string" || message.length > 4096) return;
+    // at most 30 messages per 10 s per connection
+    const now = Date.now(), r = this.msgRate.get(a.u) || { n: 0, at: now };
+    if (now - r.at > 10_000) { r.n = 0; r.at = now; }
+    if (++r.n > 30) { this.msgRate.set(a.u, r); return; }
+    this.msgRate.set(a.u, r);
+    let m;
+    try { m = JSON.parse(message); } catch { return; }
+    if (m.t === "watch" && typeof m.u === "string") {
+      const w = m.u.toLowerCase().replace(/[^0-9a-f]/g, "").slice(0, 48 * 32);
+      ws.serializeAttachment({ u: a.u, w: w.slice(0, w.length - (w.length % 32)) });
+    } else if (m.t === "emote") {
+      const id = typeof m.id === "string" && /^[a-z_]{1,16}$/.test(m.id) ? m.id : null;
+      this.broadcast(a.u, { t: "emote", uuid: a.u, id });
+    }
+  }
+
+  webSocketClose(ws, code) {
+    try { ws.close(code, "bye"); } catch { /* already closed */ }
   }
 
   count() {
@@ -353,6 +445,17 @@ export async function handle(req, env, keysOverride = null) {
   }
 
   if (rateLimited(req.headers.get("CF-Connecting-IP") || "?", now)) return json(429, { error: "slow down" });
+
+  if (path === "/v1/live") {
+    if (req.headers.get("Upgrade") !== "websocket") return json(426, { error: "expected websocket" });
+    const m0 = /^Bearer (\S+)$/.exec(req.headers.get("Authorization") || "");
+    const who = m0 ? await checkToken(secret, m0[1], now) : null;
+    if (!who) return json(401, { error: "sign in first" });
+    // the user id comes only from the checked token, never from the client's own headers
+    const headers = new Headers({ "Upgrade": "websocket", "X-Tempest-User": who });
+    return presence(env).fetch(new Request("https://presence/live", { headers }));
+  }
+
   if (req.method !== "POST") return json(404, { error: "not found" });
 
   let body;
@@ -389,6 +492,8 @@ export async function handle(req, env, keysOverride = null) {
 
   if (path === "/v1/friends/list") return json(200, await presence(env).friendsState(me));
 
+  if (path === "/v1/cosmetics") return json(200, { ok: true, c: await presence(env).setCosmetics(me, body) });
+
   if (path.startsWith("/v1/friends/")) {
     const other = normUuid(body.uuid);
     if (!other) return json(400, { error: "bad uuid" });
@@ -406,7 +511,7 @@ export async function handle(req, env, keysOverride = null) {
     if (!Array.isArray(body.uuids)) return json(400, { error: "uuids must be a list" });
     if (body.uuids.length > MAX_LOOKUP) return json(400, { error: `at most ${MAX_LOOKUP} uuids` });
     const list = [...new Set(body.uuids.map(normUuid).filter(Boolean))];
-    return json(200, { tempest: list.length ? await presence(env).lookup(list) : [] });
+    return json(200, list.length ? await presence(env).lookupFull(list) : { tempest: [], cosmetics: {} });
   }
 
   if (path === "/v1/logout") {

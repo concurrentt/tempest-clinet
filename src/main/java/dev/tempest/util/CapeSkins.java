@@ -9,7 +9,7 @@ import java.lang.reflect.Proxy;
 import java.lang.reflect.RecordComponent;
 
 /**
- * Swaps the cape (and elytra) texture inside the local player's skin.
+ * Swaps the cape (and elytra) texture inside a player's skin (yours, or another Tempest player's shared cape).
  *
  * Minecraft keeps a player's textures in one immutable record (body, cape, elytra, model, secure),
  * where cape and elytra are "texture asset" objects. This class rebuilds that record with Tempest's
@@ -21,30 +21,30 @@ import java.lang.reflect.RecordComponent;
  * logs once and leaves the skin untouched, so the worst case is "no cape", never a crash.
  */
 public final class CapeSkins {
-    private static Object lastOriginal, lastResult;
-    private static String lastKey;
+    /** original skin -> (cape -> rebuilt skin); weak keys so old skins are forgotten. */
+    private static final java.util.Map<Object, java.util.Map<String, Object>> CACHE =
+            java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
+    private static volatile boolean broken;
     private static boolean warned;
 
     private CapeSkins() { }
 
     /** @return the skin with the Tempest cape applied, or null to keep the original. */
     public static Object apply(Object original, String key) {
-        if (original == null || key == null) return null;
-        if (original == lastOriginal && key.equals(lastKey)) return lastResult;
+        if (original == null || key == null || broken) return null;
+        java.util.Map<String, Object> byKey = CACHE.computeIfAbsent(original, k -> new java.util.concurrent.ConcurrentHashMap<>());
+        Object hit = byKey.get(key);
+        if (hit != null) return hit;
         try {
             Object result = rebuild(original, key);
-            lastOriginal = original;
-            lastKey = key;
-            lastResult = result;
+            byKey.put(key, result);
             return result;
         } catch (Throwable t) {
             if (!warned) {
                 warned = true;
                 System.err.println("[Tempest] Could not apply cape (" + t + "). Capes are disabled for this session.");
             }
-            lastOriginal = original;
-            lastKey = key;
-            lastResult = null;
+            broken = true;
             return null;
         }
     }

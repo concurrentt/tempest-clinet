@@ -1,6 +1,7 @@
 package dev.tempest.render;
 
 import dev.tempest.modules.CosmeticsModule;
+import dev.tempest.util.RemoteCosmetics;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
@@ -12,10 +13,14 @@ import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.model.BipedEntityModel;
 import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Identifier;
 
 /**
- * Draws Tempest cosmetics on the local player: wings on the back, and a halo / horns / crown / cat ears on the head.
+ * Draws Tempest cosmetics: wings on the back, and a halo / horns / crown / ears / hat on the head - on you, and on
+ * other Tempest players who share theirs (util/RemoteCosmetics). Wings are three hinged panels per side so they
+ * fold and ripple as they flap.
  *
  * <p>Runs as a player feature (like the cape). Positions are in model space, where 1 unit = 1 block and +Y is
  * DOWN; after {@code body.applyTransform} the origin is the neck with the back toward +Z, after
@@ -37,23 +42,22 @@ public class CosmeticsFeature extends FeatureRenderer<PlayerEntityRenderState, B
 
     @Override
     public void render(MatrixStack matrices, OrderedRenderCommandQueue queue, int light, PlayerEntityRenderState state, float limbAngle, float limbDistance) {
-        CosmeticsModule m = CosmeticsModule.forRender();
-        if (m == null || state.invisible) return;
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.player == null || state.id != mc.player.getId()) return;   // only on yourself
+        if (state.invisible) return;
         try {
-            float age = state.age;
+            RemoteCosmetics.Look look = lookFor(state.id);
+            if (look == null) return;
+            float age = state.age + (state.id % 97) * 1.7f;      // players don't flap in sync
             BipedEntityModel<PlayerEntityRenderState> model = getContextModel();
-            if (!CosmeticsModule.wingsName(m).equals("None")) {
+            if (look.hasWings()) {
                 matrices.push();
                 model.body.applyTransform(matrices);
-                wings(matrices, queue, light, m, age, state.isGliding);
+                wings(matrices, queue, light, look, age, state.isGliding);
                 matrices.pop();
             }
-            if (!CosmeticsModule.headName(m).equals("None")) {
+            if (look.hasHead()) {
                 matrices.push();
                 model.head.applyTransform(matrices);
-                head(matrices, queue, light, m, age);
+                head(matrices, queue, light, look, age);
                 matrices.pop();
             }
         } catch (RuntimeException e) {
@@ -61,43 +65,86 @@ public class CosmeticsFeature extends FeatureRenderer<PlayerEntityRenderState, B
         }
     }
 
+    /** Your own look (with any try-on preview), or another Tempest player's shared look. */
+    private static RemoteCosmetics.Look lookFor(int entityId) {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.player != null && entityId == mc.player.getId()) {
+            CosmeticsModule m = CosmeticsModule.forRender();
+            if (m == null) return null;
+            return new RemoteCosmetics.Look(null, CosmeticsModule.wingsName(m), CosmeticsModule.headName(m), m.haloColor.get(),
+                    m.wingSize.getFloat(), m.flapSpeed.getFloat());
+        }
+        if (mc.world == null) return null;
+        Entity e = mc.world.getEntityById(entityId);
+        return e instanceof PlayerEntity p ? RemoteCosmetics.of(p.getUuid()) : null;
+    }
+
     // ------------------------------------------------------------------ wings
-    private static void wings(MatrixStack matrices, OrderedRenderCommandQueue queue, int light, CosmeticsModule m, float age, boolean gliding) {
-        Identifier texture = tex("wings_" + CosmeticsModule.wingsName(m).toLowerCase(java.util.Locale.ROOT));
-        float size = m.wingSize.getFloat();
-        float flap = (float) Math.sin(age * 0.18f * m.flapSpeed.getFloat());
-        // swept back ~28 degrees, flapping +/-16 (wider when gliding)
-        double angle = Math.toRadians((gliding ? 12 : 28) + flap * (gliding ? 6 : 16));
+    /**
+     * How each wing moves: [base sweep (deg), flap amplitude (deg), bend at joint 1, bend at joint 2 (deg), lift].
+     * Feathered and bat wings fold at two joints; insect wings are stiff and just beat.
+     */
+    private static float[] wingStyle(String name) {
+        return switch (name) {
+            case "Demon", "Dragon" -> new float[]{30, 15, 16, 22, 0.05f};
+            case "Butterfly", "Fairy" -> new float[]{22, 20, 3, 3, 0.02f};
+            case "Crystal" -> new float[]{28, 12, 8, 10, 0.03f};
+            default -> new float[]{28, 16, 12, 18, 0.05f};       // Angel, Phoenix: feathered
+        };
+    }
+
+    private static final float[] SPLIT = {0f, 0.34f, 0.68f, 1f};
+
+    private static void wings(MatrixStack matrices, OrderedRenderCommandQueue queue, int light, RemoteCosmetics.Look look, float age, boolean gliding) {
+        Identifier texture = tex("wings_" + look.wings().toLowerCase(java.util.Locale.ROOT));
+        float[] st = wingStyle(look.wings());
+        float size = look.wingSize();
+        float ph = age * 0.18f * look.flapSpeed();
+        float glideOpen = gliding ? 0.45f : 1f;           // spread wide while gliding
+        double base = Math.toRadians(st[0] * glideOpen), amp = Math.toRadians(st[1] * (gliding ? 0.4f : 1f));
         final float rootX = 0.06f, rootY = 0.20f, rootZ = 0.16f;
         final float w = 0.95f * size, h = 0.95f * size;
         final float top = -0.32f * h, bottom = 0.68f * h;          // the root sits a third of the way down the texture
-        final float cos = (float) Math.cos(angle), sin = (float) Math.sin(angle);
+        // joint positions (x outward, z back) and a little lift toward the tip, wave travelling outward
+        float[] jx = new float[4], jz = new float[4], jy = new float[4];
+        double dir = base + amp * Math.sin(ph);
+        jx[0] = rootX; jz[0] = rootZ; jy[0] = 0;
+        for (int k = 1; k < 4; k++) {
+            float len = (SPLIT[k] - SPLIT[k - 1]) * w;
+            jx[k] = jx[k - 1] + len * (float) Math.cos(dir);
+            jz[k] = jz[k - 1] + len * (float) Math.sin(dir);
+            jy[k] = jy[k - 1] - st[4] * size * (float) Math.sin(ph - k * 0.5f);
+            if (k < 3) dir += Math.toRadians(st[k + 1]) * (0.6 + 0.4 * Math.sin(ph - k * 0.6));
+        }
         RenderLayer layer = RenderLayers.entityTranslucent(texture);
         for (int side = -1; side <= 1; side += 2) {
             final int sd = side;
             queue.submitCustom(matrices, layer, (entry, vc) -> {
-                // corners in wing space (x outward along the wing, y down), then swung back around the root
-                float[][] c = {{0, top}, {w, top}, {w, bottom}, {0, bottom}};
-                float[][] uv = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
-                for (int k = 0; k < 4; k++) {
-                    float x = c[k][0];
-                    float px = sd * (rootX + x * cos);
-                    float py = rootY + c[k][1];
-                    float pz = rootZ + x * sin;
-                    vert(vc, entry, px, py, pz, uv[k][0], uv[k][1], 0xFFFFFFFF, light);
+                for (int k = 0; k < 3; k++) {
+                    float u0 = SPLIT[k], u1 = SPLIT[k + 1];
+                    vert(vc, entry, sd * jx[k], rootY + top + jy[k], jz[k], u0, 0, 0xFFFFFFFF, light);
+                    vert(vc, entry, sd * jx[k + 1], rootY + top + jy[k + 1], jz[k + 1], u1, 0, 0xFFFFFFFF, light);
+                    vert(vc, entry, sd * jx[k + 1], rootY + bottom + jy[k + 1], jz[k + 1], u1, 1, 0xFFFFFFFF, light);
+                    vert(vc, entry, sd * jx[k], rootY + bottom + jy[k], jz[k], u0, 1, 0xFFFFFFFF, light);
                 }
             });
         }
     }
 
     // ------------------------------------------------------------------ head pieces
-    private static void head(MatrixStack matrices, OrderedRenderCommandQueue queue, int light, CosmeticsModule m, float age) {
-        switch (CosmeticsModule.headName(m)) {
+    private static void head(MatrixStack matrices, OrderedRenderCommandQueue queue, int light, RemoteCosmetics.Look look, float age) {
+        switch (look.head()) {
             case "Halo" -> {
                 float y = -0.68f + 0.025f * (float) Math.sin(age * 0.1f);
-                float r = 0.27f;
-                int col = 0xFF000000 | m.haloRgb();
+                float r = 0.27f, g = 0.40f;
+                int col = 0xFF000000 | look.haloRgb();
+                int glow = 0x50000000 | look.haloRgb();
                 queue.submitCustom(matrices, RenderLayers.entityTranslucent(HALO), (entry, vc) -> {
+                    // soft outer glow, then the ring itself
+                    vert(vc, entry, -g, y + 0.002f, -g, 0, 0, glow, FULL_BRIGHT);
+                    vert(vc, entry, g, y + 0.002f, -g, 1, 0, glow, FULL_BRIGHT);
+                    vert(vc, entry, g, y + 0.002f, g, 1, 1, glow, FULL_BRIGHT);
+                    vert(vc, entry, -g, y + 0.002f, g, 0, 1, glow, FULL_BRIGHT);
                     vert(vc, entry, -r, y, -r, 0, 0, col, FULL_BRIGHT);
                     vert(vc, entry, r, y, -r, 1, 0, col, FULL_BRIGHT);
                     vert(vc, entry, r, y, r, 1, 1, col, FULL_BRIGHT);
@@ -119,22 +166,7 @@ public class CosmeticsFeature extends FeatureRenderer<PlayerEntityRenderState, B
                     });
                 }
             }
-            case "Crown" -> {
-                queue.submitCustom(matrices, RenderLayers.entityTranslucent(CROWN), (entry, vc) -> {
-                    final int segs = 8;
-                    float r = 0.29f, y0 = -0.47f, y1 = -0.66f;
-                    for (int i = 0; i < segs; i++) {
-                        double a0 = i * Math.PI * 2 / segs, a1 = (i + 1) * Math.PI * 2 / segs;
-                        float x0 = (float) Math.cos(a0) * r, z0 = (float) Math.sin(a0) * r;
-                        float x1 = (float) Math.cos(a1) * r, z1 = (float) Math.sin(a1) * r;
-                        float u0 = (i % 4) / 4f, u1 = (i % 4 + 1) / 4f;   // the texture holds four crown points
-                        vert(vc, entry, x0, y0, z0, u0, 1, 0xFFFFFFFF, FULL_BRIGHT);
-                        vert(vc, entry, x1, y0, z1, u1, 1, 0xFFFFFFFF, FULL_BRIGHT);
-                        vert(vc, entry, x1, y1, z1, u1, 0, 0xFFFFFFFF, FULL_BRIGHT);
-                        vert(vc, entry, x0, y1, z0, u0, 0, 0xFFFFFFFF, FULL_BRIGHT);
-                    }
-                });
-            }
+            case "Crown" -> ring(matrices, queue, CROWN, 0.29f, -0.47f, -0.66f, 8, 2, FULL_BRIGHT);
             case "Bunny Ears" -> {
                 for (int side = -1; side <= 1; side += 2) {
                     final int sd = side;

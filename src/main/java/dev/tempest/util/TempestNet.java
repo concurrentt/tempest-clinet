@@ -30,7 +30,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *       same key that signs your chat) and sends the public half plus Mojang's certificate for it. The service
  *       checks both. Your Minecraft access token is never used or sent anywhere.</li>
  *   <li>Heartbeat every 60 s while you are in a world ("I'm online with Tempest").</li>
- *   <li>Lookup every 10 s for players near you, in one batch, cached for 2 minutes.</li>
+ *   <li>Lookup every 10 s for players near you, in one batch, cached for 2 minutes (also returns their cosmetics).</li>
+ *   <li>Your cosmetics are sent when they change; emotes and live cosmetics changes go over {@link TempestLive}.</li>
  * </ul>
  * Everything runs off the game thread. If the service is unreachable it backs off and the game is unaffected.
  * Switch it off in Render -> Nametags.
@@ -58,7 +59,9 @@ public final class TempestNet {
     private static volatile String lastProblem;
     private static volatile boolean loggedOut;
     private static volatile long lastBeatOk;
-    private static long lastHeartbeat, lastLookup, retryAt;
+    private static long lastHeartbeat, lastLookup, retryAt, lastCosCheck, cosPendingAt;
+    private static volatile String lastCosSent, cosPending;
+    private static volatile long cosRetryAt;
     private static long backoff = 60_000;
 
     private TempestNet() { }
@@ -81,12 +84,15 @@ public final class TempestNet {
         if (base().isEmpty()) return;
         boolean share = NametagsModule.shareOnline(), show = NametagsModule.showOnline();
         boolean friends = dev.tempest.modules.FriendsModule.onlineToFriends();
-        boolean wanted = share || friends || show || Social.wanted();
+        boolean others = RemoteCosmetics.seeOthers() || Emotes.wanted();
+        boolean wanted = share || friends || show || others || RemoteCosmetics.share() || Social.wanted();
         if (!wanted) {
+            TempestLive.close();
             if (token != null && !loggedOut) { post("/v1/logout", new JsonObject(), true); loggedOut = true; }
             return;
         }
         long now = System.currentTimeMillis();
+        TempestLive.tick(c, base(), signedIn() ? token : null);
         if (busy || now < retryAt) return;
 
         if (token == null || now > tokenExpires - 60_000) {
@@ -108,7 +114,21 @@ public final class TempestNet {
             });
             return;
         }
-        if (show && c.world != null && c.player != null && now - lastLookup >= LOOKUP_MS) {
+        if (signedIn() && now - lastCosCheck >= 1_000 && now >= cosRetryAt) {
+            lastCosCheck = now;
+            String mine = RemoteCosmetics.mine().toString();
+            if (!mine.equals(lastCosSent)) {
+                if (!mine.equals(cosPending)) { cosPending = mine; cosPendingAt = now; }
+                else if (now - cosPendingAt >= 1_500) {      // wait until you've stopped clicking through options
+                    lastCosSent = mine;
+                    post("/v1/cosmetics", JsonParser.parseString(mine).getAsJsonObject(), true).thenAccept(r -> {
+                        if (r == null) { lastCosSent = null; cosRetryAt = System.currentTimeMillis() + 60_000; }   // try again later
+                    });
+                    return;
+                }
+            }
+        }
+        if ((show || others) && c.world != null && c.player != null && now - lastLookup >= LOOKUP_MS) {
             lastLookup = now;
             lookup(c, now);
         }
@@ -231,6 +251,7 @@ public final class TempestNet {
             backoff = 60_000;
             lastProblem = null;
             lastHeartbeat = 0;   // send a heartbeat (with your server and privacy choices) right away
+            lastCosSent = null;  // and your cosmetics
         });
     }
 
@@ -258,9 +279,16 @@ public final class TempestNet {
         post("/v1/lookup", body, true).thenAccept(r -> {
             if (r == null || !r.has("tempest")) return;
             long t = System.currentTimeMillis();
-            for (UUID id : ask) TEMPEST.remove(id);
+            for (UUID id : ask) { TEMPEST.remove(id); RemoteCosmetics.forget(id); }
             for (var e : r.getAsJsonArray("tempest")) {
                 try { TEMPEST.put(UUID.fromString(e.getAsString()), t); } catch (IllegalArgumentException ignored) { }
+            }
+            if (r.has("cosmetics") && r.get("cosmetics").isJsonObject()) {
+                for (var e : r.getAsJsonObject("cosmetics").entrySet()) {
+                    try {
+                        if (e.getValue().isJsonObject()) RemoteCosmetics.put(UUID.fromString(e.getKey()), e.getValue().getAsJsonObject());
+                    } catch (IllegalArgumentException ignored) { }
+                }
             }
         });
     }

@@ -9,5 +9,7 @@
   "key.tempest.waypoint_add": "Add Waypoint Here",
   "key.tempest.friends": "Open Friends Menu",
   "key.tempest.social": "Open Social Menu",
-  "key.tempest.screenshots": "Open Screenshots Folder"
+  "key.tempest.screenshots": "Open Screenshots Folder",
+  "key.tempest.emote_wheel": "Emote Wheel",
+  "key.tempest.texture_painter": "Open Texture Painter"
 }

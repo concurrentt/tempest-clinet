@@ -8,16 +8,16 @@ import dev.tempest.module.ModuleManager;
 import java.util.Locale;
 
 /**
- * Wear one of five Tempest capes. The choice is client-side: only you see it.
+ * Wear a Tempest cape. Shared with other Tempest players through the Tempest service (see RemoteCosmetics).
  * The texture files are assets/tempest/textures/cape/&lt;name&gt;.png (lower-case option name).
  */
 public final class CapesModule extends Module {
-    public final ModeSetting cape = add(new ModeSetting("cape", "Cape", "Tempest",
-            "None", "Tempest", "Stormcloud", "Voltage", "Ember", "Frostbite",
-            "Aurora", "Galaxy", "Sakura", "Inferno", "Ocean", "Void", "Royal", "Synthwave"));
+    public static final String[] CAPES = {"None", "Tempest", "Stormcloud", "Voltage", "Ember", "Frostbite",
+            "Aurora", "Galaxy", "Sakura", "Inferno", "Ocean", "Void", "Royal", "Synthwave"};
+    public final ModeSetting cape = add(new ModeSetting("cape", "Cape", "Tempest", CAPES));
 
     public CapesModule() {
-        super("capes", "Capes", "Wear a Tempest cape: Tempest, Stormcloud, Voltage, Ember or Frostbite. Only you can see it.",
+        super("capes", "Capes", "Wear a Tempest cape. Other Tempest players see it too (Cosmetics -> Show Mine To Others).",
                 Category.RENDER, true);
     }
 

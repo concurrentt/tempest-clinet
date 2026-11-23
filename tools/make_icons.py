@@ -726,6 +726,95 @@ def g_note(p):
     p.line([(44, 30), (80, 22)], w=7)
 
 
+# ---------------------------------------------------------------------------- emotes (stick figures)
+def _figure(p, arms, head=(50, 17), legs=((38, 92), (62, 92)), hip=(50, 62), neck=(50, 31)):
+    p.disc(head[0], head[1], 10)
+    p.line([neck, hip], 8)
+    for leg in legs:
+        p.line([hip] + ([leg] if isinstance(leg[0], (int, float)) else list(leg)), 8)
+    for arm in arms:
+        p.line([(50, 36)] + list(arm), 7)
+
+
+def g_emote_wave(p):
+    _figure(p, [[(34, 30), (28, 10)], [(64, 50), (66, 64)]])
+    p.arc(28, 10, 12, 200, 250, 4)
+    p.arc(28, 10, 18, 195, 255, 4)
+
+
+def g_emote_clap(p):
+    _figure(p, [[(34, 46), (48, 40)], [(66, 46), (52, 40)]])
+    for a in (-60, -90, -120):
+        x, y = 50 + 16 * math.cos(math.radians(a)), 40 + 16 * math.sin(math.radians(a))
+        x2, y2 = 50 + 24 * math.cos(math.radians(a)), 40 + 24 * math.sin(math.radians(a))
+        p.line([(x, y), (x2, y2)], 4)
+
+
+def g_emote_dance(p):
+    _figure(p, [[(32, 24), (24, 8)], [(66, 48), (80, 60)]], head=(53, 17),
+            legs=(((34, 76), (30, 92)), ((62, 76), (72, 90))))
+    p.disc(82, 22, 6)
+    p.line([(87, 22), (87, 4), (94, 8)], 4)
+
+
+def g_emote_dab(p):
+    _figure(p, [[(28, 22), (10, 10)], [(30, 34), (40, 22)]], head=(44, 22))
+
+
+def g_emote_salute(p):
+    _figure(p, [[(32, 32), (42, 14)], [(64, 50), (66, 64)]])
+
+
+def g_emote_facepalm(p):
+    _figure(p, [[(34, 42), (48, 22)], [(64, 50), (66, 64)]], head=(52, 20))
+
+
+def g_emote_cheer(p):
+    _figure(p, [[(36, 22), (26, 6)], [(64, 22), (74, 6)]])
+    p.sparkle(14, 30, 7)
+    p.sparkle(86, 30, 7)
+
+
+def g_emote_shrug(p):
+    _figure(p, [[(30, 46), (20, 34)], [(70, 46), (80, 34)]], head=(53, 17))
+
+
+# ---------------------------------------------------------------------------- texture painter tools
+def g_bucket(p):
+    p.poly([(18, 38), (66, 38), (60, 88), (24, 88)])
+    p.arc(42, 38, 20, 180, 360, 6)
+    p.poly([(70, 52), (80, 40), (90, 52), (84, 66), (76, 66)])
+    p.disc(80, 60, 8)
+
+
+def g_eyedropper(p):
+    p.line([(20, 80), (60, 40)], 9)
+    p.line([(54, 34), (66, 46)], 9)
+    p.disc(72, 28, 13)
+    p.cap(14, 86, 8)
+
+
+def g_eraser(p):
+    p.poly([(14, 62), (52, 24), (86, 58), (48, 96)])
+    p.d.polygon([p.p(30, 62), p.p(48, 44), p.p(66, 62), p.p(48, 80)], fill=0)
+    p.line([(48, 92), (90, 92)], 5)
+
+
+def g_undo(p):
+    p.arc(52, 56, 28, 200, 450, 8)
+    p.poly([(10, 46), (38, 30), (34, 62)])
+
+
+def g_redo(p):
+    p.arc(48, 56, 28, 90, 340, 8)
+    p.poly([(90, 46), (62, 30), (66, 62)])
+
+
+def g_brush(p):
+    p.line([(84, 14), (46, 56)], 9)
+    p.poly([(40, 50), (52, 62), (36, 82), (14, 88), (22, 66)])
+
+
 GLYPHS = [
     ("star_outline", g_star_outline), ("star_filled", g_star_filled), ("gear", g_gear), ("person", g_person),
     ("people", g_people), ("grid", g_grid), ("power", g_power), ("globe", g_globe),
@@ -750,6 +839,10 @@ GLYPHS = [
     ("wings", g_wings), ("halo", g_halo), ("horns", g_horns), ("crown", g_crown),
     ("cat_ears", g_cat_ears), ("bunny", g_bunny), ("antlers", g_antlers), ("flower", g_flower),
     ("witch_hat", g_witch_hat), ("top_hat", g_top_hat), ("snowflake", g_snowflake), ("note", g_note),
+    ("emote_wave", g_emote_wave), ("emote_clap", g_emote_clap), ("emote_dance", g_emote_dance), ("emote_dab", g_emote_dab),
+    ("emote_salute", g_emote_salute), ("emote_facepalm", g_emote_facepalm), ("emote_cheer", g_emote_cheer), ("emote_shrug", g_emote_shrug),
+    ("bucket", g_bucket), ("eyedropper", g_eyedropper), ("eraser", g_eraser), ("undo", g_undo),
+    ("redo", g_redo), ("brush", g_brush),
 ]
 
 

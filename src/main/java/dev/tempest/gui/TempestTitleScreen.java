@@ -51,7 +51,7 @@ public class TempestTitleScreen extends Screen {
         buttons.add(new Btn("multi", x, y, bw, bh, "people", "Multiplayer", null, 0, 0.05f));
         y += bh + gap;
         int half = (bw - gap) / 2;
-        buttons.add(new Btn("mods", x, y, half, bh, "grid", "Mods", Integer.toString(dev.tempest.module.ModuleManager.all().size()), 0, 0.10f));
+        buttons.add(new Btn("mods", x, y, half, bh, "grid", "Tempest Mods", Integer.toString(dev.tempest.module.ModuleManager.all().size()), 0, 0.10f));
         buttons.add(new Btn("visuals", x + half + gap, y, bw - half - gap, bh, "planet_stars", "Visuals", null, 1, 0.13f));
         y += bh + gap;
         if (promoH > 0) {
@@ -160,7 +160,43 @@ public class TempestTitleScreen extends Screen {
         Draw.text(ctx, tr, ver, 10, height - 14, MenuKit.fa(0xFFB9BED6, eFoot), false);
         updatePill(ctx, tr, mx, my, eFoot, time);
         String hint = "Right Shift opens the Tempest menu in game";
-        Draw.text(ctx, tr, hint, width - 10 - tr.getWidth(hint), height - 14, MenuKit.fa(0xFF9096B4, eFoot), false);
+        int hintX = width - 10 - tr.getWidth(hint);
+        int[] ext = externalModsBox(tr);
+        if (ext != null) {
+            boolean hv = Draw.hit(mx, my, ext[0], ext[1], ext[2], ext[3]);
+            float p = Draw.hoverProgress("title_external_mods", hv);
+            Draw.panel(ctx, ext[0], ext[1], ext[2], ext[3], ext[3] / 2, MenuKit.fa(Draw.lerpColor(0xB0121319, 0xD0202230, p), eFoot),
+                    MenuKit.fa(Draw.lerpColor(0x26FFFFFF, Draw.withAlpha(Draw.accent(), 0xA0), p), eFoot));
+            int fg = MenuKit.fa(Draw.lerpColor(0xFFC9CCD6, 0xFFFFFFFF, p), eFoot);
+            Icons.draw(ctx, "layers", ext[0] + 9, ext[1] + (ext[3] - 9) / 2, 9, fg);
+            Draw.text(ctx, tr, EXTERNAL_MODS, ext[0] + 23, ext[1] + (ext[3] - 8) / 2, fg, false);
+        }
+        // the hint makes room for the button on narrow screens
+        if (ext == null || hintX > ext[0] + ext[2] + 8) {
+            Draw.text(ctx, tr, hint, hintX, height - 14, MenuKit.fa(0xFF9096B4, eFoot), false);
+        }
+    }
+
+    private static final String EXTERNAL_MODS = "Fabric External Mods";
+
+    /** Mod Menu's own list of every installed mod (only when Mod Menu is installed). */
+    private static boolean modMenuInstalled() { return FabricLoader.getInstance().isModLoaded("modmenu"); }
+
+    /** {x, y, w, h} of the bottom-centre "Fabric External Mods" button, or null without Mod Menu. */
+    private int[] externalModsBox(TextRenderer tr) {
+        if (!modMenuInstalled()) return null;
+        int w = tr.getWidth(EXTERNAL_MODS) + 32, h = 18;
+        return new int[]{(width - w) / 2, height - 22, w, h};
+    }
+
+    /** Opens Mod Menu's mods screen (looked up by name so Tempest doesn't need Mod Menu to build or run). */
+    private void openModMenu() {
+        try {
+            Class<?> c = Class.forName("com.terraformersmc.modmenu.gui.ModsScreen");
+            client.setScreen((Screen) c.getConstructor(Screen.class).newInstance(this));
+        } catch (Throwable t) {
+            dev.tempest.util.Chat.info("Couldn't open Mod Menu.");
+        }
     }
 
     /** Glass button with an icon beside the label (green variant for the highlighted action). */
@@ -353,6 +389,8 @@ public class TempestTitleScreen extends Screen {
     public boolean mouseClicked(Click click, boolean doubled) {
         if (click.button() != 0) return super.mouseClicked(click, doubled);
         double mx = click.x(), my = click.y();
+        int[] ext = externalModsBox(textRenderer);
+        if (ext != null && Draw.hit(mx, my, ext[0], ext[1], ext[2], ext[3])) { openModMenu(); return true; }
         String upd = updateLabel();
         if (upd != null && Draw.hit(mx, my, 8, height - 36, pillW(textRenderer, upd), 16)) {
             client.setScreen(new UpdateScreen(this));

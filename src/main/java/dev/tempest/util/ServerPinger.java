@@ -26,6 +26,43 @@ public final class ServerPinger {
         public volatile long time;
         /** The server's 64x64 PNG icon from its status reply, if it sent one. */
         public volatile byte[] favicon;
+        /** When the server sends no icon: its website's icon (e.g. crystalbox.org's logo), if it has one. */
+        public volatile byte[] webIcon;
+
+        /** The icon to show: the server's own, else its website's, else null. */
+        public byte[] icon() { return favicon != null ? favicon : webIcon; }
+    }
+
+    /** Website icons by domain (an empty array = looked, none found), fetched once per game. */
+    private static final Map<String, byte[]> WEB_ICONS = new ConcurrentHashMap<>();
+    private static final java.net.http.HttpClient HTTP = java.net.http.HttpClient.newBuilder()
+            .connectTimeout(java.time.Duration.ofSeconds(5)).followRedirects(java.net.http.HttpClient.Redirect.NORMAL).build();
+
+    /**
+     * The icon of the website behind a server address ("play.example.net:25565" -> example.net), at least 32 px,
+     * via Google's favicon service. Blocking; called on the ping threads.
+     */
+    private static byte[] webIcon(String address) {
+        String host = address.trim().toLowerCase(java.util.Locale.ROOT);
+        int colon = host.lastIndexOf(':');
+        if (colon > 0 && host.indexOf(':') == colon) host = host.substring(0, colon);
+        if (host.isEmpty() || host.matches("[0-9.]+") || host.contains(":") || !host.contains(".")) return null;   // IPs have no website
+        String[] parts = host.split("\\.");
+        String domain = parts.length >= 2 ? parts[parts.length - 2] + "." + parts[parts.length - 1] : host;
+        byte[] known = WEB_ICONS.get(domain);
+        if (known != null) return known.length == 0 ? null : known;
+        byte[] found = new byte[0];
+        try {
+            var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(
+                    "https://www.google.com/s2/favicons?sz=64&domain_url=https://" + domain)).timeout(java.time.Duration.ofSeconds(6)).GET().build();
+            var res = HTTP.send(req, java.net.http.HttpResponse.BodyHandlers.ofByteArray());
+            if (res.statusCode() == 200 && res.body().length > 0) {
+                java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(res.body()));
+                if (img != null && img.getWidth() >= 32 && img.getHeight() >= 32) found = res.body();   // skip tiny 16 px blobs
+            }
+        } catch (Exception ignored) { }
+        WEB_ICONS.put(domain, found);
+        return found.length == 0 ? null : found;
     }
 
     private static final Map<String, Result> RESULTS = new ConcurrentHashMap<>();
@@ -58,11 +95,13 @@ public final class ServerPinger {
         r.time = System.currentTimeMillis();
         if (old != null) {                           // keep showing the last icon and ping while the new ping runs
             r.favicon = old.favicon;
+            r.webIcon = old.webIcon;
             if (old.done && !old.failed) { r.pingMs = old.pingMs; r.online = old.online; r.max = old.max; }
         }
         RESULTS.put(address, r);
         POOL.execute(() -> {
             try { run(address, r); } catch (Exception e) { r.failed = true; }
+            if (r.favicon == null && r.webIcon == null) r.webIcon = webIcon(address);
             r.done = true;
             r.time = System.currentTimeMillis();
         });

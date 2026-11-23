@@ -48,7 +48,7 @@ public class ServerAddressModule extends HudModule {
         byte[] png = info.getFavicon();
         if (png == null) {
             dev.tempest.util.ServerPinger.Result r = dev.tempest.util.ServerPinger.get(info.address);
-            if (r != null) png = r.favicon;
+            if (r != null) png = r.icon();
             if (png == null && !info.address.equals(askedFor)) {
                 askedFor = info.address;
                 dev.tempest.util.ServerPinger.ping(info.address, 300_000);

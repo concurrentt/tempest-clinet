@@ -1,3 +1,12 @@
+## 0.21.5 - Window icon, menu fixes
+- Servers that send no icon (like crystalbox.org) show their website's icon instead of the globe.
+- Mods menu: your name and face show in the corner card from the main menu too (not "Player").
+- The Right Shift menu blurs the game behind it as well (GUI & Configs -> Menu Blur).
+- Totem Pop Counter: a Reset button to clear the pop counts by hand.
+- The game window uses the Tempest icon (taskbar, title bar, Alt-Tab) instead of the grass block.
+- Discord Status: a Check button that says in chat whether it's connected to Discord (and why not); every
+  connection step and any error from Discord is also written to the game log as "[Tempest] Discord: ...".
+
 ## 0.21.4 - Nicer mods menu, background blur
 - Mods menu (Right Shift): the game behind it is blurred (GUI & Configs -> Menu Blur: Off / Light / Medium /
   Strong), with a lighter wash and a soft vignette. Cards have a top-lit surface, lift on hover and glow green when

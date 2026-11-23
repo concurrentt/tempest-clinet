@@ -46,9 +46,12 @@ public class TempestMenuScreen extends Screen {
     }
 
     // ---------------------------------------------------------------- render
-    /** No vanilla blur: it re-renders the whole screen several times per frame, and this menu draws its own wash. */
+    /** The menu draws its own background (render: blur and wash). */
     @Override
     public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) { }
+
+    @Override
+    public void removed() { MenuBlur.restore(); }
 
     @Override
     public void render(DrawContext ctx, int mx, int my, float delta) {
@@ -56,8 +59,9 @@ public class TempestMenuScreen extends Screen {
         float e = intro();
         if (client != null && client.world == null) Draw.menuBackground(ctx, width, height);
         else {
-            // darken the world, most of all behind the menu
-            ctx.fillGradient(0, 0, width, height, MenuKit.fa(0x70000000, e), MenuKit.fa(0x50000000, e));
+            // blur the world (GUI & Configs -> Menu Blur), then darken it - less when blurred - most of all behind the menu
+            boolean blurred = MenuBlur.apply(ctx);
+            ctx.fillGradient(0, 0, width, height, MenuKit.fa(blurred ? 0x48000000 : 0x70000000, e), MenuKit.fa(blurred ? 0x30000000 : 0x50000000, e));
             TempestLoading.drawGlow(ctx, width / 2, rowY(), Math.round(Math.max(width, height) * 1.1f), 0x000000, 0.45f * e);
         }
 

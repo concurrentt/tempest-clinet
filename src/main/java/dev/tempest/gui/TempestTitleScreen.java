@@ -302,7 +302,7 @@ public class TempestTitleScreen extends Screen {
             ServerPinger.Result r = ServerPinger.get(f.address);
             boolean up = r != null && !r.failed && r.pingMs >= 0;
             int dot = r == null || (!r.done && r.pingMs < 0) ? 0xFF8B96C0 : !up ? 0xFFFF5555 : r.pingMs < 80 ? 0xFF55FF55 : r.pingMs < 200 ? 0xFFFFD83A : 0xFFFF5555;
-            net.minecraft.util.Identifier ic = r != null ? dev.tempest.util.ServerIcons.get(f.address, r.favicon) : null;
+            net.minecraft.util.Identifier ic = r != null ? dev.tempest.util.ServerIcons.get(f.address, r.icon()) : null;
             if (ic != null) {
                 MenuKit.serverIcon(ctx, ic, x + 11, ry + 5, 14, e);
                 Draw.circle(ctx, x + 24, ry + 18, 2, MenuKit.fa(dot, e));

@@ -32,6 +32,10 @@ public class TotemPopModule extends HudModule {
         // -1, -1: not placed yet - it starts centred above the hotbar (see onTick) until you move it
         super("totem_pops", "Totem Pop Counter", "Shows how many totems each player has popped next to their name (e.g. Steve -3), and how many you have left.",
                 Category.PVP, true, -1, -1);
+        add(new dev.tempest.module.ActionSetting("reset", "Pop Counts", "Reset", () -> {
+            POPS.clear();
+            dev.tempest.util.Chat.info("Totem pop counts reset.");
+        }));
     }
 
     @Override

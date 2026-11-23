@@ -58,6 +58,7 @@ public class TempestClient implements ClientModInitializer {
         net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents.CHAT.register((message, signed, sender, params, time) ->
                 dev.tempest.modules.AutoGgModule.onMessage(message));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            dev.tempest.util.WindowIcon.tick(client);
             MotionBlurModule.update(client);
             dev.tempest.gui.TempestScreens.tick(client);
             dev.tempest.modules.KillEffectsModule.tick(client);

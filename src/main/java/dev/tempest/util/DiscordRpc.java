@@ -33,6 +33,13 @@ public final class DiscordRpc {
     private static Conn conn;
     private static volatile String status = "Off";
 
+    /** Records the connection state and writes changes to the game log ([Tempest] Discord: ...). */
+    private static void status(String s) {
+        if (s.equals(status)) return;
+        status = s;
+        System.out.println("[Tempest] Discord: " + s);
+    }
+
     private DiscordRpc() { }
 
     public static boolean configured() { return !APP_ID.isBlank(); }
@@ -41,7 +48,7 @@ public final class DiscordRpc {
 
     /** The activity to show (null clears it). Sent within a second or two; repeated equal calls are free. */
     public static void set(JsonObject activity) {
-        if (!configured()) { status = "No Discord app ID set"; return; }
+        if (!configured()) { status("No Discord app ID set"); return; }
         synchronized (LOCK) {
             if (activity == null ? wanted == null : activity.equals(wanted)) return;
             wanted = activity == null ? null : activity.deepCopy();
@@ -71,8 +78,8 @@ public final class DiscordRpc {
                 if (conn == null) {
                     if (System.currentTimeMillis() < nextTry) { Thread.sleep(1000); continue; }
                     conn = connect();
-                    if (conn == null) { status = "Discord isn't running"; nextTry = System.currentTimeMillis() + 15_000; continue; }
-                    status = "Connected";
+                    if (conn == null) { status("Discord isn't running"); nextTry = System.currentTimeMillis() + 15_000; continue; }
+                    status("Connected");
                 }
                 synchronized (LOCK) { dirty = false; }
                 JsonObject args = new JsonObject();
@@ -85,14 +92,16 @@ public final class DiscordRpc {
                 conn.write(1, cmd.toString());
                 JsonObject reply = conn.read();
                 if (reply != null && "ERROR".equals(reply.has("evt") && !reply.get("evt").isJsonNull() ? reply.get("evt").getAsString() : "")) {
-                    status = "Discord refused the status: " + reply;
+                    status("Discord refused the status: " + (reply.has("data") ? reply.get("data").toString() : reply.toString()));
+                } else {
+                    status(send == null ? "Connected (status cleared)" : "Connected - showing \"" + (send.has("details") ? send.get("details").getAsString() : "") + "\"");
                 }
                 if (send == null && wantedIsNull()) Thread.sleep(200);
             } catch (Exception e) {
                 // Discord closed or restarted: reconnect and resend
                 close();
                 synchronized (LOCK) { dirty = true; }
-                status = "Discord isn't running";
+                status("Lost the connection to Discord (" + e.getClass().getSimpleName() + "), retrying");
                 nextTry = System.currentTimeMillis() + 15_000;
             }
         }
@@ -124,9 +133,10 @@ public final class DiscordRpc {
                 c.write(0, hs.toString());
                 JsonObject ready = c.read();                 // DISPATCH READY, or an error / close frame
                 if (ready != null && ready.has("evt") && !ready.get("evt").isJsonNull() && "READY".equals(ready.get("evt").getAsString())) return c;
-                status = "Discord refused the app ID";
+                status("Discord refused the handshake: " + ready);
                 c.close();
             } catch (Exception e) {
+                status("Couldn't talk to Discord on pipe " + i + ": " + e);
                 if (c != null) try { c.close(); } catch (Exception ignored) { }
             }
         }

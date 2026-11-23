@@ -153,20 +153,30 @@ public class ClickGuiScreen extends Screen {
 
     private void drawPlayerHead(DrawContext ctx, int x, int y, int size) {
         MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.player == null) {
-            String ini = playerName().substring(0, 1).toUpperCase(Locale.ROOT);
-            Draw.text(ctx, textRenderer, bold(ini), x + (size - Draw.textW(textRenderer, bold(ini))) / 2,
-                    y + (size - 8) / 2, 0xFFFFFFFF, false);
+        if (mc.player != null) {
+            // 1.21.11 exposes the player's skin as SkinTextures/AssetInfo rather than a raw Identifier; Mojang's
+            // skin drawer resolves the face and hat layers through the current skin cache.
+            PlayerSkinDrawer.draw(ctx, mc.player.getSkin(), x, y, size);
             return;
         }
-        // 1.21.11 exposes the player's skin as SkinTextures/AssetInfo rather
-        // than a raw Identifier. Use Mojang's skin drawer so the face and hat
-        // layers are resolved through the current skin cache API.
-        PlayerSkinDrawer.draw(ctx, mc.player.getSkin(), x, y, size);
+        // in the menus there's no player entity: use the account's face (loaded like the title screen's)
+        java.util.UUID id = mc.getSession() != null ? mc.getSession().getUuidOrNull() : null;
+        net.minecraft.util.Identifier head = dev.tempest.util.PlayerHeads.get(id);
+        if (head != null) {
+            ctx.drawTexture(net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED, head, x, y, 0f, 0f, size, size, 32, 32, 32, 32, 0xFFFFFFFF);
+            return;
+        }
+        String ini = playerName().substring(0, 1).toUpperCase(Locale.ROOT);
+        Draw.text(ctx, textRenderer, bold(ini), x + (size - Draw.textW(textRenderer, bold(ini))) / 2,
+                y + (size - 8) / 2, 0xFFFFFFFF, false);
     }
 
+    /** Your account name - in a world or in the menus (it's the logged-in account either way). */
     private String playerName() {
-        return client != null && client.player != null ? client.player.getName().getString() : "Player";
+        if (client != null && client.player != null) return client.player.getName().getString();
+        if (client != null && client.getSession() != null && client.getSession().getUsername() != null
+                && !client.getSession().getUsername().isBlank()) return client.getSession().getUsername();
+        return "Player";
     }
 
     // ---------- layout ----------
@@ -311,33 +321,6 @@ public class ClickGuiScreen extends Screen {
     @Override
     public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) { }
 
-    /** The player's own blur strength, put back when the menu closes (we borrow Minecraft's blur while it's open). */
-    private Integer savedBlur;
-
-    /**
-     * Blurs the game behind the menu with Minecraft's own menu blur (one cheap pass), at the strength chosen in
-     * GUI & Configs -> Menu Blur. Minecraft reads the strength from its "Menu Background Blur" option, so that is set
-     * while this menu is open and restored afterwards (never saved).
-     */
-    private boolean blurBehind(DrawContext ctx) {
-        int strength = ClientSettingsModule.menuBlur();
-        if (strength <= 0 || client == null || client.world == null) return false;
-        try {
-            var opt = client.options.getMenuBackgroundBlurriness();
-            if (savedBlur == null) savedBlur = opt.getValue();
-            if (opt.getValue() != strength) opt.setValue(strength);
-            ctx.applyBlur();
-            return true;
-        } catch (Throwable t) {
-            return false;   // e.g. blur already applied this frame
-        }
-    }
-
-    private void restoreBlur() {
-        if (savedBlur == null || client == null) return;
-        try { client.options.getMenuBackgroundBlurriness().setValue(savedBlur); } catch (Throwable ignored) { }
-        savedBlur = null;
-    }
 
     @Override
     public void render(DrawContext ctx, int mx, int my, float delta) {
@@ -359,7 +342,7 @@ public class ClickGuiScreen extends Screen {
         // Blur the game behind, dim it with a soft blue-black wash (lighter when blurred) and a vignette, then a
         // soft accent glow so the window feels lit from behind.
         if (client != null && client.world == null) Draw.menuBackground(ctx, width, height);
-        boolean blurred = blurBehind(ctx);
+        boolean blurred = MenuBlur.apply(ctx);
         int topA = blurred ? 0x48 : 0x70, botA = blurred ? 0x22 : 0x38;
         ctx.fillGradient(0, 0, width, height, (((int) (topA * anim)) << 24) | 0x05070D, (((int) (botA * anim)) << 24) | 0x05070D);
         ctx.fillGradient(0, 0, width, height / 6, (((int) (0x40 * anim)) << 24), 0);
@@ -1043,7 +1026,7 @@ public class ClickGuiScreen extends Screen {
 
     @Override
     public void removed() {
-        restoreBlur();
+        MenuBlur.restore();
         savedX = pX;
         savedY = pY;
         savedScroll = scroll;

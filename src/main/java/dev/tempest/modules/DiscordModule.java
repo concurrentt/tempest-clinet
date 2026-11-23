@@ -29,6 +29,8 @@ public class DiscordModule extends Module {
     public DiscordModule() {
         super("discord", "Discord Status", "Shows that you're playing Tempest (and where) on your Discord profile.", Category.CLIENT, true);
         keyHint = "Needs the Discord desktop app open on this computer.";
+        add(new dev.tempest.module.ActionSetting("check", "Connection", "Check", () ->
+                dev.tempest.util.Chat.info("Discord Status: " + (isEnabled() ? DiscordRpc.status() : "turned off"))));
     }
 
     @Override

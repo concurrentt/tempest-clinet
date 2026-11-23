@@ -25,7 +25,7 @@ public class TempestMenuScreen extends Screen {
 
     // ---------------------------------------------------------------- layout
     private static final String[][] CHIPS = {{"hud", "layout", "Edit HUD"}, {"sky", "planet_stars", "Custom Sky"}, {"theme", "palette", "Theme"},
-            {"paint", "brush", "Textures"}, {"social", "people", "Social"}, {"settings", "gear", "Settings"}};
+            {"editor", "brush", "Editor"}, {"social", "people", "Social"}, {"settings", "gear", "Settings"}};
     private static final int CHIP_W = 68, CHIP_H = 20;
 
     private int logoSize() { return Math.max(64, Math.min(104, Math.round(height * 0.15f))); }
@@ -168,7 +168,7 @@ public class TempestMenuScreen extends Screen {
                 case "sky" -> client.setScreen(ClickGuiScreen.openTo(dev.tempest.module.Category.VISUALS, this));
                 case "theme" -> client.setScreen(new ThemeScreen(this));
                 case "social" -> client.setScreen(new SocialScreen(this));
-                case "paint" -> client.setScreen(new TexturePainterScreen(this));
+                case "editor" -> client.setScreen(new TempestEditorScreen(this));
                 default -> client.setScreen(ClickGuiScreen.openTo(dev.tempest.module.Category.CLIENT, this));
             }
             return true;

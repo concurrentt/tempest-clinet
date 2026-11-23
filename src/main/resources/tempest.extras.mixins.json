@@ -44,7 +44,8 @@
     "GameOptionsSaveMixin",
     "PlayerListHudMixin",
     "ShulkerSlotIconMixin",
-    "BipedEntityModelMixin"
+    "BipedEntityModelMixin",
+    "CrosshairStyleMixin"
   ],
   "injectors": {
     "defaultRequire": 0

@@ -375,6 +375,20 @@ Build from the project directory with: gradle build
 
 
 
+## 0.19.6 - Tempest Editor
+- Tempest Editor (Right Shift > Editor, or Utility > Tempest Editor): a pack editor. Groups PvP, Blocks, Gear, HUD,
+  Misc, Effects and Sounds, each with categories (End Crystals, Respawn Anchors, Totems, Pearls, Golden Apples,
+  Shields, Bows, Obsidian, Glowstone, Cobwebs, Fire, Bedrock, Ores, Netherite / Diamond Armor, Elytra, weapons,
+  Crosshair, Inventory GUI, Hearts, Hunger, Hotbar, XP Bar, Enchant Glint, Arrows, XP Orbs, crit / totem / explosion /
+  sweep particles, effect icons).
+- Each category: Vanilla, Custom colour (picker, or drop a screenshot / Choose... to copy its main colour), 12 styles
+  (Crimson, Frost, Toxic, Royal, Gilded, Sakura, Ocean, Midnight, Neon, Pastel, Monochrome, Inverted), and the same
+  textures from any pack in your resourcepacks folder. Pencil opens the Texture Painter on that texture.
+- Switches: explosion particles (End Crystals), enchant glint on/off, crosshair colour inversion.
+- Sounds: replace hit, hurt, explosion, totem pop and bow-hit sounds (Orb, Ding, Pling, Bell, Hat, Pop, Click,
+  Level Up, Muted); clicking a card plays it.
+- Apply writes everything into resourcepacks/Tempest Custom and reloads once; Reset, Delete (asks twice) and Packs Folder.
+
 ## 0.19.5 - Emotes, shared cosmetics, Texture Painter
 - Emotes: Wave, Clap, Dance, Dab, Salute, Facepalm, Cheer, Shrug. Hold B for the emote wheel (point and let go, or tap
   and click; 1-8 pick directly). Tempest players near you see them through a live link to the Tempest service.

@@ -74,10 +74,19 @@ public class TexturePainterScreen extends Screen {
     private String status = "";
     private long statusAt;
 
+    private Identifier openOnInit;
+
     public TexturePainterScreen(Screen parent) {
         super(Text.literal("Texture Painter"));
         this.parent = parent;
         setHsv(color);
+    }
+
+    /** Opens straight onto one texture (the pencil button in Tempest Editor). */
+    public TexturePainterScreen(Screen parent, Identifier texture) {
+        this(parent);
+        this.openOnInit = texture;
+        if (texture != null && texture.getPath().startsWith("textures/block/")) cat = 1;
     }
 
     // ---------------------------------------------------------------- layout
@@ -115,6 +124,11 @@ public class TexturePainterScreen extends Screen {
         addDrawableChild(search);
         if (all.isEmpty()) loadList();
         filter();
+        if (openOnInit != null) {
+            Identifier t = openOnInit;
+            openOnInit = null;
+            openTexture(t);
+        }
     }
 
     private void loadList() {

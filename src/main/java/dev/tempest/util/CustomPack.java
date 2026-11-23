@@ -56,7 +56,7 @@ public final class CustomPack {
         return out;
     }
 
-    private static void ensureMeta() throws IOException {
+    public static void ensureMeta() throws IOException {
         Path d = dir();
         Files.createDirectories(d);
         Path meta = d.resolve("pack.mcmeta");

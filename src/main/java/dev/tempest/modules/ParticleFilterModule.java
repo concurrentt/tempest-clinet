@@ -18,13 +18,14 @@ public final class ParticleFilterModule extends Module {
     private record Group(BoolSetting setting, ParticleType<?>[] types) { }
 
     private final List<Group> groups = new ArrayList<>();
+    public final BoolSetting explosions;
     private final BoolSetting blockBreak = group("block_break", "Hide Block Debris",
             ParticleTypes.BLOCK, ParticleTypes.BLOCK_CRUMBLE, ParticleTypes.BLOCK_MARKER,
             ParticleTypes.DUST_PILLAR, ParticleTypes.FALLING_DUST);
 
     public ParticleFilterModule() {
         super("particle_filter", "Particles", "Choose exactly which particle groups are hidden on your client.", Category.QOL, false);
-        group("explosions", "Hide Explosions & Fireworks",
+        explosions = group("explosions", "Hide Explosions & Fireworks",
                 ParticleTypes.EXPLOSION, ParticleTypes.EXPLOSION_EMITTER, ParticleTypes.FIREWORK, ParticleTypes.POOF);
         group("smoke", "Hide Smoke", ParticleTypes.SMOKE, ParticleTypes.LARGE_SMOKE, ParticleTypes.WHITE_SMOKE,
                 ParticleTypes.CAMPFIRE_COSY_SMOKE, ParticleTypes.CAMPFIRE_SIGNAL_SMOKE);
@@ -68,6 +69,19 @@ public final class ParticleFilterModule extends Module {
             }
         }
         return false;
+    }
+
+    /** Explosion particles shown? (the Pack Editor's End Crystals switch) */
+    public static boolean explosionsShown() {
+        ParticleFilterModule m = ModuleManager.get(ParticleFilterModule.class);
+        return m == null || !m.isEnabled() || !m.explosions.get();
+    }
+
+    public static void setExplosionsShown(boolean shown) {
+        ParticleFilterModule m = ModuleManager.get(ParticleFilterModule.class);
+        if (m == null) return;
+        m.explosions.set(!shown);
+        if (!shown && !m.isEnabled()) m.setEnabled(true);
     }
 
     /** Catches block debris particles created directly without a ParticleEffect argument. */

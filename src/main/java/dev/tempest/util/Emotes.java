@@ -80,7 +80,7 @@ public final class Emotes {
         EmotesModule m = ModuleManager.get(EmotesModule.class);
         if (m != null && m.thirdPerson.get() && c.options.getPerspective() == Perspective.FIRST_PERSON) {
             if (savedPerspective == null) savedPerspective = c.options.getPerspective();
-            c.options.setPerspective(Perspective.THIRD_PERSON_FRONT);
+            c.options.setPerspective(Perspective.THIRD_PERSON_BACK);
         }
         TempestLive.sendEmote(d.id);
     }
@@ -97,7 +97,7 @@ public final class Emotes {
 
     private static void restoreCamera(MinecraftClient c) {
         if (savedPerspective != null) {
-            if (c.options.getPerspective() == Perspective.THIRD_PERSON_FRONT) c.options.setPerspective(savedPerspective);
+            if (c.options.getPerspective() == Perspective.THIRD_PERSON_BACK) c.options.setPerspective(savedPerspective);
             savedPerspective = null;
         }
     }

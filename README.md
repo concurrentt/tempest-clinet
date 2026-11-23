@@ -375,6 +375,12 @@ Build from the project directory with: gradle build
 
 
 
+## 0.19.8 - Hitboxes, emote camera
+- Combat Hitboxes: a hitbox only turns red while your crosshair is on it and it's within your reach (a block in the
+  way doesn't count).
+- Emotes switch to the normal third-person view (behind you) instead of the front view, so the controls aren't reversed.
+- Reach renamed to Reach Display.
+
 ## 0.19.7 - Performance
 - HUD boxes (Modern style) are pre-rendered once per size at your screen resolution and drawn as one texture, instead
   of ~25 separate shapes per box every frame. Looks identical, far fewer draw calls.

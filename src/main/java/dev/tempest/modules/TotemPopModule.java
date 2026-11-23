@@ -76,8 +76,20 @@ public class TotemPopModule extends Module {
         ctx.drawText(c.textRenderer, Text.literal(text).styled(s -> s.withBold(true)), x + 4 + 16 + 3, y + 5, col, true);
     }
 
+    private static int totemCount, totemCountAge = -1;
+    private static Object totemCountPlayer;
+
+    /** Counted once per game tick (the inventory can't change between frames of the same tick). */
     private static int countTotems(MinecraftClient c) {
         if (c.player == null) return 0;
+        if (c.player == totemCountPlayer && c.player.age == totemCountAge) return totemCount;
+        totemCountPlayer = c.player;
+        totemCountAge = c.player.age;
+        totemCount = countTotemsNow(c);
+        return totemCount;
+    }
+
+    private static int countTotemsNow(MinecraftClient c) {
         int count = 0;
         for (int i = 0; i < c.player.getInventory().size(); i++) {
             ItemStack s = c.player.getInventory().getStack(i);

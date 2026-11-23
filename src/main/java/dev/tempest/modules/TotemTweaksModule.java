@@ -41,7 +41,8 @@ public class TotemTweaksModule extends Module {
         TotemTweaksModule m = on();
         MinecraftClient c = MinecraftClient.getInstance();
         if (m == null || c.player == null || entity != c.player || stack == null || !stack.isOf(Items.TOTEM_OF_UNDYING)) return 1f;
-        if (displayContext == null || !String.valueOf(displayContext).toUpperCase(java.util.Locale.ROOT).contains("FIRST_PERSON")) return 1f;
+        String ctxName = displayContext instanceof Enum<?> en ? en.name() : String.valueOf(displayContext).toUpperCase(java.util.Locale.ROOT);
+        if (!ctxName.contains("FIRST_PERSON")) return 1f;
         return m.heldSize.getFloat();
     }
 }

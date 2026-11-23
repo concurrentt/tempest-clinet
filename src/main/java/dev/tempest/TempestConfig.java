@@ -48,6 +48,17 @@ public class TempestConfig {
 
     public static TempestConfig get() { return instance; }
 
+    /**
+     * Bumped whenever the enabled map may have changed wholesale (config loaded or switched), so modules re-read
+     * their on/off state. Module.isEnabled() is called very often (some hooks run per block while chunks are built),
+     * so it keeps a cached copy instead of looking the map up every time.
+     */
+    private static volatile int generation;
+
+    public static int generation() { return generation; }
+
+    public static void touch() { generation++; }
+
     public static void load() {
         if (Files.exists(PATH)) {
             try {
@@ -70,6 +81,7 @@ public class TempestConfig {
                     if (oldFov != null) c.settings.putIfAbsent("custom_fov.fov", oldFov);
 
                     instance = c;
+                    touch();
                 }
             } catch (Exception e) {
                 System.err.println("[Tempest] Could not read config, using defaults: " + e);

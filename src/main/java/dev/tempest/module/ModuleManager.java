@@ -95,16 +95,24 @@ public class ModuleManager {
     }
 
     private static void register(Module m) {
+        hudCache = null;
         MODULES.add(m);
         BY_CLASS.put(m.getClass(), m);
     }
 
     public static List<Module> all() { return Collections.unmodifiableList(MODULES); }
 
+    private static List<HudModule> hudCache;
+
+    /** HUD modules (built once: the list never changes after start-up, and this is read every frame). */
     public static List<HudModule> huds() {
-        List<HudModule> out = new ArrayList<>();
-        for (Module m : MODULES) if (m instanceof HudModule h) out.add(h);
-        return out;
+        List<HudModule> c = hudCache;
+        if (c == null || c.isEmpty()) {
+            List<HudModule> out = new ArrayList<>();
+            for (Module m : MODULES) if (m instanceof HudModule h) out.add(h);
+            hudCache = c = Collections.unmodifiableList(out);
+        }
+        return c;
     }
 
     @SuppressWarnings("unchecked")

@@ -100,11 +100,9 @@ public abstract class HudModule extends Module {
             }
             default -> {
                 // Modern: soft shadow, a dark surface with a faint top-lit gradient, a hairline edge and a
-                // highlight along the top, like a small piece of smoked glass.
-                Draw.shadow(ctx, x, y, bw, bh, 5, 3);
-                Draw.roundRectV(ctx, x, y, bw, bh, 5, Draw.withAlpha(0x1A1D2A, a), Draw.withAlpha(0x0B0C12, a));
-                Draw.ring(ctx, x, y, bw, bh, 5, Draw.withAlpha(0xFFFFFF, Math.max(0x0C, a / 9)));
-                ctx.fill(x + 5, y + 1, x + bw - 5, y + 2, Draw.withAlpha(0xFFFFFF, Math.max(0x08, a / 7)));
+                // highlight along the top, like a small piece of smoked glass. Pre-rendered once per size
+                // (Draw.modernBox) so it costs one batch per frame instead of ~25 separate pieces.
+                Draw.modernBox(ctx, x, y, bw, bh, a);
             }
         }
     }
@@ -133,6 +131,36 @@ public abstract class HudModule extends Module {
     /** @param preview true inside the HUD editor: draw sample data. Use x, y, w, h (logical units). */
     protected abstract void renderHud(DrawContext ctx, boolean preview);
 
+    // ---- text layout cache: lines usually stay the same for many frames, so the label/value split and the
+    //      text widths are only worked out again when the text changes (or once a second, in case fonts changed).
+    private List<String> layoutLines;
+    private String[] layoutLabel, layoutValue;
+    private int layoutLabelW, layoutTw;
+    private long layoutAt;
+
+    private void layout(TextRenderer tr, List<String> lines) {
+        long now = System.nanoTime();
+        if (layoutLines != null && now - layoutAt < 1_000_000_000L && layoutLines.equals(lines)) return;
+        int n = lines.size();
+        String[] label = new String[n], value = new String[n];
+        int labelW = 0, tw = 0;
+        for (int i = 0; i < n; i++) {
+            String l = lines.get(i);
+            int cut = l.indexOf(": ");
+            if (cut > 0) { label[i] = l.substring(0, cut); value[i] = l.substring(cut + 2); }
+            else { label[i] = null; value[i] = l; }
+            if (label[i] != null) labelW = Math.max(labelW, tr.getWidth(label[i]));
+        }
+        int gap = labelW > 0 ? 6 : 0;
+        for (int i = 0; i < n; i++) tw = Math.max(tw, (label[i] != null ? labelW + gap : 0) + tr.getWidth(value[i]));
+        layoutLines = new java.util.ArrayList<>(lines);
+        layoutLabel = label;
+        layoutValue = value;
+        layoutLabelW = labelW;
+        layoutTw = tw;
+        layoutAt = now;
+    }
+
     /** Horizontal padding between the box edge / accent bar and the text. */
     protected static final int PAD_X = 8;
 
@@ -150,22 +178,14 @@ public abstract class HudModule extends Module {
      * One line gets one large icon; several lines get a small icon each. Null entries leave a gap.
      */
     protected void drawLines(DrawContext ctx, List<String> lines, List<Integer> cols, List<net.minecraft.util.Identifier> icons) {
-        if (icons != null && icons.stream().anyMatch(java.util.Objects::nonNull)) { drawWithIcons(ctx, lines, cols, icons); return; }
+        if (icons != null) {
+            for (Object ic : icons) if (ic != null) { drawWithIcons(ctx, lines, cols, icons); return; }
+        }
         TextRenderer tr = MinecraftClient.getInstance().textRenderer;
-        int labelW = 0, tw = 0;
-        String[] label = new String[lines.size()], value = new String[lines.size()];
-        for (int i = 0; i < lines.size(); i++) {
-            String l = lines.get(i);
-            int cut = l.indexOf(": ");
-            if (cut > 0) { label[i] = l.substring(0, cut); value[i] = l.substring(cut + 2); }
-            else { label[i] = null; value[i] = l; }
-            if (label[i] != null) labelW = Math.max(labelW, tr.getWidth(label[i]));
-        }
+        layout(tr, lines);
+        String[] label = layoutLabel, value = layoutValue;
+        int labelW = layoutLabelW, tw = layoutTw;
         int gap = labelW > 0 ? 6 : 0;
-        for (int i = 0; i < lines.size(); i++) {
-            int lw = label[i] != null ? labelW + gap : 0;
-            tw = Math.max(tw, lw + tr.getWidth(value[i]));
-        }
         boolean modern = background.get() && style.get().equals("Modern");
         int lead = modern ? 7 + 8 + 5 : PAD_X;      // icon column in the Modern style
         int lineH = 11;
@@ -193,17 +213,10 @@ public abstract class HudModule extends Module {
         TextRenderer tr = MinecraftClient.getInstance().textRenderer;
         boolean big = lines.size() == 1;
         int is = big ? 16 : 9, lineH = big ? 11 : 12;
-        int labelW = 0, tw = 0;
-        String[] label = new String[lines.size()], value = new String[lines.size()];
-        for (int i = 0; i < lines.size(); i++) {
-            String l = lines.get(i);
-            int cut = l.indexOf(": ");
-            if (cut > 0) { label[i] = l.substring(0, cut); value[i] = l.substring(cut + 2); }
-            else { label[i] = null; value[i] = l; }
-            if (label[i] != null) labelW = Math.max(labelW, tr.getWidth(label[i]));
-        }
+        layout(tr, lines);
+        String[] label = layoutLabel, value = layoutValue;
+        int labelW = layoutLabelW, tw = layoutTw;
         int gap = labelW > 0 ? 6 : 0;
-        for (int i = 0; i < lines.size(); i++) tw = Math.max(tw, (label[i] != null ? labelW + gap : 0) + tr.getWidth(value[i]));
         boolean modern = background.get() && style.get().equals("Modern");
         int lead = 6 + is + 6;
         w = lead + tw + 7;

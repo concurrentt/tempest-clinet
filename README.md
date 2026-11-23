@@ -375,6 +375,15 @@ Build from the project directory with: gradle build
 
 
 
+## 0.19.7 - Performance
+- HUD boxes (Modern style) are pre-rendered once per size at your screen resolution and drawn as one texture, instead
+  of ~25 separate shapes per box every frame. Looks identical, far fewer draw calls.
+- Module on/off state is cached (it was looked up in the config map on every check; some checks run for every block
+  while chunks are built, others for every entity every frame).
+- HUD text layout (label/value split and text widths) is only worked out again when the text changes.
+- Xray remembers which blocks it shows (no registry lookups per block while chunks rebuild).
+- Totem counter counts your inventory once per tick instead of every frame; small allocation fixes.
+
 ## 0.19.6 - Tempest Editor
 - Tempest Editor (Right Shift > Editor, or Utility > Tempest Editor): a pack editor. Groups PvP, Blocks, Gear, HUD,
   Misc, Effects and Sounds, each with categories (End Crystals, Respawn Anchors, Totems, Pearls, Golden Apples,

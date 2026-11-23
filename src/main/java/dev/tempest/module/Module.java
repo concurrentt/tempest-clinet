@@ -35,12 +35,25 @@ public abstract class Module {
     /** Modules that cannot be switched off (the GUI hides their toggle). */
     public boolean alwaysOn() { return false; }
 
-    public boolean isEnabled() { return alwaysOn() || TempestConfig.get().enabled.getOrDefault(id, defaultEnabled); }
+    private volatile boolean enabledCache;
+    private volatile int enabledGen = -1;
+
+    public boolean isEnabled() {
+        if (alwaysOn()) return true;
+        int g = TempestConfig.generation();
+        if (enabledGen != g) {
+            enabledCache = TempestConfig.get().enabled.getOrDefault(id, defaultEnabled);
+            enabledGen = g;
+        }
+        return enabledCache;
+    }
 
     public void setEnabled(boolean v) {
         if (alwaysOn()) return;
         boolean was = isEnabled();
         TempestConfig.get().enabled.put(id, v);
+        enabledCache = v;
+        enabledGen = TempestConfig.generation();
         if (!was && v) onEnable();
         else if (was && !v) onDisable();
     }
@@ -62,7 +75,10 @@ public abstract class Module {
         return kb;
     }
 
-    public void reloadSettings() { for (Setting s : settings) s.restore(); }
+    public void reloadSettings() {
+        enabledGen = -1;          // the enabled map may have been replaced (config switch)
+        for (Setting s : settings) s.restore();
+    }
     public void commitAll() { for (Setting s : settings) s.commit(); }
 
     public void onInit() { }

@@ -352,6 +352,125 @@ public final class Draw {
         }
     }
 
+    // ---------- pre-rendered HUD box ----------
+    /** (height, alpha, gui scale) -> baked "Modern" HUD box texture; least recently used ones are freed. */
+    private static final Map<Long, net.minecraft.util.Identifier> BOXES = new java.util.LinkedHashMap<>(16, 0.75f, true);
+    private static int boxCounter;
+
+    /**
+     * The "Modern" HUD box (soft shadow, top-lit gradient, hairline edge, top highlight), exactly as the separate
+     * shadow / roundRectV / ring / fill calls draw it, but pre-composited at screen resolution into one small texture
+     * and drawn as three slices (left, stretched middle, right). One texture = one GPU batch instead of ~25 pieces.
+     */
+    public static void modernBox(DrawContext c, int x, int y, int w, int h, int a) {
+        int k = hiRes();
+        if (w < 12 || h < 12 || h > 400) {
+            shadow(c, x, y, w, h, 5, 3);
+            roundRectV(c, x, y, w, h, 5, withAlpha(0x1A1D2A, a), withAlpha(0x0B0C12, a));
+            ring(c, x, y, w, h, 5, withAlpha(0xFFFFFF, Math.max(0x0C, a / 9)));
+            c.fill(x + 5, y + 1, x + w - 5, y + 2, withAlpha(0xFFFFFF, Math.max(0x08, a / 7)));
+            return;
+        }
+        long key = ((long) h << 40) | ((long) (a & 255) << 32) | k;
+        net.minecraft.util.Identifier tex = BOXES.get(key);
+        if (tex == null) {
+            tex = bakeModernBox(h, a, k);
+            BOXES.put(key, tex);
+            if (BOXES.size() > 32) {
+                var it = BOXES.entrySet().iterator();
+                var old = it.next();
+                it.remove();
+                MinecraftClient.getInstance().getTextureManager().destroyTexture(old.getValue());
+            }
+        }
+        int texW = 17 * k, texH = (h + 6) * k;
+        c.getMatrices().pushMatrix();
+        c.getMatrices().scale(1f / k, 1f / k);
+        int X = (x - 3) * k, Y = (y - 2) * k;
+        c.drawTexture(net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED, tex, X, Y, 0f, 0f, 8 * k, texH, 8 * k, texH, texW, texH, 0xFFFFFFFF);
+        c.drawTexture(net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED, tex, X + 8 * k, Y, 8f * k, 0f, (w - 10) * k, texH, k, texH, texW, texH, 0xFFFFFFFF);
+        c.drawTexture(net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED, tex, X + (w - 2) * k, Y, 9f * k, 0f, 8 * k, texH, 8 * k, texH, texW, texH, 0xFFFFFFFF);
+        c.getMatrices().popMatrix();
+    }
+
+    /** Software-composites the box layers for an 11-wide box at (3, 2) inside a 17 x (h + 6) GUI-pixel image. */
+    private static net.minecraft.util.Identifier bakeModernBox(int h, int a, int k) {
+        final int bx = 3, by = 2, bw = 11;
+        int W = 17 * k, H = (h + 6) * k;
+        float[] r = new float[W * H], g = new float[W * H], b = new float[W * H], al = new float[W * H];
+        // layer 1: shadow rings (same alphas as shadow(): only rings that come out non-zero)
+        for (int i = 3; i >= 1; i--) {
+            float f = 1f - i / 4f;
+            int sa = (int) (0x2C * f * f * f);
+            if (sa <= 0) continue;
+            ringLayer(r, g, b, al, W, H, k, bx - i, by - i + 1, bw + 2 * i, h + 2 * i, 5 + i, 0, 0, 0, sa / 255f);
+        }
+        // layer 2: the gradient body
+        int top = 0x1A1D2A, bot = 0x0B0C12;
+        for (int py = 0; py < H; py++) {
+            float gy = (py + 0.5f) / k;
+            float t = Math.max(0f, Math.min(1f, (gy - by) / Math.max(1, h - 1)));
+            int col = lerpColor(0xFF000000 | top, 0xFF000000 | bot, t);
+            for (int px = 0; px < W; px++) {
+                float cov = rrCoverage((px + 0.5f) / k, gy, bx, by, bw, h, 5, k);
+                if (cov > 0) over(r, g, b, al, py * W + px, (col >> 16) & 255, (col >> 8) & 255, col & 255, cov * a / 255f);
+            }
+        }
+        // layer 3: hairline edge
+        ringLayer(r, g, b, al, W, H, k, bx, by, bw, h, 5, 255, 255, 255, Math.max(0x0C, a / 9) / 255f);
+        // layer 4: top highlight (the middle column, which is stretched across)
+        int ha = Math.max(0x08, a / 7);
+        for (int py = (by + 1) * k; py < (by + 2) * k; py++)
+            for (int px = (bx + 5) * k; px < (bx + bw - 5) * k; px++) over(r, g, b, al, py * W + px, 255, 255, 255, ha / 255f);
+
+        net.minecraft.client.texture.NativeImage img = new net.minecraft.client.texture.NativeImage(W, H, true);
+        for (int py = 0; py < H; py++) {
+            for (int px = 0; px < W; px++) {
+                int i = py * W + px;
+                int A = Math.round(al[i] * 255f);
+                img.setColorArgb(px, py, (A << 24) | (Math.round(r[i]) << 16) | (Math.round(g[i]) << 8) | Math.round(b[i]));
+            }
+        }
+        net.minecraft.util.Identifier id = net.minecraft.util.Identifier.of("tempest", "dynamic/hudbox_" + (boxCounter++));
+        MinecraftClient.getInstance().getTextureManager().registerTexture(id,
+                new net.minecraft.client.texture.NativeImageBackedTexture(() -> "Tempest HUD box", img));
+        return id;
+    }
+
+    private static void ringLayer(float[] r, float[] g, float[] b, float[] al, int W, int H, int k,
+                                  int x, int y, int w, int h, int rad, int cr, int cg, int cb, float alpha) {
+        for (int py = 0; py < H; py++) {
+            float gy = (py + 0.5f) / k;
+            for (int px = 0; px < W; px++) {
+                float gx = (px + 0.5f) / k;
+                float cov = rrCoverage(gx, gy, x, y, w, h, rad, k) - rrCoverage(gx, gy, x + 1, y + 1, w - 2, h - 2, rad - 1, k);
+                if (cov > 0) over(r, g, b, al, py * W + px, cr, cg, cb, cov * alpha);
+            }
+        }
+    }
+
+    /** Anti-aliased coverage of a rounded rectangle at a point (GUI units; the edge is softened over one screen pixel). */
+    private static float rrCoverage(float px, float py, float x, float y, float w, float h, float rad, int k) {
+        if (w <= 0 || h <= 0) return 0f;
+        rad = Math.max(0f, Math.min(rad, Math.min(w, h) / 2f));
+        float cx = x + w / 2f, cy = y + h / 2f;
+        float qx = Math.abs(px - cx) - (w / 2f - rad), qy = Math.abs(py - cy) - (h / 2f - rad);
+        float ox = Math.max(qx, 0f), oy = Math.max(qy, 0f);
+        float d = (float) Math.sqrt(ox * ox + oy * oy) + Math.min(Math.max(qx, qy), 0f) - rad;
+        return Math.max(0f, Math.min(1f, 0.5f - d * k));
+    }
+
+    /** Straight-alpha "over" compositing of one colour into the buffers. */
+    private static void over(float[] r, float[] g, float[] b, float[] al, int i, int sr, int sg, int sb, float sa) {
+        if (sa <= 0f) return;
+        float da = al[i], oa = sa + da * (1f - sa);
+        if (oa <= 0f) return;
+        r[i] = (sr * sa + r[i] * da * (1f - sa)) / oa;
+        g[i] = (sg * sa + g[i] * da * (1f - sa)) / oa;
+        b[i] = (sb * sa + b[i] * da * (1f - sa)) / oa;
+        al[i] = oa;
+    }
+
     /** 1px rectangle outline. */
     public static void outline(DrawContext c, int x, int y, int w, int h, int col) {
         c.fill(x, y, x + w, y + 1, col);

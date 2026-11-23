@@ -47,6 +47,7 @@ public final class ProfileManager {
             if (d.enabled != null) { c.enabled.clear(); c.enabled.putAll(d.enabled); }
             if (d.settings != null) { c.settings.clear(); c.settings.putAll(d.settings); }
             if (d.hud != null) { c.hud.clear(); c.hud.putAll(d.hud); }
+            TempestConfig.touch();
             for (Module m : ModuleManager.all()) m.reloadSettings();
             TempestConfig.save();
             return true;

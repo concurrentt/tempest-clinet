@@ -26,9 +26,13 @@ public final class XrayModule extends Module {
 
     public XrayModule() {
         super("xray", "Xray", "See ores through walls: everything else is hidden and ores are fully lit.", Category.RENDER, false);
+        instance = this;
     }
 
-    @Override public void onEnable() { rebuild(); }
+    /** Block -> shown, filled as chunks are built (the answer only changes with the settings). */
+    private static final java.util.concurrent.ConcurrentHashMap<net.minecraft.block.Block, Boolean> SHOWS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    @Override public void onEnable() { SHOWS.clear(); rebuild(); }
     @Override public void onDisable() { rebuild(); }
 
     /** Rebuild the chunks whenever a setting changes while xray is on. */
@@ -38,6 +42,7 @@ public final class XrayModule extends Module {
         if (!now.equals(applied)) {
             boolean first = applied.isEmpty();
             applied = now;
+            SHOWS.clear();
             if (!first && isEnabled()) rebuild();
         }
     }
@@ -47,12 +52,26 @@ public final class XrayModule extends Module {
         if (c != null && c.worldRenderer != null) c.worldRenderer.reload();
     }
 
-    public static boolean active() { return ModuleManager.enabled(XrayModule.class); }
+    private static XrayModule instance;
+
+    /** Called for nearly every block while chunks are built, so it skips the module lookup. */
+    public static boolean active() {
+        XrayModule m = instance;
+        return m != null && m.isEnabled();
+    }
 
     /** Should this block be drawn while xray is on? */
     public static boolean shows(BlockState state) {
         XrayModule m = ModuleManager.get(XrayModule.class);
         if (m == null || state == null) return true;
+        Boolean cached = SHOWS.get(state.getBlock());
+        if (cached != null) return cached;
+        boolean v = compute(m, state);
+        SHOWS.put(state.getBlock(), v);
+        return v;
+    }
+
+    private static boolean compute(XrayModule m, BlockState state) {
         String path = Registries.BLOCK.getId(state.getBlock()).getPath();
         if (m.ores.get() && (path.endsWith("_ore") || path.startsWith("raw_") && path.endsWith("_block"))) return true;
         if (m.debris.get() && path.equals("ancient_debris")) return true;

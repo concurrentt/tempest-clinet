@@ -53,7 +53,7 @@ public class ClickGuiScreen extends Screen {
     private TextFieldWidget search;
     private Category filter = null;
     private Module open = null;
-    private double scroll = 0, scrollTarget = 0;
+    private double scroll = 0, scrollTarget = 0, scrollVel = 0;
     private Setting dragging = null;
     private KeySetting listening = null, prevListen = null;
     // color picker popup
@@ -115,6 +115,7 @@ public class ClickGuiScreen extends Screen {
             if (open == null) savedOpenId = null;
         }
         scroll = savedScroll;
+        scrollVel = 0;
         scrollTarget = savedScrollTarget;
         String old = search != null ? search.getText() : "";
         search = new TextFieldWidget(textRenderer, 0, 0, searchW() - 78, 12, Text.literal("Search"));
@@ -219,7 +220,7 @@ public class ClickGuiScreen extends Screen {
     private int cols() { return cw() >= 300 ? 3 : 2; }
     private int cardW() { int c = cols(); return (cw() - GAP * (c - 1)) / c; }
     private int cardX(int col) { return cx() + col * (cardW() + GAP); }
-    private int cardY(int row) { return cy() + row * (MCARD_H + GAP) - (int) Math.round(scroll); }
+    private int cardY(int row) { return cy() + row * (MCARD_H + GAP) - (int) Math.floor(scroll); }
     // pieces of a card, relative to its top-left corner
     private int optY() { return 78; }
     private int togY() { return 78 + OPT_H + 4; }
@@ -227,7 +228,30 @@ public class ClickGuiScreen extends Screen {
 
     private int rx() { return cx(); }
     private int rw() { return cw(); }
-    private int top() { return cy() - (int) Math.round(scroll); }
+    private int top() { return cy() - (int) Math.floor(scroll); }
+
+    /**
+     * Smooth scrolling: a critically damped spring toward the target (eases in and out, never wobbles), solved exactly
+     * so it behaves the same at any frame rate.
+     */
+    private void stepScroll(float dt) {
+        final double omega = 18.0;
+        double x = scroll - scrollTarget, e = Math.exp(-omega * dt);
+        double k = scrollVel + omega * x;
+        scroll = scrollTarget + (x + k * dt) * e;
+        scrollVel = (scrollVel - omega * k * dt) * e;
+        double max = maxScroll();
+        if (scroll < 0) { scroll = 0; scrollVel = Math.max(0, scrollVel); }
+        if (scroll > max) { scroll = max; scrollVel = Math.min(0, scrollVel); }
+        if (Math.abs(scroll - scrollTarget) < 0.02 && Math.abs(scrollVel) < 0.5) { scroll = scrollTarget; scrollVel = 0; }
+    }
+
+    /** The part of the scroll below one GUI pixel, rounded to whole screen pixels, so content glides 1 px at a time. */
+    private float scrollFraction() {
+        double frac = scroll - Math.floor(scroll);
+        double gs = client != null ? client.getWindow().getScaleFactor() : 1.0;
+        return (float) (Math.round(frac * gs) / gs);
+    }
     private int rowY(int i) { return top() + ROWS_TOP + i * PITCH; }
 
     private double maxScroll() {
@@ -295,9 +319,7 @@ public class ClickGuiScreen extends Screen {
         pY += (int) ((1f - anim) * 16);
 
         scrollTarget = Math.max(0, Math.min(maxScroll(), scrollTarget));
-        float scrollEase = 1f - (float) Math.exp(-dt * 13f);
-        scroll += (scrollTarget - scroll) * scrollEase;
-        if (Math.abs(scrollTarget - scroll) < 0.08) scroll = scrollTarget;
+        stepScroll(dt);
 
         TextRenderer tr = textRenderer;
 
@@ -316,8 +338,11 @@ public class ClickGuiScreen extends Screen {
 
         int cx = cx(), cy = cy(), cw = cw(), ch = ch();
         ctx.enableScissor(cx, cy, cx + cw, cy + ch);
+        ctx.getMatrices().pushMatrix();
+        ctx.getMatrices().translate(0f, -scrollFraction());
         if (open == null) renderGrid(ctx, mx, my);
         else renderSettings(ctx, mx, my);
+        ctx.getMatrices().popMatrix();
 
         // content fades out at the edges it can still scroll past
         int solid = Draw.solid();
@@ -848,6 +873,7 @@ public class ClickGuiScreen extends Screen {
         open = m;
         scrollTarget = 0;
         scroll = 0;
+        scrollVel = 0;
     }
 
     /** Opens the mod menu on a given category (used by the main menu). */
@@ -865,6 +891,7 @@ public class ClickGuiScreen extends Screen {
             open = null;
             scrollTarget = 0;
             scroll = 0;
+            scrollVel = 0;
             return true;
         }
         if (Draw.hit(mx, my, rx + rw - 52, top + 26, 52, HDR_H)) {
@@ -931,7 +958,7 @@ public class ClickGuiScreen extends Screen {
         // independent scroll step. This also prevents accidental menu movement elsewhere.
         if (mouseX < cx() || mouseX > cx() + cw() || mouseY < cy() || mouseY > cy() + ch())
             return false;
-        double step = 42.0;
+        double step = 46.0;
         scrollTarget = Math.max(0, Math.min(maxScroll(), scrollTarget - vertical * step));
         return true;
     }

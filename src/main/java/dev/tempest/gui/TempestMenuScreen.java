@@ -86,7 +86,7 @@ public class TempestMenuScreen extends Screen {
 
         float ef = intro(0.25f);
         String hint = "Right Shift or Esc to close";
-        Draw.text(ctx, tr, hint, cx - tr.getWidth(hint) / 2, height - 16, MenuKit.fa(0x90FFFFFF, ef), false);
+        Draw.text(ctx, tr, hint, cx - Draw.textW(tr, hint) / 2, height - 16, MenuKit.fa(0x90FFFFFF, ef), false);
 
         super.render(ctx, mx, my, delta);
     }
@@ -120,7 +120,7 @@ public class TempestMenuScreen extends Screen {
         float p = Draw.hoverProgress("tm_mods", hv);
         frame(ctx, x, y, MID_W, BTN_H, p, false, e);
         String count = Integer.toString(ModuleManager.all().size());
-        int tw = Draw.spacedW(tr, "MODS", true, 3), cw = tr.getWidth(count) + 10, is = 14;
+        int tw = Draw.spacedW(tr, "MODS", true, 3), cw = Draw.textW(tr, count) + 10, is = 14;
         int total = is + 8 + tw + 8 + cw;
         int sx = x + (MID_W - total) / 2, cy = y + (BTN_H - 8) / 2;
         Icons.draw(ctx, "grid", sx, y + (BTN_H - is) / 2, is, MenuKit.fa(Draw.lerpColor(Draw.accent(), 0xFFFFFFFF, 0.35f + 0.4f * p), e));
@@ -137,7 +137,7 @@ public class TempestMenuScreen extends Screen {
         Draw.panel(ctx, x, y, CHIP_W, CHIP_H, CHIP_H / 2, MenuKit.fa(Draw.lerpColor(0x8015161C, 0xB8242838, p), e),
                 MenuKit.fa(Draw.lerpColor(0x26FFFFFF, Draw.withAlpha(Draw.accent(), 0xA0), p), e));
         String label = CHIPS[i][2];
-        int is = 9, total = is + 5 + tr.getWidth(label);
+        int is = 9, total = is + 5 + Draw.textW(tr, label);
         int sx = x + (CHIP_W - total) / 2;
         int col = MenuKit.fa(Draw.lerpColor(0xFFB8BED0, 0xFFFFFFFF, p), e);
         Icons.draw(ctx, CHIPS[i][1], sx, y + (CHIP_H - is) / 2, is, col);

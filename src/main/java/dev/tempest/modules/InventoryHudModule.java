@@ -1,5 +1,6 @@
 package dev.tempest.modules;
 
+import dev.tempest.gui.Draw;
 import dev.tempest.module.BoolSetting;
 import dev.tempest.module.Category;
 import dev.tempest.module.HudModule;
@@ -47,7 +48,7 @@ public class InventoryHudModule extends HudModule {
                 String count = String.valueOf(s.getCount());
                 ctx.getMatrices().pushMatrix();
                 ctx.getMatrices().translate(0, 0); // keep same layer
-                ctx.drawText(c.textRenderer, count, ix + 19 - 2 - c.textRenderer.getWidth(count), iy + 6 + 3, 0xFFFFFFFF, true);
+                Draw.text(ctx, c.textRenderer, count, ix + 19 - 2 - Draw.textW(c.textRenderer, count), iy + 6 + 3, 0xFFFFFFFF, true);
                 ctx.getMatrices().popMatrix();
             }
         }

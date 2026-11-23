@@ -20,6 +20,8 @@ import java.util.Map;
  *   <li>Block sound: plays the block sound for every hit a shield takes, including explosions and arrows.</li>
  *   <li>Blocking state: a player using a shield shows as blocking - after the real 5-tick (0.25 s) raise delay when
  *       "Respect 5-Tick Delay" is on (accurate), or instantly when it is off.</li>
+ *   <li>Raised shield on other players: when the "using an item" signal reaches you before their equipment does,
+ *       the game drops their shield and never shows it raised; it's put back every tick (LivingEntityMixin).</li>
  * </ul>
  * Client-side only: the singleplayer server is never affected, and each sound plays at most once per event even if
  * the game already played it.
@@ -67,12 +69,25 @@ public final class ShieldFixesModule extends Module {
         return c.world != null && c.world.getEntityById(e.getId()) == e;
     }
 
+    /** Should LivingEntityMixin repair this player's shield-in-use state? (other players, client side, while "using"). */
+    public static boolean resyncWanted(LivingEntity e) {
+        ShieldFixesModule m = on();
+        if (m == null || !m.animationFix.get() || e == null || !e.isUsingItem()) return false;
+        MinecraftClient c = MinecraftClient.getInstance();
+        return e != c.player && clientSide(e);
+    }
+
+    /** A shield, or any item that blocks attacks like one. */
+    public static boolean isShield(net.minecraft.item.ItemStack s) {
+        return s.isOf(Items.SHIELD) || s.contains(net.minecraft.component.DataComponentTypes.BLOCKS_ATTACKS);
+    }
+
     /**
      * isBlocking() override for the client: null = leave vanilla alone, otherwise the value to report.
      */
     public static Boolean blocking(LivingEntity e) {
         ShieldFixesModule m = on();
-        if (m == null || !m.animationFix.get() || e == null || !e.isUsingItem() || !e.getActiveItem().isOf(Items.SHIELD)) return null;
+        if (m == null || !m.animationFix.get() || e == null || !e.isUsingItem() || !isShield(e.getActiveItem())) return null;
         if (!clientSide(e)) return null;
         return !m.delay.get() || e.getItemUseTime() >= 5;
     }

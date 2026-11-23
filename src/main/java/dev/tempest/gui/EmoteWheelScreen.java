@@ -88,7 +88,7 @@ public class EmoteWheelScreen extends Screen {
             ctx.getMatrices().pushMatrix();
             ctx.getMatrices().translate(x, y + 12);
             ctx.getMatrices().scale(0.75f, 0.75f);
-            Draw.text(ctx, tr, d.name(), -tr.getWidth(d.name()) / 2, 0, MenuKit.fa(hv ? 0xFFFFFFFF : 0xFFC9CCD6, e), false);
+            Draw.text(ctx, tr, d.name(), -Draw.textW(tr, d.name()) / 2, 0, MenuKit.fa(hv ? 0xFFFFFFFF : 0xFFC9CCD6, e), false);
             ctx.getMatrices().popMatrix();
             ctx.getMatrices().pushMatrix();
             ctx.getMatrices().translate(x + r - 6, y - r + 2);

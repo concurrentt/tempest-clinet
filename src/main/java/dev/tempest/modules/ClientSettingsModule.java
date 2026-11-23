@@ -15,6 +15,7 @@ public class ClientSettingsModule extends Module {
     public final dev.tempest.module.ColorSetting customAccent = add(new dev.tempest.module.ColorSetting("custom_accent", "Custom Theme Colour", 0xFF4FC3F7));
     public final ModeSetting menuBackground = add(new ModeSetting("menu_bg", "Menu Background", "Nebula",
             "Nebula", "Galaxy", "Aurora", "Black Hole", "Ringed Planet", "Blood Moon", "Animated", "Plain"));
+    public final ModeSetting font = add(new ModeSetting("font", "Font", "Inter", "Inter", "Minecraft"));
     public final BoolSetting animations = add(new BoolSetting("animations", "Menu Animations", true));
     public final ModeSetting animationEasing = add(new ModeSetting("anim_easing", "Animation Easing", "Smooth", "Smooth", "Linear", "Snappy"));
     public final NumberSetting guiScale = add(new NumberSetting("gui_scale", "GUI Size", 1.0, 0.6, 1.0, 0.05));

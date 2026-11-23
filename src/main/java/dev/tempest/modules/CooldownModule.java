@@ -53,7 +53,7 @@ public class CooldownModule extends HudModule {
             Row r = rows.get(i);
             int ry = y + 2 + i * 18;
             ctx.drawItem(r.icon(), x + 2, ry);
-            ctx.drawText(tr, r.label(), x + 22, ry, color.get(), true);
+            Draw.text(ctx, tr, r.label(), x + 22, ry, color.get(), true);
             Draw.roundRect(ctx, x + 22, ry + 10, w - 26, 4, 2, 0xFF222838);
             int fw = (int) ((w - 26) * Math.max(0f, Math.min(1f, r.progress())));
             if (fw > 0) Draw.roundRect(ctx, x + 22, ry + 10, Math.max(3, fw), 4, 2, Draw.accent());

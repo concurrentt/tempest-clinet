@@ -65,7 +65,7 @@ public class ThemeScreen extends Screen {
             if (custom) Icons.draw(ctx, "palette", swX(i) + 7, swY() + 7, 12, 0xE0FFFFFF);
             if (hv) {
                 String n = custom ? "Custom" : PRESETS[i];
-                Draw.text(ctx, tr, n, swX(i) + SW / 2 - tr.getWidth(n) / 2, swY() + SW + 3, 0xFFFFFFFF, true);
+                Draw.text(ctx, tr, n, swX(i) + SW / 2 - Draw.textW(tr, n) / 2, swY() + SW + 3, 0xFFFFFFFF, true);
             }
         }
 

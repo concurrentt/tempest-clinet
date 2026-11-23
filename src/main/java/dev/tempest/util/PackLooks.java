@@ -156,6 +156,9 @@ public final class PackLooks {
                     "textures/item/netherite_sword.png", "textures/item/diamond_sword.png", "textures/item/iron_sword.png"),
             tex("axes", "Gear", "Axes & Mace", Items.NETHERITE_AXE, "textures/item/netherite_axe.png", null, null,
                     "textures/item/netherite_axe.png", "textures/item/diamond_axe.png", "textures/item/mace.png"),
+            // spears (1.21.11): an inventory texture and a separate held one for every material
+            tex("spears", "Gear", "Spears", Items.NETHERITE_SPEAR, "textures/item/netherite_spear.png", null, null,
+                    "textures/item/netherite_spear.png", "textures/item/netherite_spear_in_hand.png", "textures/item/diamond_spear.png", "textures/item/diamond_spear_in_hand.png", "textures/item/iron_spear.png", "textures/item/iron_spear_in_hand.png", "textures/item/golden_spear.png", "textures/item/golden_spear_in_hand.png", "textures/item/copper_spear.png", "textures/item/copper_spear_in_hand.png", "textures/item/stone_spear.png", "textures/item/stone_spear_in_hand.png", "textures/item/wooden_spear.png", "textures/item/wooden_spear_in_hand.png"),
             tex("pickaxes", "Gear", "Pickaxes", Items.NETHERITE_PICKAXE, "textures/item/netherite_pickaxe.png", null, null,
                     "textures/item/netherite_pickaxe.png", "textures/item/diamond_pickaxe.png", "textures/item/iron_pickaxe.png"),
 

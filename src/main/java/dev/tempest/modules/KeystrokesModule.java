@@ -97,7 +97,7 @@ public class KeystrokesModule extends HudModule {
         int base = background.get() ? Draw.withAlpha(0x0A1233, a) : Draw.withAlpha(0x0A1233, 0x30);
         Draw.roundRect(ctx, kx, ky, kw, kh, 4, Draw.lerpColor(base, Draw.accent(), f));
         if (label.isEmpty()) return;
-        int tw = tr.getWidth(label);
-        ctx.drawText(tr, label, kx + (kw - tw) / 2, ky + (kh - 8) / 2, Draw.lerpColor(color.get(), 0xFFFFFFFF, f), false);
+        int tw = Draw.textW(tr, label);
+        Draw.text(ctx, tr, label, kx + (kw - tw) / 2, ky + (kh - 8) / 2, Draw.lerpColor(color.get(), 0xFFFFFFFF, f), false);
     }
 }

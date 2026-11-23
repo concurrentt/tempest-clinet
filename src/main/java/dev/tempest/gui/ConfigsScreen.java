@@ -138,7 +138,7 @@ public class ConfigsScreen extends Screen {
             String name = Draw.trim(tr, e.name(), textW - (isActive ? 44 : 0));
             Draw.text(ctx, tr, Draw.bold(name), x + 26, ry + 5, Draw.TEXT, false);
             if (isActive) {
-                int cw = Draw.textW(tr, "Active") + 10, chx = x + 26 + tr.getWidth(Draw.bold(name)) + 6;
+                int cw = Draw.textW(tr, "Active") + 10, chx = x + 26 + Draw.textW(tr, Draw.bold(name)) + 6;
                 Draw.roundRect(ctx, chx, ry + 4, cw, 11, 5, Draw.withAlpha(Draw.accent(), 0x40));
                 Draw.text(ctx, tr, "Active", chx + 5, ry + 6, Draw.accent(), false);
             }

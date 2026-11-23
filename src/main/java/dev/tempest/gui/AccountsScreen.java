@@ -118,7 +118,7 @@ public class AccountsScreen extends Screen {
                     waiting ? MenuKit.OUTLINE : MenuKit.GREEN, Draw.hit(mx, my, x + 12, by, 110, 20), waiting || !Accounts.busy(), 1f);
             MenuKit.flatButton(ctx, tr, "acc_done", x + w - 72, by, 60, 20, null, "Done", MenuKit.OUTLINE, Draw.hit(mx, my, x + w - 72, by, 60, 20), true, 1f);
             String link = "App ID";
-            int lw = tr.getWidth(link);
+            int lw = Draw.textW(tr, link);
             boolean hv = Draw.hit(mx, my, x + w - 84 - lw, by + 4, lw, 12);
             Draw.text(ctx, tr, link, x + w - 84 - lw, by + 6, hv ? 0xFFFFFFFF : 0xFF6B7080, false);
         }
@@ -152,7 +152,7 @@ public class AccountsScreen extends Screen {
             if (!r.launcher()) {
                 boolean armed = r.id().equals(removeArmed) && System.currentTimeMillis() - removeArmedAt < 4000;
                 String rl = armed ? "Sure?" : "Remove";
-                int rw = tr.getWidth(rl) + 12;
+                int rw = Draw.textW(tr, rl) + 12;
                 bx -= rw;
                 boolean rh = Draw.hit(mx, my, bx, ry + 4, rw, 18);
                 Draw.panel(ctx, bx, ry + 4, rw, 18, 5, rh || armed ? 0xC03A1C22 : 0x80181A22, rh || armed ? 0xA0FF6B6B : 0x30FFFFFF);
@@ -161,7 +161,7 @@ public class AccountsScreen extends Screen {
             }
             if (active) {
                 String a = "● Current";
-                bx -= tr.getWidth(a);
+                bx -= Draw.textW(tr, a);
                 Draw.text(ctx, tr, a, bx, ry + 9, 0xFF6AF09A, false);
             } else {
                 int sw = 52;
@@ -247,7 +247,7 @@ public class AccountsScreen extends Screen {
             return true;
         }
         if (Draw.hit(mx, my, x + w - 72, by, 60, 20)) { close(); return true; }
-        int lw = textRenderer.getWidth("App ID");
+        int lw = Draw.textW(textRenderer, "App ID");
         if (Draw.hit(mx, my, x + w - 84 - lw, by + 4, lw, 12)) {
             setup = true;
             clearAndInit();
@@ -273,7 +273,7 @@ public class AccountsScreen extends Screen {
         int bx = x + w - 18;
         if (!r.launcher()) {
             boolean armed = r.id().equals(removeArmed) && System.currentTimeMillis() - removeArmedAt < 4000;
-            int rw = textRenderer.getWidth(armed ? "Sure?" : "Remove") + 12;
+            int rw = Draw.textW(textRenderer, armed ? "Sure?" : "Remove") + 12;
             bx -= rw;
             if (Draw.hit(mx, my, bx, ry + 4, rw, 18)) {
                 if (armed) { Accounts.remove(r.id()); removeArmed = null; }

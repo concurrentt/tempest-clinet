@@ -10,11 +10,12 @@ import org.spongepowered.asm.mixin.injection.Coerce;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Draws Kill Effects in the world, right after entities are submitted (the camera is at the matrix origin there). */
+/** Draws Kill Effects and sky lyrics in the world, right after entities are submitted (the camera is at the matrix origin there). */
 @Mixin(WorldRenderer.class)
 public abstract class WorldRendererEffectsMixin {
     @Inject(method = "pushEntityRenders", at = @At("TAIL"), require = 0)
     private void tempest$killEffects(MatrixStack matrices, @Coerce Object renderStates, OrderedRenderCommandQueue queue, CallbackInfo ci) {
         KillEffectsModule.render(matrices, queue);
+        dev.tempest.render.SkyLyrics.render(matrices, queue);
     }
 }

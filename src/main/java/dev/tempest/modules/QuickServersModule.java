@@ -1,5 +1,6 @@
 package dev.tempest.modules;
 
+import dev.tempest.gui.Draw;
 import dev.tempest.TempestConfig;
 import dev.tempest.gui.FavoritesScreen;
 import dev.tempest.module.ActionSetting;
@@ -109,9 +110,9 @@ public class QuickServersModule extends Module {
                 var tr = client.textRenderer;
                 var btn = buttons.get(i);
                 String players = r != null && r.online >= 0 ? "  " + r.online + "/" + r.max : "";
-                ctx.drawText(tr, tr.trimToWidth(f.name, 70), btn.getX() + 6, btn.getY() + 6, 0xFFFFFFFF, true);
+                Draw.text(ctx, tr, Draw.trim(tr, f.name, 70), btn.getX() + 6, btn.getY() + 6, 0xFFFFFFFF, true);
                 String right = players + "  " + status;
-                ctx.drawText(tr, right, btn.getX() + btn.getWidth() - 6 - tr.getWidth(right), btn.getY() + 6, col, true);
+                Draw.text(ctx, tr, right, btn.getX() + btn.getWidth() - 6 - Draw.textW(tr, right), btn.getY() + 6, col, true);
             }
         });
     }

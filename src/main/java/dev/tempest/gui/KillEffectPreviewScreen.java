@@ -93,7 +93,7 @@ public class KillEffectPreviewScreen extends Screen {
         String[] fx = KillEffectsModule.effects();
         int sel = m == null ? 0 : m.effectIndex();
         String now = fx[sel].equals("Random") ? "Random: " + preview.playing() : preview.playing();
-        Draw.text(ctx, tr, now, x + w - 12 - tr.getWidth(now), y + 11, Draw.withAlpha(Draw.accent(), 0xFF), false);
+        Draw.text(ctx, tr, now, x + w - 12 - Draw.textW(tr, now), y + 11, Draw.withAlpha(Draw.accent(), 0xFF), false);
 
         // loop: a short pause after each play, then again
         if (preview.finished()) {

@@ -149,10 +149,10 @@ public final class TempestWorldLoading {
         }
         int dots = (int) ((clock * 2.2f) % 4);
         String shown = line + ".".repeat(dots);
-        int tw = tr.getWidth(line + "...");
+        int tw = Draw.textW(tr, line + "...");
         int ta = Math.round(255 * clamp01(lineAlpha * a));
         if (ta > 4) {
-            ctx.drawText(tr, shown, cx - tw / 2, ty, (ta << 24) | 0xE6EBFF, false);
+            Draw.text(ctx, tr, shown, cx - tw / 2, ty, (ta << 24) | 0xE6EBFF, false);
         }
 
         // --- indeterminate progress bar -----------------------------------------------------------

@@ -42,7 +42,7 @@ public class UpdateScreen extends Screen {
             else if (l.startsWith("- ") || l.startsWith("* ")) l = "• " + l.substring(2);
             l = l.replace("**", "").replace("`", "");
             if (l.isEmpty()) { lines.add(OrderedText.EMPTY); continue; }
-            lines.addAll(textRenderer.wrapLines(Text.literal(l), wrap));
+            lines.addAll(textRenderer.wrapLines(Draw.ui(Text.literal(l)), wrap));
         }
         scroll = 0;
     }
@@ -59,7 +59,7 @@ public class UpdateScreen extends Screen {
         };
     }
 
-    private int btnW(String[] b) { return Math.max(70, textRenderer.getWidth(b[0]) + 24); }
+    private int btnW(String[] b) { return Math.max(70, Draw.textW(textRenderer, b[0]) + 24); }
 
     @Override
     public void render(DrawContext ctx, int mx, int my, float delta) {
@@ -78,7 +78,7 @@ public class UpdateScreen extends Screen {
         scroll = Math.max(0, Math.min(scroll, Math.max(0, lines.size() - visible)));
         ctx.enableScissor(x + 16, nt - 2, x + W - 16, nt + nh + 2);
         for (int i = 0; i < visible && i + scroll < lines.size(); i++) {
-            ctx.drawText(tr, lines.get(i + scroll), x + 24, nt + 2 + i * 10, 0xFFD6D9EA, false);
+            Draw.text(ctx, tr, lines.get(i + scroll), x + 24, nt + 2 + i * 10, 0xFFD6D9EA, false);
         }
         ctx.disableScissor();
         if (lines.size() > visible) {

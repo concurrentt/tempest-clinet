@@ -1,5 +1,6 @@
 package dev.tempest.modules;
 
+import dev.tempest.gui.Draw;
 import dev.tempest.module.Category;
 import dev.tempest.module.HudModule;
 import net.minecraft.client.MinecraftClient;
@@ -41,7 +42,7 @@ public class PotionModule extends HudModule {
 
         if (rows.isEmpty()) { w = 42; h = 18; return; }
         int textWidth = 0;
-        for (EffectRow row : rows) textWidth = Math.max(textWidth, client.textRenderer.getWidth(row.duration()));
+        for (EffectRow row : rows) textWidth = Math.max(textWidth, Draw.textW(client.textRenderer, row.duration()));
         w = 18 + 7 + textWidth + 12;
         h = rows.size() * 22 + 6;
 
@@ -60,22 +61,22 @@ public class PotionModule extends HudModule {
                 ctx.drawGuiTexture(RenderPipelines.GUI_TEXTURED, spriteId, iconX, iconY, 18, 18);
             } else {
                 // HUD-editor preview uses a recognizable potion glyph in place of a live effect sprite.
-                ctx.drawText(client.textRenderer, "✦", iconX + 4, iconY + 5, 0xFFFFFFFF, true);
+                Draw.text(ctx, client.textRenderer, "✦", iconX + 4, iconY + 5, 0xFFFFFFFF, true);
             }
 
             String dur = row.duration();
             int durationX = iconX + 18 + 7;
             int durationY = rowY + 5;
-            ctx.drawText(client.textRenderer, dur, durationX, durationY, color.get(), true);
+            Draw.text(ctx, client.textRenderer, dur, durationX, durationY, color.get(), true);
 
             // Overlay timer on the icon as well for quick readability
             ctx.getMatrices().pushMatrix();
             float scale = 0.75f;
             ctx.getMatrices().scale(scale, scale);
-            int tw = client.textRenderer.getWidth(dur);
+            int tw = Draw.textW(client.textRenderer, dur);
             int ox = (int) ((iconX + 18 - tw * scale - 1) / scale);
             int oy = (int) ((iconY + 18 - 7 * scale) / scale);
-            ctx.drawText(client.textRenderer, dur, ox, oy, 0xFFFFFFFF, true);
+            Draw.text(ctx, client.textRenderer, dur, ox, oy, 0xFFFFFFFF, true);
             ctx.getMatrices().popMatrix();
         }
     }

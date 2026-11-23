@@ -149,10 +149,10 @@ public abstract class HudModule extends Module {
             int cut = l.indexOf(": ");
             if (cut > 0) { label[i] = l.substring(0, cut); value[i] = l.substring(cut + 2); }
             else { label[i] = null; value[i] = l; }
-            if (label[i] != null) labelW = Math.max(labelW, tr.getWidth(label[i]));
+            if (label[i] != null) labelW = Math.max(labelW, Draw.textW(tr, label[i]));
         }
         int gap = labelW > 0 ? 6 : 0;
-        for (int i = 0; i < n; i++) tw = Math.max(tw, (label[i] != null ? labelW + gap : 0) + tr.getWidth(value[i]));
+        for (int i = 0; i < n; i++) tw = Math.max(tw, (label[i] != null ? labelW + gap : 0) + Draw.textW(tr, value[i]));
         layoutLines = new java.util.ArrayList<>(lines);
         layoutLabel = label;
         layoutValue = value;
@@ -202,10 +202,10 @@ public abstract class HudModule extends Module {
             int ty = y + 5 + i * lineH;
             int vx = x + lead;
             if (label[i] != null) {
-                ctx.drawText(tr, label[i], vx, ty, Draw.DIM, false);
+                Draw.text(ctx, tr, label[i], vx, ty, Draw.DIM, false);
                 vx += labelW + gap;
             }
-            ctx.drawText(tr, value[i], vx, ty, cols != null ? cols.get(i) : color.get(), modern);
+            Draw.text(ctx, tr, value[i], vx, ty, cols != null ? cols.get(i) : color.get(), modern);
         }
     }
 
@@ -233,10 +233,10 @@ public abstract class HudModule extends Module {
             int ty = big ? y + (h - 8) / 2 : rowY + 1;
             int vx = x + lead;
             if (label[i] != null) {
-                ctx.drawText(tr, label[i], vx, ty, Draw.DIM, false);
+                Draw.text(ctx, tr, label[i], vx, ty, Draw.DIM, false);
                 vx += labelW + gap;
             }
-            ctx.drawText(tr, value[i], vx, ty, cols != null ? cols.get(i) : color.get(), modern);
+            Draw.text(ctx, tr, value[i], vx, ty, cols != null ? cols.get(i) : color.get(), modern);
         }
     }
 }

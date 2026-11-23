@@ -27,8 +27,8 @@ public class InfoBarModule extends HudModule {
 
         Text logo = Text.literal("TEMPEST").formatted(Formatting.BOLD);
         List<String> parts = List.of(name, where, time);
-        int tw = tr.getWidth(logo) + 12 + 18;
-        for (String p : parts) tw += tr.getWidth(p) + 17;
+        int tw = Draw.textW(tr, logo) + 12 + 18;
+        for (String p : parts) tw += Draw.textW(tr, p) + 17;
         w = tw;
         h = 20;
         box(ctx);
@@ -36,13 +36,13 @@ public class InfoBarModule extends HudModule {
         int cx = x + 6;
         dev.tempest.gui.TempestLoading.drawLogo(ctx, cx, y + 2, 16);
         cx += 19;
-        ctx.drawText(tr, logo, cx, y + 6, Draw.accent(), false);
-        cx += tr.getWidth(logo) + 6;
+        Draw.text(ctx, tr, logo, cx, y + 6, Draw.accent(), false);
+        cx += Draw.textW(tr, logo) + 6;
         for (String p : parts) {
             ctx.fill(cx + 3, y + 5, cx + 4, y + h - 5, Draw.withAlpha(0xFFFFFF, 0x30));
             cx += 10;
-            ctx.drawText(tr, p, cx, y + 6, color.get(), false);
-            cx += tr.getWidth(p) + 7;
+            Draw.text(ctx, tr, p, cx, y + 6, color.get(), false);
+            cx += Draw.textW(tr, p) + 7;
         }
     }
 }

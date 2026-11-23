@@ -408,7 +408,7 @@ public class TexturePainterScreen extends Screen {
         Draw.glass(ctx, x, y, w, h, 10, 0xE40F1117, 0x40FFFFFF);
         MenuKit.titleBar(ctx, tr, x + 10, y + 6, "Texture Painter", null, Draw.hit(mx, my, x + 10, y + 6, 24, 24), 1f);
         String packLine = CustomPack.enabled() ? "Saving into \"" + CustomPack.NAME + "\" (on)" : "Saves into the \"" + CustomPack.NAME + "\" pack";
-        Draw.text(ctx, tr, packLine, x + w - 12 - tr.getWidth(packLine), y + 14, 0xFF8B90A0, false);
+        Draw.text(ctx, tr, packLine, x + w - 12 - Draw.textW(tr, packLine), y + 14, 0xFF8B90A0, false);
 
         drawList(ctx, tr, mx, my);
         drawCanvas(ctx, tr, mx, my);
@@ -628,7 +628,7 @@ public class TexturePainterScreen extends Screen {
     }
 
     private void tooltip(DrawContext ctx, TextRenderer tr, String s, int mx, int my) {
-        int w = tr.getWidth(s) + 8;
+        int w = Draw.textW(tr, s) + 8;
         int x = Math.min(mx + 8, width - w - 2), y = my - 16;
         Draw.panel(ctx, x, y, w, 14, 4, 0xF0101218, 0x50FFFFFF);
         Draw.text(ctx, tr, s, x + 4, y + 3, 0xFFFFFFFF, false);

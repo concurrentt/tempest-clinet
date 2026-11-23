@@ -196,11 +196,11 @@ public class TempestControlsScreen extends Screen {
         String[] labels = {"All", "Conflicts", "Free Keys"};
         int bx = sx + sw + 8;
         for (int i = 0; i < labels.length; i++) {
-            int w = tr.getWidth(labels[i]) + 16;
+            int w = Draw.textW(tr, labels[i]) + 16;
             boolean sel = view == i, hv = Draw.hit(mx, my, bx, sy + 2, w, 18);
             int count = i == 1 ? countConflicts() : -1;
             String lab = labels[i] + (count > 0 ? " " + count : "");
-            w = tr.getWidth(lab) + 16;
+            w = Draw.textW(tr, lab) + 16;
             Draw.panel(ctx, bx, sy + 2, w, 18, 9, sel ? Draw.withAlpha(Draw.accent(), 0xC0) : hv ? Draw.cardHover() : Draw.card(),
                     i == 1 && count > 0 && !sel ? 0xC0E04A5F : sel ? 0x60FFFFFF : Draw.border());
             Draw.text(ctx, tr, lab, bx + 8, sy + 7, sel ? 0xFFFFFFFF : Draw.TEXT, false);
@@ -222,7 +222,7 @@ public class TempestControlsScreen extends Screen {
                 if (y + ROW >= ly && y <= ly + lh) {
                     if (r instanceof String cat) {
                         Draw.text(ctx, tr, Draw.bold(cat.toUpperCase(Locale.ROOT)), lx + 2, y + 8, Draw.accent(), false);
-                        ctx.fill(lx + tr.getWidth(Draw.bold(cat.toUpperCase(Locale.ROOT))) + 8, y + 12, lx + lw, y + 13, Draw.border());
+                        ctx.fill(lx + Draw.textW(tr, Draw.bold(cat.toUpperCase(Locale.ROOT))) + 8, y + 12, lx + lw, y + 13, Draw.border());
                     } else if (r instanceof KeyBinding k) {
                         renderRow(ctx, tr, k, lx, y, lw, mx, my);
                     }
@@ -262,7 +262,7 @@ public class TempestControlsScreen extends Screen {
         Draw.panel(ctx, kx, y + 2, kw, ROW - 4, 5, fill, border);
         int col = editing ? 0xFFFFFFFF : conflict ? 0xFFFF6B7D : k.isUnbound() ? Draw.DIM2 : 0xFFFFFFFF;
         String shown = Draw.ellipsize(tr, label, kw - 8);
-        Draw.text(ctx, tr, shown, kx + (kw - tr.getWidth(shown)) / 2, y + 6, col, false);
+        Draw.text(ctx, tr, shown, kx + (kw - Draw.textW(tr, shown)) / 2, y + 6, col, false);
         if (conflict && !editing) Draw.text(ctx, tr, "!", kx - 9, y + 6, 0xFFFF6B7D, false);
         // reset button
         if (!k.isDefault()) {
@@ -278,10 +278,10 @@ public class TempestControlsScreen extends Screen {
         Draw.text(ctx, tr, free.size() + " common keys are free to bind:", x + 2, y + 4, Draw.DIM, false);
         int cx = x, cy = y + 20;
         for (String k : free) {
-            int cw = Math.max(26, tr.getWidth(k) + 12);
+            int cw = Math.max(26, Draw.textW(tr, k) + 12);
             if (cx + cw > x + w) { cx = x; cy += 24; }
             Draw.panel(ctx, cx, cy, cw, 20, 5, Draw.card(), Draw.withAlpha(Draw.accent(), 0x70));
-            Draw.text(ctx, tr, k, cx + (cw - tr.getWidth(k)) / 2, cy + 6, 0xFFFFFFFF, false);
+            Draw.text(ctx, tr, k, cx + (cw - Draw.textW(tr, k)) / 2, cy + 6, 0xFFFFFFFF, false);
             cx += cw + 4;
         }
     }
@@ -338,7 +338,7 @@ public class TempestControlsScreen extends Screen {
         int bx = listX() + 240 + 8, sy = btnY();
         for (int i = 0; i < labels.length; i++) {
             int count = i == 1 ? countConflicts() : -1;
-            int w = textRenderer.getWidth(labels[i] + (count > 0 ? " " + count : "")) + 16;
+            int w = Draw.textW(textRenderer, labels[i] + (count > 0 ? " " + count : "")) + 16;
             if (Draw.hit(mx, my, bx, sy + 2, w, 18)) { view = i; scrollTarget = 0; return true; }
             bx += w + 6;
         }

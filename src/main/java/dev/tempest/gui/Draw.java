@@ -5,7 +5,10 @@ import dev.tempest.modules.ClientSettingsModule;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.text.OrderedText;
+import net.minecraft.text.StyleSpriteSource;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -28,20 +31,46 @@ public final class Draw {
     // glass opacities
     private static final int A_BG = 0x9A, A_SIDE = 0x70, A_HEAD = 0x60, A_CARD = 0x52, A_HOVER = 0x78, A_OFF = 0xA0, A_BORDER = 0x34;
 
-    /** Use Minecraft's native bitmap font for crisp, pixel-aligned UI text. */
-    public static Text bold(String s) { return Text.literal(s).styled(style -> style.withBold(true)); }
+    /**
+     * Tempest's UI font (assets/tempest/font/ui.json): Inter, a clean Discord-like font, with Minecraft's font as the
+     * fallback for symbols. "GUI & Configs -> Font" switches back to the Minecraft font. Only Tempest's own menus and
+     * HUD use it; chat, signs and vanilla screens keep Minecraft's font.
+     */
+    public static final Identifier UI_FONT = Identifier.of("tempest", "ui");
+    private static final StyleSpriteSource UI = new StyleSpriteSource.Font(UI_FONT);
 
-    private static Text styled(Text t) { return t.copy(); }
+    public static boolean smoothFont() {
+        ClientSettingsModule m = dev.tempest.module.ModuleManager.get(ClientSettingsModule.class);
+        return m == null || !m.font.is("Minecraft");
+    }
 
-    public static int textW(TextRenderer tr, String s) { return tr.getWidth(s); }
+    /** Text in the UI font (parts that pick their own font, like icons, keep it). */
+    public static Text ui(Text t) {
+        return smoothFont() ? Text.empty().styled(s -> s.withFont(UI)).append(t) : t;
+    }
+
+    public static Text uiText(String s) { return ui(Text.literal(s)); }
+
+    public static Text bold(String s) { return ui(Text.literal(s).styled(style -> style.withBold(true))); }
+
+    private static Text styled(Text t) { return ui(t); }
+
+    public static int textW(TextRenderer tr, String s) { return smoothFont() ? tr.getWidth(uiText(s)) : tr.getWidth(s); }
     public static int textW(TextRenderer tr, Text t) { return tr.getWidth(styled(t)); }
+    /** Already laid-out text (e.g. wrapped lines) keeps whatever font it was built with. */
+    public static int textW(TextRenderer tr, OrderedText t) { return tr.getWidth(t); }
 
     public static void text(DrawContext c, TextRenderer tr, String s, int x, int y, int col, boolean shadow) {
-        c.drawText(tr, s, x, y, col, shadow);
+        if (smoothFont()) c.drawText(tr, uiText(s), x, y, col, shadow);
+        else c.drawText(tr, s, x, y, col, shadow);
     }
 
     public static void text(DrawContext c, TextRenderer tr, Text t, int x, int y, int col, boolean shadow) {
         c.drawText(tr, styled(t), x, y, col, shadow);
+    }
+
+    public static void text(DrawContext c, TextRenderer tr, OrderedText t, int x, int y, int col, boolean shadow) {
+        c.drawText(tr, t, x, y, col, shadow);
     }
 
     public static void centered(DrawContext c, TextRenderer tr, String s, int cx, int y, int col) {
@@ -53,7 +82,7 @@ public final class Draw {
         int w = 0;
         for (int i = 0; i < s.length(); i++) {
             String ch = String.valueOf(s.charAt(i));
-            w += bold ? tr.getWidth(bold(ch)) : tr.getWidth(ch);
+            w += bold ? tr.getWidth(bold(ch)) : textW(tr, ch);
         }
         return w + Math.max(0, s.length() - 1) * spacing;
     }
@@ -64,8 +93,8 @@ public final class Draw {
         for (int i = 0; i < s.length(); i++) {
             String ch = String.valueOf(s.charAt(i));
             if (bold) c.drawText(tr, bold(ch), x, y, col, false);
-            else c.drawText(tr, ch, x, y, col, false);
-            x += (bold ? tr.getWidth(bold(ch)) : tr.getWidth(ch)) + spacing;
+            else text(c, tr, ch, x, y, col, false);
+            x += (bold ? tr.getWidth(bold(ch)) : textW(tr, ch)) + spacing;
         }
     }
 

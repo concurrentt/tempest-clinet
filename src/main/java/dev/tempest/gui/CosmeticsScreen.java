@@ -121,7 +121,7 @@ public class CosmeticsScreen extends Screen {
         Draw.glass(ctx, x, y, w, h, 10, MenuKit.fa(0xE0101218, e), MenuKit.fa(0x40FFFFFF, e));
         MenuKit.titleBar(ctx, tr, x + 10, y + 6, "Cosmetics", null, Draw.hit(mx, my, x + 10, y + 6, 24, 24), e);
         String status = sharingLine();
-        Draw.text(ctx, tr, status, x + w - 12 - tr.getWidth(status), y + 14, MenuKit.fa(0xFF8B90A0, e), false);
+        Draw.text(ctx, tr, status, x + w - 12 - Draw.textW(tr, status), y + 14, MenuKit.fa(0xFF8B90A0, e), false);
 
         // --- hover = try on
         int hovered = cardAt(mx, my);
@@ -178,7 +178,7 @@ public class CosmeticsScreen extends Screen {
             float p = Draw.hoverProgress("cos_tab" + i, hv || sel);
             Draw.panel(ctx, tx, ty, tabW(), 22, 11, MenuKit.fa(sel ? Draw.withAlpha(Draw.accent(), 0xD0) : Draw.lerpColor(0x5A26272C, 0x8A3A3C44, p), e),
                     MenuKit.fa(sel ? 0x60FFFFFF : Draw.lerpColor(0x30FFFFFF, 0x80FFFFFF, p), e));
-            int is = 10, lw = tr.getWidth(TABS[i]), sx = tx + (tabW() - is - 5 - lw) / 2;
+            int is = 10, lw = Draw.textW(tr, TABS[i]), sx = tx + (tabW() - is - 5 - lw) / 2;
             Icons.draw(ctx, TAB_ICONS[i], sx, ty + 6, is, MenuKit.fa(0xFFFFFFFF, e));
             Draw.text(ctx, tr, TABS[i], sx + is + 5, ty + 7, MenuKit.fa(0xFFFFFFFF, e), false);
         }
@@ -212,7 +212,7 @@ public class CosmeticsScreen extends Screen {
             ctx.getMatrices().pushMatrix();
             ctx.getMatrices().translate(cx + CARD / 2f, cy + CARD - 11);
             ctx.getMatrices().scale(0.8f, 0.8f);
-            Draw.text(ctx, tr, label, -tr.getWidth(label) / 2, 0, MenuKit.fa(on ? 0xFFFFFFFF : 0xFFD0D3DC, e), false);
+            Draw.text(ctx, tr, label, -Draw.textW(tr, label) / 2, 0, MenuKit.fa(on ? 0xFFFFFFFF : 0xFFD0D3DC, e), false);
             ctx.getMatrices().popMatrix();
             if (on) {
                 Draw.circle(ctx, cx + CARD - 8, cy + 8, 4, MenuKit.fa(0xFF2FA866, e));

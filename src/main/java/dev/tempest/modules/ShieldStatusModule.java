@@ -110,7 +110,7 @@ public class ShieldStatusModule extends HudModule {
         box(ctx);
         ctx.drawItem(new ItemStack(Items.SHIELD), x + 3, y + 2);
         String label = prog > 0f ? String.format(java.util.Locale.ROOT, "%.1fs", prog * 5f) : "Ready";
-        ctx.drawText(c.textRenderer, label, x + 23, y + 4, col, true);
+        Draw.text(ctx, c.textRenderer, label, x + 23, y + 4, col, true);
         // thin progress bar under the text
         int bw = w - 28;
         Draw.roundRect(ctx, x + 23, y + 14, bw, 2, 1, 0x40FFFFFF);

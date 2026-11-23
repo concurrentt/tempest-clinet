@@ -1,3 +1,13 @@
+## 0.21.3 - New font, real sky lyrics, shield fix
+- Tempest's menus and HUD use Inter, a clean Discord-like font (chat, signs and vanilla screens keep Minecraft's
+  font). GUI & Configs -> Font switches back to the Minecraft font.
+- Sky lyrics are now really in the sky: a glowing panel far away above the horizon, part of the world (buildings
+  and trees in front hide it, real perspective), drifting slowly after you like the moon; lines cross-fade.
+- Shield Fixes: other players' raised shield always shows. When the "using an item" signal arrived before their
+  equipment, the game lost the shield and never showed it raised until they blocked again.
+- Tempest Editor: new Spears category (every material, inventory and held textures).
+- Totem Pop Counter: the totem count can be moved in the HUD editor (starts above the hotbar as before).
+
 ## 0.21.2 - Tier Tagger MCTiers fix, new Spotify card
 - Tier Tagger: MCTiers tiers now show. It looks players up the same way the TierTagger mod does (the rankings
   endpoint); if a list can't be reached, the reason is written to the game log once.

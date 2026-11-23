@@ -210,9 +210,9 @@ public final class ChatTabsModule extends Module {
     }
 
     private static int tabW(TextRenderer tr, Item t, ChatTabsModule m) {
-        int w = tr.getWidth(t.label) + 12;
+        int w = Draw.textW(tr, t.label) + 12;
         int n = UNREAD.getOrDefault(t.id, 0);
-        if (m.showUnread.get() && n > 0) w += tr.getWidth(Integer.toString(n)) + 7;
+        if (m.showUnread.get() && n > 0) w += Draw.textW(tr, Integer.toString(n)) + 7;
         return w;
     }
 
@@ -227,27 +227,27 @@ public final class ChatTabsModule extends Module {
             int fill = sel ? Draw.withAlpha(Draw.accent(), 0xC8) : hv ? 0xC0242838 : 0xA0101118;
             Draw.panel(ctx, x, y, w, TAB_H, 4, fill, sel ? Draw.withAlpha(0xFFFFFF, 0x50) : 0x30FFFFFF);
             if (t.color != 0 && !sel) ctx.fill(x + 3, y + TAB_H - 2, x + w - 3, y + TAB_H - 1, 0xC0000000 | t.color);
-            ctx.drawText(tr, t.label, x + 6, y + 3, sel ? 0xFFFFFFFF : hv ? 0xFFE6E8F0 : 0xFFA9AEC0, false);
+            Draw.text(ctx, tr, t.label, x + 6, y + 3, sel ? 0xFFFFFFFF : hv ? 0xFFE6E8F0 : 0xFFA9AEC0, false);
             int n = UNREAD.getOrDefault(t.id, 0);
             if (m.showUnread.get() && n > 0) {
                 String s = Integer.toString(n);
-                int bx = x + 6 + tr.getWidth(t.label) + 4;
-                Draw.roundRect(ctx, bx, y + 2, tr.getWidth(s) + 5, 9, 4, 0xFFE04A5F);
-                ctx.drawText(tr, s, bx + 3, y + 3, 0xFFFFFFFF, false);
+                int bx = x + 6 + Draw.textW(tr, t.label) + 4;
+                Draw.roundRect(ctx, bx, y + 2, Draw.textW(tr, s) + 5, 9, 4, 0xFFE04A5F);
+                Draw.text(ctx, tr, s, bx + 3, y + 3, 0xFFFFFFFF, false);
             }
             x += w + TAB_GAP;
         }
         // the tab's own row, after a small gap
         x += 6;
         for (Item e : extras()) {
-            int w = tr.getWidth(e.label) + 10;
-            if (x + w > width - 4) { ctx.drawText(tr, "\u2026", x, y + 3, 0xFF9DA2B3, true); break; }
+            int w = Draw.textW(tr, e.label) + 10;
+            if (x + w > width - 4) { Draw.text(ctx, tr, "\u2026", x, y + 3, 0xFF9DA2B3, true); break; }
             boolean clickable = !e.id.isEmpty(), hv = clickable && Draw.hit(mx, my, x, y, w, TAB_H);
             int fill = e.on ? Draw.withAlpha(Draw.accent(), 0xB0) : hv ? 0xC0242838 : clickable ? 0x90101118 : 0x60101118;
             Draw.panel(ctx, x, y, w, TAB_H, 6, fill, e.on ? 0x60FFFFFF : clickable ? 0x28FFFFFF : 0x10FFFFFF);
             int col = e.color != 0 && !e.on ? e.color : 0xFFFFFFFF;
             if (e.id.startsWith("pm:")) Draw.circle(ctx, x + 4, y + TAB_H / 2, 1, e.color);
-            ctx.drawText(tr, e.label, x + 5 + (e.id.startsWith("pm:") ? 2 : 0), y + 3, e.id.startsWith("pm:") ? 0xFFFFFFFF : col, false);
+            Draw.text(ctx, tr, e.label, x + 5 + (e.id.startsWith("pm:") ? 2 : 0), y + 3, e.id.startsWith("pm:") ? 0xFFFFFFFF : col, false);
             x += w + 2;
         }
     }
@@ -273,7 +273,7 @@ public final class ChatTabsModule extends Module {
         }
         x += 6;
         for (Item e : extras()) {
-            int w = tr.getWidth(e.label) + 10;
+            int w = Draw.textW(tr, e.label) + 10;
             if (x + w > width - 4) break;
             if (!e.id.isEmpty() && Draw.hit(mx, my, x, y, w, TAB_H)) {
                 if (e.id.startsWith("pm:")) {

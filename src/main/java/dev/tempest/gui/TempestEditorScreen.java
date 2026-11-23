@@ -254,7 +254,7 @@ public class TempestEditorScreen extends Screen {
         }
         boolean recent = System.currentTimeMillis() - statusAt < 8000 && !status.isEmpty();
         String info = recent ? status : dirty() ? "You have looks that aren't applied yet" : "Looks are saved into the \"" + CustomPack.NAME + "\" pack";
-        int iw = tr.getWidth(info) + 20, iy = by + bh + 12;
+        int iw = Draw.textW(tr, info) + 20, iy = by + bh + 12;
         Draw.panel(ctx, width / 2 - iw / 2, iy, iw, 16, 4, MenuKit.fa(0xA0101218, e), MenuKit.fa(0x40FFFFFF, e));
         Draw.centered(ctx, tr, info, width / 2, iy + 4, MenuKit.fa(dirty() ? 0xFFFFD27A : 0xFFD0D3DC, e));
         Draw.text(ctx, tr, "Esc to close", 8, height - 14, 0x80FFFFFF, false);
@@ -286,7 +286,7 @@ public class TempestEditorScreen extends Screen {
         Draw.text(ctx, tr, "Pick a look, then press Apply", x + 84, y + 17, 0xFF8B90A0, false);
         boolean dirty = dirty();
         String st = dirty ? "● Not applied yet" : "✔ Everything applied";
-        int stW = tr.getWidth(st) + 14, stC = dirty ? 0xFFFFD27A : 0xFF6AF09A;
+        int stW = Draw.textW(tr, st) + 14, stC = dirty ? 0xFFFFD27A : 0xFF6AF09A;
         Draw.panel(ctx, x + w - 10 - stW, y + 8, stW, 16, 8, Draw.withAlpha(stC, 0x1E), Draw.withAlpha(stC, 0x60));
         Draw.text(ctx, tr, st, x + w - 10 - stW + 7, y + 12, stC, false);
         Draw.hairline(ctx, x + 10, y + 30, w - 20, gc & 0xFFFFFF, 0x50);
@@ -315,7 +315,7 @@ public class TempestEditorScreen extends Screen {
         Look look = pendingLook(cat);
         Draw.text(ctx, tr, Draw.bold(cat.name()), mx0, ty + 4, 0xFFFFFFFF, false);
         String sel = "selected: " + displayName(look.look());
-        Draw.text(ctx, tr, sel, mx0 + tr.getWidth(Draw.bold(cat.name())) + 10, ty + 4, Draw.withAlpha(Draw.accent(), 0xFF), false);
+        Draw.text(ctx, tr, sel, mx0 + Draw.textW(tr, Draw.bold(cat.name())) + 10, ty + 4, Draw.withAlpha(Draw.accent(), 0xFF), false);
         int rx = mx0 + mw;
         if (!cat.isSound()) {
             rx -= 18;
@@ -328,7 +328,7 @@ public class TempestEditorScreen extends Screen {
             boolean on = toggleOn();
             rx -= 34;
             Draw.toggle(ctx, rx, ty + 1, Draw.hoverProgress("ed_tg_" + cat.id(), on));
-            Draw.text(ctx, tr, tg, rx - 6 - tr.getWidth(tg), ty + 4, 0xFFE4E6EC, false);
+            Draw.text(ctx, tr, tg, rx - 6 - Draw.textW(tr, tg), ty + 4, 0xFFE4E6EC, false);
         }
         // drop zone
         if (!cat.isSound()) {
@@ -381,7 +381,7 @@ public class TempestEditorScreen extends Screen {
         MenuKit.flatButton(ctx, tr, "ed_apply", bx, by, 86, 22, null, "✔ Apply", MenuKit.GREEN, Draw.hit(mx, my, bx, by, 86, 22), canApply, 1f);
         for (int i = labels.length - 1; i >= 0; i--) {
             String lb = i == 1 && System.currentTimeMillis() - deleteArmedAt < 4000 ? "Sure? Click again" : labels[i];
-            int bw2 = tr.getWidth(lb) + 16;
+            int bw2 = Draw.textW(tr, lb) + 16;
             bx -= bw2 + 6;
             MenuKit.flatButton(ctx, tr, "ed_btn" + i, bx, by, bw2, 22, null, lb, MenuKit.OUTLINE, Draw.hit(mx, my, bx, by, bw2, 22), true, 1f);
         }
@@ -525,7 +525,7 @@ public class TempestEditorScreen extends Screen {
         String[] labels = {"Packs Folder", "Delete", "Reset", "Close"};
         for (int i = labels.length - 1; i >= 0; i--) {
             String lb = i == 1 && System.currentTimeMillis() - deleteArmedAt < 4000 ? "Sure? Click again" : labels[i];
-            int bw2 = textRenderer.getWidth(lb) + 16;
+            int bw2 = Draw.textW(textRenderer, lb) + 16;
             bx -= bw2 + 6;
             if (!Draw.hit(mx, my, bx, by, bw2, 22)) continue;
             switch (i) {
@@ -554,7 +554,7 @@ public class TempestEditorScreen extends Screen {
         }
         if (toggleLabel() != null) {
             rx -= 34;
-            if (Draw.hit(mx, my, rx - 6 - textRenderer.getWidth(toggleLabel()), ty, textRenderer.getWidth(toggleLabel()) + 40, 16)) { flipToggle(); return true; }
+            if (Draw.hit(mx, my, rx - 6 - Draw.textW(textRenderer, toggleLabel()), ty, Draw.textW(textRenderer, toggleLabel()) + 40, 16)) { flipToggle(); return true; }
         }
         if (!cat.isSound() && Draw.hit(mx, my, mx0 + mw - 58, ty + 21, 56, 14)) { chooseFile(); return true; }
         // cards

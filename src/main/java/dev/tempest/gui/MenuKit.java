@@ -25,11 +25,11 @@ public final class MenuKit {
 
     /** Text scaled up (or down) around a centre x. Uses the 2D matrix stack, like the HUD modules do. */
     public static void scaledCentered(DrawContext c, TextRenderer tr, Text t, float cx, float y, float scale, int col, boolean shadow) {
-        int w = tr.getWidth(t);
+        int w = Draw.textW(tr, t);
         c.getMatrices().pushMatrix();
         c.getMatrices().translate(cx - w * scale / 2f, y);
         c.getMatrices().scale(scale, scale);
-        c.drawText(tr, t, 0, 0, col, shadow);
+        Draw.text(c, tr, t, 0, 0, col, shadow);
         c.getMatrices().popMatrix();
     }
 
@@ -63,11 +63,11 @@ public final class MenuKit {
         }
         Draw.panel(c, x, y, w, h, Math.min(6, h / 2), fa(fill, a), fa(border, a));
         int is = icon == null ? 0 : Math.min(10, h - 10);
-        int lw = label == null ? 0 : tr.getWidth(label);
+        int lw = label == null ? 0 : Draw.textW(tr, label);
         int gap = is > 0 && lw > 0 ? 6 : 0;
         int cx = x + (w - (is + gap + lw)) / 2;
         if (is > 0) Icons.draw(c, icon, cx, y + (h - is) / 2, is, fa(fg, a));
-        if (lw > 0) c.drawText(tr, label, cx + is + gap, y + (h - 8) / 2, fa(fg, a), false);
+        if (lw > 0) Draw.text(c, tr, label, cx + is + gap, y + (h - 8) / 2, fa(fg, a), false);
     }
 
     /** Square dark button holding just an icon. */
@@ -83,7 +83,7 @@ public final class MenuKit {
     public static void titleBar(DrawContext c, TextRenderer tr, int x, int y, String title, String sub, boolean backHover, float alpha) {
         iconButton(c, "back_" + title, x, y, 24, "back", backHover, 0xFFE4E6EC, alpha);
         scaledLeft(c, tr, Draw.bold(title), x + 34, y + 1, 1.5f, fa(0xFFFFFFFF, alpha), true);
-        if (sub != null) c.drawText(tr, sub, x + 34, y + 15, fa(0xFF8B90A0, alpha), false);
+        if (sub != null) Draw.text(c, tr, sub, x + 34, y + 15, fa(0xFF8B90A0, alpha), false);
     }
 
     /** Rounded list row; returns nothing, just paints the background with hover / selected states. */
@@ -122,7 +122,7 @@ public final class MenuKit {
         c.getMatrices().pushMatrix();
         c.getMatrices().translate(x, y);
         c.getMatrices().scale(scale, scale);
-        c.drawText(tr, t, 0, 0, col, shadow);
+        Draw.text(c, tr, t, 0, 0, col, shadow);
         c.getMatrices().popMatrix();
     }
 
@@ -149,11 +149,11 @@ public final class MenuKit {
         int textCol = Draw.lerpColor(primary ? 0xFFF1EEFF : Draw.DIM, 0xFFFFFFFF, primary ? p : Math.max(0.35f, p));
         int ty = y + (h - 8) / 2;
         if (sub != null) {
-            Draw.text(c, tr, primary ? Draw.bold(label) : Text.literal(label), x + (w - tr.getWidth(primary ? Draw.bold(label) : Text.literal(label))) / 2, ty - 5, fa(textCol, alpha), false);
-            Draw.text(c, tr, sub, x + (w - tr.getWidth(sub)) / 2, ty + 7, fa(Draw.DIM2, alpha), false);
+            Draw.text(c, tr, primary ? Draw.bold(label) : Text.literal(label), x + (w - Draw.textW(tr, primary ? Draw.bold(label) : Text.literal(label))) / 2, ty - 5, fa(textCol, alpha), false);
+            Draw.text(c, tr, sub, x + (w - Draw.textW(tr, sub)) / 2, ty + 7, fa(Draw.DIM2, alpha), false);
         } else {
             Text t = primary ? Draw.bold(label) : Text.literal(label);
-            Draw.text(c, tr, t, x + (w - tr.getWidth(t)) / 2, ty, fa(textCol, alpha), false);
+            Draw.text(c, tr, t, x + (w - Draw.textW(tr, t)) / 2, ty, fa(textCol, alpha), false);
         }
     }
 
@@ -165,7 +165,7 @@ public final class MenuKit {
         Draw.ring(c, x, y, size, size, 8, fa(Draw.withAlpha(base, 0x70), alpha));
         String ini = name == null || name.isBlank() ? "?" : name.substring(0, 1).toUpperCase(java.util.Locale.ROOT);
         Text t = Draw.bold(ini);
-        c.drawText(tr, t, x + (size - tr.getWidth(t)) / 2, y + (size - 8) / 2, fa(Draw.withAlpha(Draw.lerpColor(base, 0xFFFFFFFF, 0.45f), 0xFF), alpha), false);
+        Draw.text(c, tr, t, x + (size - Draw.textW(tr, t)) / 2, y + (size - 8) / 2, fa(Draw.withAlpha(Draw.lerpColor(base, 0xFFFFFFFF, 0.45f), 0xFF), alpha), false);
     }
 
     /** Header strip used by the list screens: logo, title, subtitle. */

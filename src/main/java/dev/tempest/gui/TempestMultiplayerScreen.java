@@ -166,17 +166,17 @@ public class TempestMultiplayerScreen extends Screen {
             } else {
                 int col = pingColor(r);
                 String ping = r == null || (!r.done && r.pingMs < 0) ? "..." : (r.failed || r.pingMs < 0) ? "offline" : r.pingMs + " ms";
-                int pw = tr.getWidth(ping);
+                int pw = Draw.textW(tr, ping);
                 Draw.text(ctx, tr, ping, right - pw, ry + 9, MenuKit.fa(col, e), false);
                 Icons.draw(ctx, "signal", right - pw - 14, ry + 8, 10, MenuKit.fa(col, e));
                 String pl = r != null && r.online >= 0 && !r.failed ? r.online + " / " + r.max : "";
-                if (!pl.isEmpty()) Draw.text(ctx, tr, pl, right - tr.getWidth(pl), ry + 22, MenuKit.fa(0xFF8B90A0, e), false);
-                infoW = Math.max(pw + 16, tr.getWidth(pl)) + 12;
+                if (!pl.isEmpty()) Draw.text(ctx, tr, pl, right - Draw.textW(tr, pl), ry + 22, MenuKit.fa(0xFF8B90A0, e), false);
+                infoW = Math.max(pw + 16, Draw.textW(tr, pl)) + 12;
             }
             int textMax = w - 50 - infoW;
             String nm = Draw.ellipsize(tr, s.name, textMax - (fav ? 14 : 0));
             Draw.text(ctx, tr, nm, x + 42, ry + 9, MenuKit.fa(0xFFFFFFFF, e), false);
-            if (fav && !(hv || sel)) Icons.draw(ctx, "star_filled", x + 46 + tr.getWidth(nm), ry + 9, 8, MenuKit.fa(0xFFFFD34D, e));
+            if (fav && !(hv || sel)) Icons.draw(ctx, "star_filled", x + 46 + Draw.textW(tr, nm), ry + 9, 8, MenuKit.fa(0xFFFFD34D, e));
             Draw.text(ctx, tr, Draw.ellipsize(tr, s.address, textMax), x + 42, ry + 22, MenuKit.fa(0xFF8B90A0, e), false);
         }
         MenuKit.listFades(ctx, x - 2, lt, w + 4, lh, scroll, maxScroll());
@@ -198,7 +198,7 @@ public class TempestMultiplayerScreen extends Screen {
         address.render(ctx, mx, my, delta);
 
         if (tip != null) {
-            int tw = tr.getWidth(tip) + 12;
+            int tw = Draw.textW(tr, tip) + 12;
             int tx = Math.min(mx + 8, width - tw - 4), ty = my - 20;
             Draw.panel(ctx, tx, ty, tw, 16, 4, 0xF0101116, 0x40FFFFFF);
             Draw.text(ctx, tr, tip, tx + 6, ty + 4, 0xFFFFFFFF, false);

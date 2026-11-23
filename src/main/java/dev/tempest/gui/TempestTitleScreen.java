@@ -163,7 +163,7 @@ public class TempestTitleScreen extends Screen {
         Draw.text(ctx, tr, ver, 10, height - 14, MenuKit.fa(0xFFB9BED6, eFoot), false);
         updatePill(ctx, tr, mx, my, eFoot, time);
         String hint = "Right Shift opens the Tempest menu in game";
-        int hintX = width - 10 - tr.getWidth(hint);
+        int hintX = width - 10 - Draw.textW(tr, hint);
         int[] ext = externalModsBox(tr);
         if (ext != null) {
             boolean hv = Draw.hit(mx, my, ext[0], ext[1], ext[2], ext[3]);
@@ -188,7 +188,7 @@ public class TempestTitleScreen extends Screen {
     /** {x, y, w, h} of the bottom-centre "Fabric External Mods" button, or null without Mod Menu. */
     private int[] externalModsBox(TextRenderer tr) {
         if (!modMenuInstalled()) return null;
-        int w = tr.getWidth(EXTERNAL_MODS) + 32, h = 18;
+        int w = Draw.textW(tr, EXTERNAL_MODS) + 32, h = 18;
         return new int[]{(width - w) / 2, height - 22, w, h};
     }
 
@@ -216,8 +216,8 @@ public class TempestTitleScreen extends Screen {
         ctx.fill(x + 10, y + 1, x + w - 10, y + 2, MenuKit.fa(Draw.withAlpha(0xFFFFFF, 0x10 + Math.round(0x18 * p)), e));
 
         int is = Math.min(10, h - 8), igap = 6;
-        int lw = tr.getWidth(b.label());
-        int bwid = b.badge() == null ? 0 : tr.getWidth(b.badge()) + 10;
+        int lw = Draw.textW(tr, b.label());
+        int bwid = b.badge() == null ? 0 : Draw.textW(tr, b.badge()) + 10;
         int total = is + igap + lw + (bwid > 0 ? 7 + bwid : 0);
         int cx = x + (w - total) / 2, ty = y + (h - 8) / 2;
         Icons.draw(ctx, b.icon(), cx, y + (h - is) / 2, is, MenuKit.fa(fg, e));
@@ -285,7 +285,7 @@ public class TempestTitleScreen extends Screen {
         Draw.shadow(ctx, x, favY, favW, h, 10, 8);
         Draw.glass(ctx, x, favY, favW, h, 10, MenuKit.fa(Draw.bg(), e), MenuKit.fa(Draw.border(), e));
         Draw.text(ctx, tr, Draw.bold("\u2605 Favorites"), x + 12, favY + 11, MenuKit.fa(Draw.TEXT, e), false);
-        Draw.text(ctx, tr, "Quick join", x + favW - 12 - tr.getWidth("Quick join"), favY + 11, MenuKit.fa(Draw.DIM2, e), false);
+        Draw.text(ctx, tr, "Quick join", x + favW - 12 - Draw.textW(tr, "Quick join"), favY + 11, MenuKit.fa(Draw.DIM2, e), false);
         ctx.fill(x + 10, favY + 26, x + favW - 10, favY + 27, MenuKit.fa(Draw.border(), e));
         if (favs.isEmpty()) {
             Draw.text(ctx, tr, "No favorites yet", x + 12, favY + 40, MenuKit.fa(Draw.DIM2, e), false);
@@ -310,9 +310,9 @@ public class TempestTitleScreen extends Screen {
                 Draw.circle(ctx, x + 16, ry + 12, 3, MenuKit.fa(dot, e));
             }
             String right = up ? (r.online >= 0 ? r.online + "" : r.pingMs + "ms") : "";
-            int nameMax = favW - 54 - tr.getWidth(right);
+            int nameMax = favW - 54 - Draw.textW(tr, right);
             Draw.text(ctx, tr, Draw.ellipsize(tr, f.name, nameMax), x + 26, ry + 8, MenuKit.fa(Draw.lerpColor(Draw.DIM, Draw.TEXT, p), e), false);
-            if (!right.isEmpty()) Draw.text(ctx, tr, right, x + favW - 14 - tr.getWidth(right), ry + 8, MenuKit.fa(Draw.DIM2, e), false);
+            if (!right.isEmpty()) Draw.text(ctx, tr, right, x + favW - 14 - Draw.textW(tr, right), ry + 8, MenuKit.fa(Draw.DIM2, e), false);
         }
     }
 
@@ -347,7 +347,7 @@ public class TempestTitleScreen extends Screen {
 
     /** {x, y, w, h} of the small account chip shown top-right when the profile card doesn't fit. */
     private int[] accountChip(TextRenderer tr) {
-        int w = tr.getWidth(playerName()) + 34;
+        int w = Draw.textW(tr, playerName()) + 34;
         return new int[]{width - w - 8, 6, w, 18};
     }
 
@@ -369,7 +369,7 @@ public class TempestTitleScreen extends Screen {
         float p = Draw.hoverProgress("mk:" + key, Draw.hit(mx, my, x, y, w, h));
         Draw.panel(ctx, x, y, w, h, 6, MenuKit.fa(Draw.lerpColor(Draw.card(), Draw.cardHover(), p), e),
                 MenuKit.fa(Draw.lerpColor(Draw.border(), Draw.withAlpha(Draw.accent(), 0xA0), p), e));
-        Draw.text(ctx, tr, label, x + (w - tr.getWidth(label)) / 2, y + (h - 8) / 2, MenuKit.fa(Draw.lerpColor(Draw.DIM, Draw.TEXT, p), e), false);
+        Draw.text(ctx, tr, label, x + (w - Draw.textW(tr, label)) / 2, y + (h - 8) / 2, MenuKit.fa(Draw.lerpColor(Draw.DIM, Draw.TEXT, p), e), false);
     }
 
     private String playerName() {
@@ -387,7 +387,7 @@ public class TempestTitleScreen extends Screen {
         return null;
     }
 
-    private int pillW(TextRenderer tr, String label) { return tr.getWidth(label) + 30; }
+    private int pillW(TextRenderer tr, String label) { return Draw.textW(tr, label) + 30; }
 
     /** Small glowing pill above the version text while an update is offered / downloading / ready. */
     private void updatePill(DrawContext ctx, TextRenderer tr, int mx, int my, float e, float time) {

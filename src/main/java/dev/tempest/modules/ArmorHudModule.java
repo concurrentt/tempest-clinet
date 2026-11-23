@@ -94,11 +94,11 @@ public class ArmorHudModule extends HudModule {
                 String t = display.is("Percent") ? (left * 100 / Math.max(1, max)) + "%" : Integer.toString(left);
                 float f = left / (float) Math.max(1, max);
                 int col = f > 0.6f ? 0xFF55FF55 : f > 0.3f ? 0xFFFFD83A : 0xFFFF5555;
-                int tw = tr.getWidth(t);
+                int tw = Draw.textW(tr, t);
                 float scale = 0.7f;
                 ctx.getMatrices().pushMatrix();
                 ctx.getMatrices().scale(scale, scale);
-                ctx.drawText(tr, t, (int) ((sx + 9 - tw * scale / 2f) / scale), (int) ((sy + (bars ? 23 : 20)) / scale), col, true);
+                Draw.text(ctx, tr, t, (int) ((sx + 9 - tw * scale / 2f) / scale), (int) ((sy + (bars ? 23 : 20)) / scale), col, true);
                 ctx.getMatrices().popMatrix();
             }
         }
@@ -111,6 +111,6 @@ public class ArmorHudModule extends HudModule {
         String t = display.is("Percent") ? (left * 100 / Math.max(1, max)) + "%" : Integer.toString(left);
         float f = left / (float) Math.max(1, max);
         int col = f > 0.6f ? 0xFF55FF55 : f > 0.3f ? 0xFFFFD83A : 0xFFFF5555;
-        ctx.drawText(tr, t, tx, ty, col, true);
+        Draw.text(ctx, tr, t, tx, ty, col, true);
     }
 }

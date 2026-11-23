@@ -96,8 +96,8 @@ public class WaypointsModule extends Module {
 
             String ds = String.format(Locale.ROOT, "%.0fm", dist);
             String name = wp.name;
-            int nameW = tr.getWidth(name);
-            int distW = distance.get() ? tr.getWidth(ds) : 0;
+            int nameW = Draw.textW(tr, name);
+            int distW = distance.get() ? Draw.textW(tr, ds) : 0;
             int padX = 7;
             int gap = distance.get() ? 6 : 0;
             int lw = nameW + gap + distW + padX * 2;
@@ -108,9 +108,9 @@ public class WaypointsModule extends Module {
             Draw.shadow(ctx, lx, ly, lw, lh, 4, 3);
             Draw.panel(ctx, lx, ly, lw, lh, 5, 0xB8101422, Draw.withAlpha(col, 0x55));
             Draw.roundRect(ctx, lx + 3, ly + 4, 2, lh - 8, 1, col);
-            ctx.drawText(tr, name, lx + padX + 2, ly + 4, 0xFFF0F4FF, false);
+            Draw.text(ctx, tr, name, lx + padX + 2, ly + 4, 0xFFF0F4FF, false);
             if (distance.get()) {
-                ctx.drawText(tr, ds, lx + lw - padX - distW, ly + 4, 0xFF9AA4C0, false);
+                Draw.text(ctx, tr, ds, lx + lw - padX - distW, ly + 4, 0xFF9AA4C0, false);
             }
         }
     }

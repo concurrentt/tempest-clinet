@@ -33,12 +33,12 @@ public class TargetHealthModule extends HudModule {
 
         String hpText = String.format(Locale.ROOT, "%.1f / %.0f", hp, max);
         TextRenderer tr = MinecraftClient.getInstance().textRenderer;
-        w = Math.max(110, tr.getWidth(name) + tr.getWidth(hpText) + 24);
+        w = Math.max(110, Draw.textW(tr, name) + Draw.textW(tr, hpText) + 24);
         h = 28;
         box(ctx);
 
-        ctx.drawText(tr, name, x + 7, y + 4, color.get(), true);
-        ctx.drawText(tr, hpText, x + w - 6 - tr.getWidth(hpText), y + 4, Draw.DIM, true);
+        Draw.text(ctx, tr, name, x + 7, y + 4, color.get(), true);
+        Draw.text(ctx, tr, hpText, x + w - 6 - Draw.textW(tr, hpText), y + 4, Draw.DIM, true);
 
         int bx = x + 7, by = y + 17, bw = w - 14;
         Draw.roundRect(ctx, bx, by, bw, 6, 3, 0xFF1C2030);

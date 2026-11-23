@@ -120,7 +120,7 @@ public class ChatGroupScreen extends Screen {
             else Draw.roundRect(ctx, x + 20, ry + 2, 16, 16, 3, 0x40FFFFFF);
             Draw.text(ctx, tr, Social.nameOf(f.id()), x + 42, ry + 6, 0xFFFFFFFF, false);
             String st = f.online() ? "Online" : "Offline";
-            Draw.text(ctx, tr, st, x + w - 44 - tr.getWidth(st), ry + 6, f.online() ? 0xFF6AF09A : 0xFF6B7080, false);
+            Draw.text(ctx, tr, st, x + w - 44 - Draw.textW(tr, st), ry + 6, f.online() ? 0xFF6AF09A : 0xFF6B7080, false);
             // tick box
             int bx = x + w - 34;
             Draw.panel(ctx, bx, ry + 4, 12, 12, 3, on ? Draw.accent() : 0xC0181A22, 0x60FFFFFF);

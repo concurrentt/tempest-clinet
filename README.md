@@ -1,3 +1,8 @@
+## 0.20.1 - Inventory looks fix
+- Tempest Editor: an Inventory GUI look taken from one of your packs could come out see-through (some PvP packs ship
+  "clear" inventories). Inventory looks are now always solid, and one you already applied is fixed the next time you
+  open the editor. Pack previews of high-resolution packs now show the right part of the texture.
+
 ## 0.20.0 - Tempest Editor icons
 - Tempest Editor's main page has its own hand-drawn, full-colour icons for PvP, Blocks, Gear, HUD, Misc, Effects and
   Sounds and for the Configs / My Packs / Cosmetics / Painter buttons, and each tile glows in its own colour on hover

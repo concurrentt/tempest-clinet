@@ -324,9 +324,16 @@ public final class PackLooks {
         public Img copy() { return new Img(w, h, px.clone()); }
 
         /** First square frame of an animation strip, or a region. */
-        public Img crop(int[] region) {
+        public Img crop(int[] region) { return crop(region, 0); }
+
+        /** refW: width of the texture the region was measured on (HD packs are scaled to match); 0 = same size. */
+        public Img crop(int[] region, int refW) {
             int x = 0, y = 0, cw = w, ch = h;
-            if (region != null) { x = region[0]; y = region[1]; cw = Math.min(region[2], w - x); ch = Math.min(region[3], h - y); }
+            if (region != null) {
+                float k = refW > 0 ? w / (float) refW : 1f;
+                x = Math.round(region[0] * k); y = Math.round(region[1] * k);
+                cw = Math.min(Math.round(region[2] * k), w - x); ch = Math.min(Math.round(region[3] * k), h - y);
+            }
             else if (h > w && h % w == 0) ch = w;
             if (cw <= 0 || ch <= 0) return this;
             int[] out = new int[cw * ch];
@@ -384,7 +391,7 @@ public final class PackLooks {
         }
         String l = look.look();
         if (l.equals("Vanilla")) return null;
-        if (l.startsWith("pack:")) return fromPack(l.substring(5), id);
+        if (l.startsWith("pack:")) return solidify(cat, id, fromPack(l.substring(5), id));
         Img b = base(id);
         if (b == null) return null;
         Style s = l.equals("Custom") ? custom(look.color()) : style(l);
@@ -392,6 +399,34 @@ public final class PackLooks {
         int[] p = b.px.clone();
         for (int i = 0; i < p.length; i++) p[i] = recolor(p[i], s);
         return new Img(b.w, b.h, p);
+    }
+
+    /**
+     * Inventory / container screens must stay solid. Some PvP packs ship "clear" GUIs (see-through panels) that only
+     * look right with the rest of that pack, so taking just that texture left the inventory see-through. Wherever the
+     * normal texture is solid, the pack's texture is laid over it, so the panel is never see-through (works for HD
+     * packs too: the normal texture is sampled at the matching spot).
+     */
+    public static Img solidify(Category cat, Identifier id, Img img) {
+        if (img == null || cat == null || !cat.id().equals("gui")) return img;
+        Img b = base(id);
+        if (b == null) return img;
+        int[] out = img.px.clone();
+        for (int y = 0; y < img.h; y++) {
+            int by = Math.min(b.h - 1, y * b.h / img.h);
+            for (int x = 0; x < img.w; x++) {
+                int bx = Math.min(b.w - 1, x * b.w / img.w);
+                int under = b.px[by * b.w + bx];
+                if ((under >>> 24) < 200) continue;                 // outside the panel: leave as the pack has it
+                int over = out[y * img.w + x];
+                int a = over >>> 24;
+                if (a == 255) continue;
+                float t = a / 255f;
+                int rgb = lerp(under & 0xFFFFFF, over & 0xFFFFFF, t);
+                out[y * img.w + x] = 0xFF000000 | rgb;
+            }
+        }
+        return new Img(img.w, img.h, out);
     }
 
     // ------------------------------------------------------------------ apply
@@ -482,31 +517,64 @@ public final class PackLooks {
         return dominantColor(img);
     }
 
+    // ------------------------------------------------------------------ small options file
+    private static Path optionsFile() { return FabricLoader.getInstance().getConfigDir().resolve("tempest-packs-options.json"); }
+
+    private static JsonObject options() {
+        try {
+            if (Files.exists(optionsFile())) return JsonParser.parseString(Files.readString(optionsFile())).getAsJsonObject();
+        } catch (Exception ignored) { }
+        return new JsonObject();
+    }
+
+    private static void setOption(String k, boolean v) {
+        JsonObject o = options();
+        o.addProperty(k, v);
+        try { Files.writeString(optionsFile(), GSON.toJson(o)); } catch (Exception ignored) { }
+    }
+
     // ------------------------------------------------------------------ crosshair blending
     private static Boolean invertCrosshair;
 
     /** Vanilla draws the crosshair inverted against the world; with a coloured crosshair you may want it plain. */
     public static boolean invertCrosshair() {
         if (invertCrosshair == null) {
-            invertCrosshair = true;
-            try {
-                Path p = FabricLoader.getInstance().getConfigDir().resolve("tempest-packs-options.json");
-                if (Files.exists(p)) {
-                    JsonObject o = JsonParser.parseString(Files.readString(p)).getAsJsonObject();
-                    if (o.has("invertCrosshair")) invertCrosshair = o.get("invertCrosshair").getAsBoolean();
-                }
-            } catch (Exception ignored) { }
+            JsonObject o = options();
+            invertCrosshair = !o.has("invertCrosshair") || o.get("invertCrosshair").getAsBoolean();
         }
         return invertCrosshair;
     }
 
     public static void setInvertCrosshair(boolean v) {
         invertCrosshair = v;
-        JsonObject o = new JsonObject();
-        o.addProperty("invertCrosshair", v);
+        setOption("invertCrosshair", v);
+    }
+
+    // ------------------------------------------------------------------ one-time repair
+    /**
+     * Inventory looks taken from a pack used to keep that pack's see-through panels. Rebuilds an already applied one
+     * once (solid now, see solidify). Returns true if it rebuilt something (the caller says so).
+     */
+    public static boolean repairGuiOnce() {
+        JsonObject o = options();
+        if (o.has("guiSolidV1")) return false;
+        setOption("guiSolidV1", true);
+        Look l = appliedLook("gui");
+        if (!l.look().startsWith("pack:")) return false;
+        Category cat = null;
+        for (Category c : CATEGORIES) if (c.id().equals("gui")) cat = c;
+        if (cat == null) return false;
         try {
-            Files.writeString(FabricLoader.getInstance().getConfigDir().resolve("tempest-packs-options.json"), GSON.toJson(o));
-        } catch (Exception ignored) { }
+            for (Identifier id : ids(cat)) {
+                CustomPack.remove(id);
+                Img img = render(cat, id, l);
+                if (img != null) CustomPack.save(id, img.px, img.w, img.h);
+            }
+            CustomPack.apply();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private PackLooks() { }

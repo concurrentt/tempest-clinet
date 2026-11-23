@@ -65,6 +65,7 @@ public class TempestEditorScreen extends Screen {
         super(Text.literal("Tempest Editor"));
         this.parent = parent;
         for (var e : PackLooks.applied().entrySet()) pending.put(e.getKey(), e.getValue());
+        if (PackLooks.repairGuiOnce()) flash("Fixed your inventory look: it's solid now (reloading textures\u2026)");
     }
 
     private Look pendingLook(Category c) { return pending.getOrDefault(c.id(), Look.VANILLA); }
@@ -117,17 +118,20 @@ public class TempestEditorScreen extends Screen {
         packs = c.isSound() ? new ArrayList<>() : PackLooks.packsWith(c);
         if (!c.isSound()) {
             Img base = PackLooks.base(c.previewId());
-            if (base != null) buildPreviews(base.crop(c.region()));
+            if (base != null) buildPreviews(base.crop(c.region(), regionRef(c)));
         }
     }
+
+    /** Width of the vanilla texture a category's preview region is measured on (HD packs get it scaled up). */
+    private static int regionRef(Category c) { return c.region() == null ? 0 : c.id().equals("gui") ? 256 : 64; }
 
     private void buildPreviews(Img base) {
         register("Vanilla", base);
         for (PackLooks.Style s : PackLooks.STYLES) register(s.name(), recolored(base, s));
         register("Custom", recolored(base, PackLooks.custom(pendingLook(cat).color())));
         for (ResourcePackProfile p : packs) {
-            Img img = PackLooks.fromPack(p.getId(), cat.previewId());
-            if (img != null) register("pack:" + p.getId(), img.crop(cat.region()));
+            Img img = PackLooks.solidify(cat, cat.previewId(), PackLooks.fromPack(p.getId(), cat.previewId()));
+            if (img != null) register("pack:" + p.getId(), img.crop(cat.region(), regionRef(cat)));
         }
     }
 
@@ -153,7 +157,7 @@ public class TempestEditorScreen extends Screen {
     private void refreshCustomPreview() {
         if (cat == null || cat.isSound()) return;
         Img base = PackLooks.base(cat.previewId());
-        if (base != null) register("Custom", recolored(base.crop(cat.region()), PackLooks.custom(pendingLook(cat).color())));
+        if (base != null) register("Custom", recolored(base.crop(cat.region(), regionRef(cat)), PackLooks.custom(pendingLook(cat).color())));
     }
 
     private void clearPreviews() {
@@ -248,7 +252,8 @@ public class TempestEditorScreen extends Screen {
             hubIcon(ctx, SHORTCUTS[i][0], x + bw / 2 - 7, by + 3, 14, e);
             Draw.centered(ctx, tr, SHORTCUTS[i][1], x + bw / 2, by + 19, MenuKit.fa(0xFFE4E6EC, e));
         }
-        String info = dirty() ? "You have looks that aren't applied yet" : "Looks are saved into the \"" + CustomPack.NAME + "\" pack";
+        boolean recent = System.currentTimeMillis() - statusAt < 8000 && !status.isEmpty();
+        String info = recent ? status : dirty() ? "You have looks that aren't applied yet" : "Looks are saved into the \"" + CustomPack.NAME + "\" pack";
         int iw = tr.getWidth(info) + 20, iy = by + bh + 12;
         Draw.panel(ctx, width / 2 - iw / 2, iy, iw, 16, 4, MenuKit.fa(0xA0101218, e), MenuKit.fa(0x40FFFFFF, e));
         Draw.centered(ctx, tr, info, width / 2, iy + 4, MenuKit.fa(dirty() ? 0xFFFFD27A : 0xFFD0D3DC, e));

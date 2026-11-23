@@ -25,6 +25,14 @@ if errorlevel 1 (
 ) else (
   echo Nothing new to commit.
 )
+rem Bring in anything changed on GitHub (e.g. a README edited on the website) before pushing.
+git pull --rebase origin main
+if errorlevel 1 (
+  echo.
+  echo PULL FAILED: GitHub has changes that clash with yours.
+  echo Run  git status  to see the files, or  git rebase --abort  to undo the pull.
+  goto :fail
+)
 git push
 if errorlevel 1 ( echo PUSH FAILED & goto :fail )
 

@@ -307,9 +307,37 @@ public class ClickGuiScreen extends Screen {
     private int rowH() { return Math.min(sidePitch(), sideH() >= 400 ? 22 : 18); }
 
     // ---------- render ----------
-    /** No vanilla blur: it re-renders the whole screen several times per frame, and this menu draws its own wash. */
+    /** The menu draws its own background (render: blur, wash and glow). */
     @Override
     public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) { }
+
+    /** The player's own blur strength, put back when the menu closes (we borrow Minecraft's blur while it's open). */
+    private Integer savedBlur;
+
+    /**
+     * Blurs the game behind the menu with Minecraft's own menu blur (one cheap pass), at the strength chosen in
+     * GUI & Configs -> Menu Blur. Minecraft reads the strength from its "Menu Background Blur" option, so that is set
+     * while this menu is open and restored afterwards (never saved).
+     */
+    private boolean blurBehind(DrawContext ctx) {
+        int strength = ClientSettingsModule.menuBlur();
+        if (strength <= 0 || client == null || client.world == null) return false;
+        try {
+            var opt = client.options.getMenuBackgroundBlurriness();
+            if (savedBlur == null) savedBlur = opt.getValue();
+            if (opt.getValue() != strength) opt.setValue(strength);
+            ctx.applyBlur();
+            return true;
+        } catch (Throwable t) {
+            return false;   // e.g. blur already applied this frame
+        }
+    }
+
+    private void restoreBlur() {
+        if (savedBlur == null || client == null) return;
+        try { client.options.getMenuBackgroundBlurriness().setValue(savedBlur); } catch (Throwable ignored) { }
+        savedBlur = null;
+    }
 
     @Override
     public void render(DrawContext ctx, int mx, int my, float delta) {
@@ -328,9 +356,14 @@ public class ClickGuiScreen extends Screen {
 
         TextRenderer tr = textRenderer;
 
-        // Dim the game with a faint blue-black wash, then a soft accent glow so the window feels lit from behind.
+        // Blur the game behind, dim it with a soft blue-black wash (lighter when blurred) and a vignette, then a
+        // soft accent glow so the window feels lit from behind.
         if (client != null && client.world == null) Draw.menuBackground(ctx, width, height);
-        ctx.fillGradient(0, 0, width, height, (((int) (0x70 * anim)) << 24) | 0x05070D, (((int) (0x38 * anim)) << 24) | 0x05070D);
+        boolean blurred = blurBehind(ctx);
+        int topA = blurred ? 0x48 : 0x70, botA = blurred ? 0x22 : 0x38;
+        ctx.fillGradient(0, 0, width, height, (((int) (topA * anim)) << 24) | 0x05070D, (((int) (botA * anim)) << 24) | 0x05070D);
+        ctx.fillGradient(0, 0, width, height / 6, (((int) (0x40 * anim)) << 24), 0);
+        ctx.fillGradient(0, height - height / 6, width, height, 0, (((int) (0x50 * anim)) << 24));
         TempestLoading.drawGlow(ctx, pX + pW / 2, pY + pH / 2, Math.round(Math.max(pW, pH) * 1.7f), Draw.accent(), 0.18f * anim);
 
         // window: shadow, panel, a faint sheen across the top and an accent hairline on the edge
@@ -543,10 +576,16 @@ public class ClickGuiScreen extends Screen {
                 float h = approach(hov, m, hv ? 1f : 0f);
                 float t = approach(tog, m, on ? 1f : 0f);
 
-                // card: soft translucent grey, a touch lighter on hover
-                int fill = Draw.lerpColor(Draw.withAlpha(0x2C2F37, 0x8C), Draw.withAlpha(0x3A3E48, 0xA6), h);
-                int border = Draw.lerpColor(Draw.withAlpha(0xFFFFFF, 0x1C), Draw.withAlpha(0xFFFFFF, 0x3A), h);
-                Draw.panel(ctx, x, y, cardW, MCARD_H, 7, fill, border);
+                // card: a soft top-lit surface that lifts a pixel on hover; enabled mods glow faintly green
+                y -= Math.round(h);
+                if (t > 0.02f) Draw.roundRect(ctx, x - 1, y - 1, cardW + 2, MCARD_H + 2, 8, Draw.withAlpha(ON_GREEN, (int) (0x30 * t)));
+                int top = Draw.lerpColor(Draw.withAlpha(0x30333C, 0x9C), Draw.withAlpha(0x3E424D, 0xB4), h);
+                int bot = Draw.lerpColor(Draw.withAlpha(0x1E2027, 0x9C), Draw.withAlpha(0x2A2D35, 0xB4), h);
+                Draw.roundRectV(ctx, x, y, cardW, MCARD_H, 7, top, bot);
+                int border = Draw.lerpColor(Draw.lerpColor(Draw.withAlpha(0xFFFFFF, 0x18), Draw.withAlpha(0xFFFFFF, 0x38), h),
+                        Draw.withAlpha(ON_GREEN, 0x90), t * 0.8f);
+                Draw.ring(ctx, x, y, cardW, MCARD_H, 7, border);
+                Draw.hairline(ctx, x + 8, y + 1, cardW - 16, 0xFFFFFF, (int) (0x18 + 0x18 * h));
 
                 // favourite star, top-left
                 boolean fav = favs.contains(m.getId());
@@ -593,11 +632,13 @@ public class ClickGuiScreen extends Screen {
                     Draw.roundRect(ctx, bx, ty, bw, TOG_H, 3, Draw.withAlpha(0x15161B, 0xA0));
                     Draw.spaced(ctx, tr, "ALWAYS ON", bx + bw / 2, ty + (TOG_H - 8) / 2, 0xFF9EA3B0, true, 2);
                 } else {
-                    int base = Draw.lerpColor(OFF_RED, ON_GREEN, t);
-                    int col = Draw.lerpColor(Draw.withAlpha(base, 0xD8), Draw.lerpColor(base, 0xFFFFFFFF, 0.12f), pt);
-                    Draw.roundRect(ctx, bx, ty, bw, TOG_H, 3, col);
-                    Draw.hairline(ctx, bx + 3, ty, bw - 6, 0xFFFFFF, 0x30);
-                    Draw.spaced(ctx, tr, on ? "ENABLED" : "DISABLED", bx + bw / 2, ty + (TOG_H - 8) / 2, 0xFFFFFFFF, true, 2);
+                    // off: a quiet dark bar (no wall of red); on: green with a sheen
+                    int offCol = Draw.lerpColor(Draw.withAlpha(0x15161B, 0xB0), Draw.withAlpha(0x2C2F38, 0xD0), pt);
+                    int onCol = Draw.lerpColor(Draw.withAlpha(ON_GREEN, 0xD8), Draw.lerpColor(ON_GREEN, 0xFFFFFFFF, 0.12f), pt);
+                    Draw.roundRect(ctx, bx, ty, bw, TOG_H, 3, Draw.lerpColor(offCol, onCol, t));
+                    if (t > 0.02f) Draw.hairline(ctx, bx + 3, ty, bw - 6, 0xFFFFFF, (int) (0x30 * t));
+                    int tc = Draw.lerpColor(Draw.lerpColor(0xFF8A8F9E, 0xFFD6D9E2, pt), 0xFFFFFFFF, t);
+                    Draw.spaced(ctx, tr, on ? "ENABLED" : "DISABLED", bx + bw / 2, ty + (TOG_H - 8) / 2, tc, true, 2);
                 }
             }
         }
@@ -1002,6 +1043,7 @@ public class ClickGuiScreen extends Screen {
 
     @Override
     public void removed() {
+        restoreBlur();
         savedX = pX;
         savedY = pY;
         savedScroll = scroll;

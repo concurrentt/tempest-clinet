@@ -16,6 +16,7 @@ public class ClientSettingsModule extends Module {
     public final ModeSetting menuBackground = add(new ModeSetting("menu_bg", "Menu Background", "Nebula",
             "Nebula", "Galaxy", "Aurora", "Black Hole", "Ringed Planet", "Blood Moon", "Animated", "Plain"));
     public final ModeSetting font = add(new ModeSetting("font", "Font", "Inter", "Inter", "Minecraft"));
+    public final ModeSetting menuBlur = add(new ModeSetting("menu_blur", "Menu Blur", "Medium", "Off", "Light", "Medium", "Strong"));
     public final BoolSetting animations = add(new BoolSetting("animations", "Menu Animations", true));
     public final ModeSetting animationEasing = add(new ModeSetting("anim_easing", "Animation Easing", "Smooth", "Smooth", "Linear", "Snappy"));
     public final NumberSetting guiScale = add(new NumberSetting("gui_scale", "GUI Size", 1.0, 0.6, 1.0, 0.05));
@@ -69,6 +70,13 @@ public class ClientSettingsModule extends Module {
     public static boolean styledWidgetsOn() {
         ClientSettingsModule m = ModuleManager.get(ClientSettingsModule.class);
         return m == null || m.styledWidgets.get();
+    }
+
+    /** How strongly the game behind the mods menu is blurred: 0 (off) .. 10, Minecraft's own blur scale. */
+    public static int menuBlur() {
+        ClientSettingsModule m = ModuleManager.get(ClientSettingsModule.class);
+        if (m == null) return 5;
+        return switch (m.menuBlur.get()) { case "Off" -> 0; case "Light" -> 3; case "Strong" -> 9; default -> 6; };
     }
 
     public static boolean animationsOn() {

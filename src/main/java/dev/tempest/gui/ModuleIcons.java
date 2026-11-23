@@ -29,6 +29,7 @@ public final class ModuleIcons {
         MODULES.put("inventory_hud", Items.BARREL);
         MODULES.put("totem_pops", Items.TOTEM_OF_UNDYING);
         MODULES.put("tier_tagger", Items.NETHERITE_SWORD);
+        MODULES.put("discord", Items.NOTE_BLOCK);
         MODULES.put("auto_gg", Items.PAPER);
         MODULES.put("chat_macros", Items.WRITABLE_BOOK);
         MODULES.put("zoom", Items.SPYGLASS);

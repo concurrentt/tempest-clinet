@@ -94,6 +94,7 @@ public class ModuleManager {
         register(new EmotesModule());
         register(new FriendsModule());
         register(new MiddleClickFriendModule());
+        register(new DiscordModule());
 
         MODULES.forEach(Module::onInit);
     }

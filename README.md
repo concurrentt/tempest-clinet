@@ -1,3 +1,11 @@
+## 0.21.4 - Nicer mods menu, background blur
+- Mods menu (Right Shift): the game behind it is blurred (GUI & Configs -> Menu Blur: Off / Light / Medium /
+  Strong), with a lighter wash and a soft vignette. Cards have a top-lit surface, lift on hover and glow green when
+  enabled; disabled mods get a quiet dark bar instead of a red one.
+- Discord Status (Client): "Playing Tempest Client" on your Discord profile - where you are (server, singleplayer or
+  menus), time played, the Tempest logo, your skin's face and a "Get Tempest" button. Server address, username
+  and button can each be hidden. Needs the Discord desktop app.
+
 ## 0.21.3 - New font, real sky lyrics, shield fix
 - Tempest's menus and HUD use Inter, a clean Discord-like font (chat, signs and vanilla screens keep Minecraft's
   font). GUI & Configs -> Font switches back to the Minecraft font.

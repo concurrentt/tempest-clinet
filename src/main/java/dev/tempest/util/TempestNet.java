@@ -42,7 +42,7 @@ public final class TempestNet {
      */
     public static final String DEFAULT_URL = "https://tempest-backend.imamunchlmaoii.workers.dev";
 
-    private static final long HEARTBEAT_MS = 60_000, LOOKUP_MS = 10_000, CACHE_MS = 120_000;
+    private static final long HEARTBEAT_MS = 45_000, LOOKUP_MS = 10_000, CACHE_MS = 120_000;
 
     private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8)).build();
     /** uuid -> time we last learned they use Tempest */
@@ -57,6 +57,7 @@ public final class TempestNet {
     private static volatile String lastError = "";
     private static volatile String lastProblem;
     private static volatile boolean loggedOut;
+    private static volatile long lastBeatOk;
     private static long lastHeartbeat, lastLookup, retryAt;
     private static long backoff = 60_000;
 
@@ -101,7 +102,9 @@ public final class TempestNet {
             String server = currentServer(c);
             if (server != null) hb.addProperty("server", server);
             post("/v1/heartbeat", hb, true).thenAccept(r -> {
-                if (r != null && r.has("incoming")) Social.onIncomingCount(r.get("incoming").getAsInt());
+                if (r == null) { lastBeatOk = 0; return; }
+                lastBeatOk = System.currentTimeMillis();
+                if (r.has("incoming")) Social.onIncomingCount(r.get("incoming").getAsInt());
             });
             return;
         }
@@ -132,6 +135,24 @@ public final class TempestNet {
     }
 
     public static boolean signedIn() { return token != null && System.currentTimeMillis() < tokenExpires; }
+
+    /** Send a heartbeat on the next tick (e.g. the Social menu opened), unless one went out in the last 10 s. */
+    public static void heartbeatSoon() {
+        if (System.currentTimeMillis() - lastHeartbeat > 10_000) lastHeartbeat = 0;
+    }
+
+    /**
+     * What your friends actually see, confirmed by the service: "Online", "Hidden from friends" (setting off),
+     * or a reason it isn't getting through.
+     */
+    public static String presence() {
+        if (!signedIn()) return status() == null ? "Connecting\u2026" : status();
+        if (!dev.tempest.modules.FriendsModule.onlineToFriends()) return "Hidden from friends";
+        if (System.currentTimeMillis() - lastBeatOk < HEARTBEAT_MS * 2 + 15_000) return "Online";
+        return lastHeartbeat == 0 ? "Connecting\u2026" : "Status not reaching Tempest";
+    }
+
+    public static boolean visibleOnline() { return "Online".equals(presence()); }
 
     /** Short status for menus. */
     public static String status() {

@@ -84,8 +84,7 @@ public final class NametagsModule extends Module {
         MutableText out = Text.empty().styled(s -> s.withInsertion(MARK));
         if (addLogo) out.append(LOGO).append(Text.literal(" "));
         out.append(name);
-        if (pops > 0) out.append(Text.literal(" ")).append(TOTEM).append(Text.literal(Integer.toString(pops))
-                .styled(st -> st.withColor(0xFF5A5A).withBold(true)));
+        if (pops > 0) out.append(Text.literal(" -" + pops).styled(st -> st.withColor(0xFF5A5A).withBold(true)));
         if (shield != null) out.append(shield);
         return out;
     }

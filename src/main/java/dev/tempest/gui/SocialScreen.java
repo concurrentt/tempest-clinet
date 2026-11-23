@@ -68,6 +68,7 @@ public class SocialScreen extends Screen {
         addDrawableChild(field);
         Social.markScreenOpen();
         Social.refresh();
+        TempestNet.heartbeatSoon();
         if (tab == 0 && Social.pendingCount() > 0 && Social.friends().isEmpty()) tab = 1;
         layoutField();
     }
@@ -239,13 +240,13 @@ public class SocialScreen extends Screen {
         UUID me = client != null && client.getSession() != null ? client.getSession().getUuidOrNull() : null;
         String myName = client != null && client.getSession() != null ? client.getSession().getUsername() : "You";
         drawHead(ctx, tr, me, myName, sx + 10, sy + 11, 28);
-        boolean connected = TempestNet.signedIn();
-        int dot = connected ? 0xFF43D17A : 0xFFFFB36B;
+        String st = TempestNet.presence();          // confirmed by the service, not just "signed in"
+        boolean live = st.equals("Online"), hidden = st.equals("Hidden from friends");
+        int dot = live ? 0xFF43D17A : hidden ? 0xFF6B6F7E : 0xFFFFB36B;
         Draw.circle(ctx, sx + 36, sy + 36, 4, Draw.solid());
         Draw.circle(ctx, sx + 36, sy + 36, 3, dot);
         Draw.text(ctx, tr, Draw.bold(Draw.trim(tr, myName, SIDE_W - 58)), sx + 46, sy + 14, Draw.TEXT, false);
-        String st = connected ? "Online" : TempestNet.status() == null ? "Connecting…" : TempestNet.status();
-        Draw.text(ctx, tr, Draw.trim(tr, st, SIDE_W - 54), sx + 46, sy + 26, connected ? 0xFF8EE3AE : 0xFFFFC48A, false);
+        Draw.text(ctx, tr, Draw.trim(tr, st, SIDE_W - 54), sx + 46, sy + 26, live ? 0xFF8EE3AE : hidden ? Draw.DIM : 0xFFFFC48A, false);
         ctx.fill(sx + 12, sy + 50, sx + SIDE_W - 12, sy + 51, Draw.border());
 
         // sections

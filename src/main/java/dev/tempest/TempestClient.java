@@ -51,6 +51,7 @@ public class TempestClient implements ClientModInitializer {
         ModuleManager.init();
 
         dev.tempest.modules.LowFireModule.registerModels();
+        dev.tempest.modules.LowShieldsModule.registerPack();
         net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
             if (!overlay) dev.tempest.modules.AutoGgModule.onMessage(message);
         });

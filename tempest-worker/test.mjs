@@ -97,6 +97,14 @@ await call("/v1/heartbeat", {}, tA);
 [s, b] = await call("/v1/friends/accept", { uuid: A }, tB); assert.equal(s, 200);
 [s, b] = await call("/v1/friends/list", {}, tA);
 assert.deepEqual(b.friends, [{ uuid: B, online: true, server: "crystalbox.org" }]); assert.deepEqual(b.outgoing, []);
+// the object restarts (eviction / deploy): presence comes back from storage, friends still see B online
+const before = env.PRESENCE.get;
+const restarted = new w.Presence({ storage: { sql } }, {});
+env.PRESENCE.get = () => restarted;
+[s, b] = await call("/v1/friends/list", {}, tA);
+assert.deepEqual(b.friends, [{ uuid: B, online: true, server: "crystalbox.org" }], "online survives a restart");
+[s, b] = await call("/health", null, null, "GET"); assert.ok(b.online >= 2, "restored online count");
+env.PRESENCE.get = before;
 // B hides from friends -> offline to A, but still has the public nametag logo
 await call("/v1/heartbeat", { server: "x", friends: false, public: true }, tB);
 [s, b] = await call("/v1/friends/list", {}, tA); assert.deepEqual(b.friends, [{ uuid: B, online: false, server: null }]);

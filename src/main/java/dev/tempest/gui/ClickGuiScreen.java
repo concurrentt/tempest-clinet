@@ -282,6 +282,8 @@ public class ClickGuiScreen extends Screen {
         y += 16;
         out.add(new Side("Edit HUD", null, 1, Items.ITEM_FRAME, y));
         y += pitch;
+        out.add(new Side("Configs", null, 1, Items.BOOK, y));
+        y += pitch;
         out.add(new Side("Waypoints", null, 1, Items.RECOVERY_COMPASS, y));
         y += pitch;
         out.add(new Side("Friends", null, 1, Items.PLAYER_HEAD, y));
@@ -293,8 +295,8 @@ public class ClickGuiScreen extends Screen {
     /** Distance between sidebar rows. Shrinks on short windows so every row (and the profile card) still fits. */
     private int sidePitch() {
         boolean profile = sideH() >= 330;
-        // clickable rows (All + every category + 4 actions) plus the two section labels and a small gap
-        int rows = 1 + Category.values().length + 4;
+        // clickable rows (All + every category + 5 actions) plus the two section labels and a small gap
+        int rows = 1 + Category.values().length + 5;
         int avail = sideH() - 54 - 2 * 16 - 4 - (profile ? 48 : 8);
         return Math.max(14, Math.min(24, avail / rows));
     }
@@ -455,6 +457,7 @@ public class ClickGuiScreen extends Screen {
             if (e.kind() != 0) {   // categories are text only; the shortcut rows keep their icons
                 String ic = switch (e.label()) {
                     case "Edit HUD" -> "layout";
+                    case "Configs" -> "layers";
                     case "Waypoints" -> "pin";
                     case "Friends" -> "people";
                     default -> "servers";
@@ -822,6 +825,7 @@ public class ClickGuiScreen extends Screen {
             } else if (client != null) {
                 switch (e.label()) {
                     case "Edit HUD" -> client.setScreen(new HudEditorScreen(this));
+                    case "Configs" -> client.setScreen(new ConfigsScreen(this));
                     case "Waypoints" -> client.setScreen(new WaypointScreen(this));
                     case "Friends" -> client.setScreen(new SocialScreen(this));
                     default -> client.setScreen(new FavoritesScreen(this));

@@ -170,7 +170,7 @@ public class TempestMenuScreen extends Screen {
     }
 
     // ---------------------------------------------------------------- cosmetics: preview + carousel
-    private static final String[] TABS = {"Capes", "Wings", "Head", "Aura"};
+    private static final String[] TABS = {"Capes", "Wings", "Head"};
     private static final int PANEL_W = 470, PANEL_H = 196, PREV_W = 132, CARD = 108;
     private int tab = 0;
     private int focus = -1;          // carousel index being looked at (-1 = start on the equipped one)
@@ -181,7 +181,6 @@ public class TempestMenuScreen extends Screen {
         return switch (tab) {
             case 1 -> CosmeticsModule.WINGS;
             case 2 -> CosmeticsModule.HEADS;
-            case 3 -> CosmeticsModule.AURAS;
             default -> CAPES;
         };
     }
@@ -192,7 +191,6 @@ public class TempestMenuScreen extends Screen {
         return switch (tab) {
             case 1 -> cm == null || !cm.isEnabled() ? "None" : cm.wings.get();
             case 2 -> cm == null || !cm.isEnabled() ? "None" : cm.head.get();
-            case 3 -> cm == null || !cm.isEnabled() ? "None" : cm.aura.get();
             default -> cp == null || !cp.isEnabled() ? "None" : cp.cape.get();
         };
     }
@@ -213,10 +211,6 @@ public class TempestMenuScreen extends Screen {
                 case "Antlers" -> "antlers"; case "Flower Crown" -> "flower"; case "Witch Hat" -> "witch_hat"; case "Top Hat" -> "top_hat";
                 default -> "cat_ears";
             };
-            case 3 -> switch (opt) {
-                case "Hearts" -> "heart"; case "Flames" -> "flame"; case "Snow" -> "snowflake"; case "Notes" -> "note";
-                case "Theme Orbit" -> "orbs"; default -> "sparkles";
-            };
             default -> "cape";
         };
     }
@@ -236,7 +230,6 @@ public class TempestMenuScreen extends Screen {
         switch (tab) {
             case 1 -> CosmeticsModule.previewWings = o;
             case 2 -> CosmeticsModule.previewHead = o;
-            case 3 -> CosmeticsModule.previewAura = o;
             default -> CapesModule.previewCape = o;
         }
     }
@@ -401,7 +394,6 @@ public class TempestMenuScreen extends Screen {
         switch (tab) {
             case 1 -> { if (cm != null) { cm.wings.set(o); if (!cm.isEnabled()) cm.setEnabled(true); } }
             case 2 -> { if (cm != null) { cm.head.set(o); if (!cm.isEnabled()) cm.setEnabled(true); } }
-            case 3 -> { if (cm != null) { cm.aura.set(o); if (!cm.isEnabled()) cm.setEnabled(true); } }
             default -> { if (cp != null) { cp.cape.set(o); if (!cp.isEnabled() && !o.equals("None")) cp.setEnabled(true); } }
         }
         TempestConfig.save();

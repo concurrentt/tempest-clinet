@@ -29,11 +29,13 @@ public class ModuleManager {
         register(new InfoBarModule());
         register(new ScoreboardModule());
         register(new ServerAddressModule());
+        register(new ReplayModModule());
         register(new PackDisplayModule());
         // PvP
         register(new TotemPopModule());
         register(new AutoGgModule());
         register(new ShieldFixesModule());
+        register(new LowShieldsModule());
         register(new ClientSideCrystalsModule());
         register(new AlertsModule());
         register(new HitboxModule());
@@ -59,7 +61,6 @@ public class ModuleManager {
         register(new XrayModule());
 
         register(new CustomSkyModule());
-        register(new FirefliesModule());
         register(new CinematicModule());
         // Utility
         register(new AntiLeakModule());

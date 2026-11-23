@@ -204,6 +204,9 @@ async function readJson(req) {
 
 // ------------------------------------------------------------------ who is online (one shared Durable Object)
 const MAX_FRIENDS = 200;
+// Who's online is also saved (at most every 4 minutes per player, or when their status changes), so a restart of
+// this object (Cloudflare evicts idle objects and every deploy restarts it) doesn't make everyone look offline.
+const PERSIST_EVERY_MS = 240_000;
 const MAX_OUTGOING = 30;
 const MAX_INCOMING = 100;
 
@@ -223,6 +226,16 @@ export class Presence extends DurableObject {
     this.sql.exec("CREATE TABLE IF NOT EXISTS friends (a TEXT NOT NULL, b TEXT NOT NULL, since INTEGER NOT NULL, PRIMARY KEY (a, b))");
     this.sql.exec("CREATE TABLE IF NOT EXISTS requests (src TEXT NOT NULL, dst TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (src, dst))");
     this.sql.exec("CREATE INDEX IF NOT EXISTS requests_dst ON requests (dst)");
+    this.sql.exec("CREATE TABLE IF NOT EXISTS presence (uuid TEXT PRIMARY KEY, seen INTEGER NOT NULL, server TEXT, pub INTEGER NOT NULL, fr INTEGER NOT NULL)");
+    this.persisted = new Map(); // uuid -> { at, key } last saved
+    // restore players who were online before a restart; give them until their next heartbeat to check in
+    const now = Date.now();
+    this.sql.exec("DELETE FROM presence WHERE seen < ?", now - 3600_000);
+    for (const r of this.rows("SELECT uuid, seen, server, pub, fr FROM presence WHERE seen > ?", now - ONLINE_TTL_MS - PERSIST_EVERY_MS)) {
+      const seen = Math.min(now, Number(r.seen) + PERSIST_EVERY_MS);
+      this.online.set(r.uuid, { seen, server: r.server ?? null, pub: !!r.pub, fr: !!r.fr });
+      this.persisted.set(r.uuid, { at: Number(r.seen), key: `${r.server}|${r.pub}|${r.fr}` });
+    }
   }
 
   rows(q, ...args) { return this.sql.exec(q, ...args).toArray(); }
@@ -235,12 +248,24 @@ export class Presence extends DurableObject {
   /** opts: { server, pub (show logo to everyone), fr (show online to friends) }. Returns pending incoming count. */
   heartbeat(uuid, opts = {}) {
     const pub = opts.pub !== false, fr = opts.fr !== false;
-    if (!pub && !fr) this.online.delete(uuid);
-    else this.online.set(uuid, { seen: Date.now(), server: cleanServer(opts.server), pub, fr });
+    if (!pub && !fr) this.logout(uuid);
+    else {
+      const now = Date.now(), server = cleanServer(opts.server);
+      this.online.set(uuid, { seen: now, server, pub, fr });
+      const key = `${server}|${pub ? 1 : 0}|${fr ? 1 : 0}`, last = this.persisted.get(uuid);
+      if (!last || last.key !== key || now - last.at >= PERSIST_EVERY_MS) {
+        this.sql.exec("INSERT OR REPLACE INTO presence (uuid, seen, server, pub, fr) VALUES (?, ?, ?, ?, ?)",
+          uuid, now, server, pub ? 1 : 0, fr ? 1 : 0);
+        this.persisted.set(uuid, { at: now, key });
+      }
+    }
     return this.num("SELECT COUNT(*) AS n FROM requests WHERE dst = ?", uuid);
   }
 
-  logout(uuid) { this.online.delete(uuid); }
+  logout(uuid) {
+    this.online.delete(uuid);
+    if (this.persisted.delete(uuid)) this.sql.exec("DELETE FROM presence WHERE uuid = ?", uuid);
+  }
 
   lookup(uuids) {
     const now = Date.now();
@@ -359,7 +384,7 @@ export async function handle(req, env, keysOverride = null) {
 
   if (path === "/v1/heartbeat") {
     const incoming = await presence(env).heartbeat(me, { server: body.server, pub: body.public, fr: body.friends });
-    return json(200, { ok: true, incoming });
+    return json(200, { ok: true, incoming, visibleToFriends: body.friends !== false });
   }
 
   if (path === "/v1/friends/list") return json(200, await presence(env).friendsState(me));

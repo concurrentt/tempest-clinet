@@ -43,6 +43,8 @@ public class TempestConfig {
     public Map<String, Long> playtimeServers = new LinkedHashMap<>();
     /** Auto-updater: a release version the player chose to skip ("Skip this version"). */
     public String skippedUpdate = "";
+    /** Name of the config last loaded or saved (shown as active in the Configs screen). */
+    public String activeConfig = "";
 
     public static TempestConfig get() { return instance; }
 

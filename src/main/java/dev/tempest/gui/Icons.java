@@ -30,7 +30,7 @@ public final class Icons {
                 {"armor_hud", "chestplate"}, {"cooldowns", "hourglass"}, {"shield_status", "shield"},
                 {"coordinates", "compass"}, {"server_address", "servers"}, {"pack_display", "layers"}, {"old_animations", "runner"}, {"kill_effects", "sparkles"}, {"chat_tabs", "chat"}, {"chat_animation", "motion"}, {"ping", "signal"}, {"inventory_hud", "grid"}, {"session", "clock"},
                 {"info_bar", "list"}, {"scoreboard", "board"}, {"totem_pops", "totem"}, {"auto_gg", "chat"},
-                {"shield_fixes", "shield"}, {"client_crystals", "crystal"}, {"alerts", "bell"}, {"hitboxes", "outline_square"},
+                {"shield_fixes", "shield"}, {"low_shields", "shield"}, {"client_crystals", "crystal"}, {"alerts", "bell"}, {"hitboxes", "outline_square"},
                 {"totem_tweaks", "totem"}, {"friends", "people"}, {"middle_click_friend", "person_plus"},
                 {"zoom", "magnifier"}, {"fullbright", "sun"}, {"freelook", "eye"},
                 {"who_am_i", "idcard"}, {"capes", "cape"}, {"cinematic", "film_camera"}, {"waypoints", "pin"},

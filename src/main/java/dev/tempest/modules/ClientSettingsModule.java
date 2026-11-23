@@ -9,7 +9,6 @@ import dev.tempest.module.ModeSetting;
 import dev.tempest.module.Module;
 import dev.tempest.module.ModuleManager;
 import dev.tempest.module.NumberSetting;
-import dev.tempest.util.ProfileManager;
 
 public class ClientSettingsModule extends Module {
     public final ModeSetting theme = add(new ModeSetting("theme", "Theme", "Tempest", "Tempest", "Midnight", "Crimson", "Emerald", "Violet", "Amber", "Custom"));
@@ -23,17 +22,16 @@ public class ClientSettingsModule extends Module {
     public final BoolSetting customMenu = add(new BoolSetting("custom_menu", "Custom Main Menu", true));
     public final BoolSetting styledWidgets = add(new BoolSetting("styled_widgets", "Tempest Style Buttons & Options", true));
     public final BoolSetting checkUpdates = add(new BoolSetting("check_updates", "Check For Updates", true));
-    private final ModeSetting slot = add(new ModeSetting("slot", "Profile Slot", "1", "1", "2", "3"));
 
     public ClientSettingsModule() {
-        super("client", "GUI & Profiles", "Theme, menu key, animations, profiles.", Category.CLIENT, true);
+        super("client", "GUI & Configs", "Theme, menu key, animations, configs.", Category.CLIENT, true);
         add(new KeySetting("menu_key", "Open Menu Key", TempestClient.openMenuKey));
-        add(new ActionSetting("save", "Save to Slot", "Save", () -> ProfileManager.save(slot.get())));
-        add(new ActionSetting("load", "Load from Slot", "Load", () -> ProfileManager.load(slot.get())));
-        add(new ActionSetting("export", "Share (copy to clipboard)", "Copy", ProfileManager::exportClipboard));
-        add(new ActionSetting("import", "Import (from clipboard)", "Paste", ProfileManager::importClipboard));
+        add(new ActionSetting("configs", "Configs (named setups)", "Open", () -> {
+            net.minecraft.client.MinecraftClient c = net.minecraft.client.MinecraftClient.getInstance();
+            c.setScreen(new dev.tempest.gui.ConfigsScreen(c.currentScreen));
+        }));
         add(new ActionSetting("check_now", "Check for updates now", "Check", () -> dev.tempest.util.Updater.checkAsync()));
-        keyHint = "Profiles store enabled mods, settings and HUD layout. Esc while binding a key unbinds it.";
+        keyHint = "Configs store enabled mods, settings and HUD layout under a name. Esc while binding a key unbinds it.";
     }
 
     @Override public boolean alwaysOn() { return true; }

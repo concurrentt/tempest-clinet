@@ -373,6 +373,16 @@ Build from the project directory with: gradle build
 
 
 
+
+## 0.19.3 - Configs, Low Shields, presence fix
+- Friends seeing you offline: the online list is now saved by the service (so restarts don't wipe it), heartbeats
+  every 45 s, one sent as soon as Social opens, and your status in Social only says Online once the service confirmed it.
+- Configs replace profile slots: create named configs, load, save over, rename, copy to share, import, delete
+  (GUI & Configs > Configs, or Configs in the mod menu sidebar). Old slots 1-3 become "Profile 1-3".
+- Low Shields: the shield sits at the side of the screen and is small while blocking (built-in pack, toggled by the module).
+- Server Address shows the server's icon; Pack Display shows each pack's icon.
+- Totem pops on nametags are back to "-3". Auras and Fireflies removed.
+
 ## 0.19.2 - Kill effects remastered, key bind fix
 - Kill effects rebuilt: smooth light fall-off, three theme tones plus white-hot cores, physics sparks with motion
   streaks that land on the ground, a light pool under every kill and lens-flare stars.

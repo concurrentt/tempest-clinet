@@ -24,7 +24,7 @@ public class TotemPopModule extends Module {
     private final BoolSetting nametag = add(new BoolSetting("nametag", "Show On Nametag", true));
     private final BoolSetting showHotbarCount = add(new BoolSetting("hotbar_count", "Totem Count", true));
 
-    public TotemPopModule() { super("totem_pops", "Totem Pop Counter", "Shows how many totems each player has popped next to their name, with a totem icon. Resets on death.", Category.PVP, true); }
+    public TotemPopModule() { super("totem_pops", "Totem Pop Counter", "Shows how many totems each player has popped next to their name (e.g. Steve -3). Resets on death.", Category.PVP, true); }
 
     /** Called from ClientPlayNetworkHandlerMixin for every entity status packet. */
     public static void onStatus(Entity e, byte status) {

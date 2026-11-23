@@ -143,7 +143,14 @@ public abstract class HudModule extends Module {
      * bright value column (so FPS, Ping, CPS ... all read the same way); a line without ": " is drawn whole.
      * cols (optional) tints each line's value.
      */
-    protected void drawLines(DrawContext ctx, List<String> lines, List<Integer> cols) {
+    protected void drawLines(DrawContext ctx, List<String> lines, List<Integer> cols) { drawLines(ctx, lines, cols, null); }
+
+    /**
+     * Same, with a picture in front of the lines (64x64 textures, e.g. a server icon or a resource pack's icon).
+     * One line gets one large icon; several lines get a small icon each. Null entries leave a gap.
+     */
+    protected void drawLines(DrawContext ctx, List<String> lines, List<Integer> cols, List<net.minecraft.util.Identifier> icons) {
+        if (icons != null && icons.stream().anyMatch(java.util.Objects::nonNull)) { drawWithIcons(ctx, lines, cols, icons); return; }
         TextRenderer tr = MinecraftClient.getInstance().textRenderer;
         int labelW = 0, tw = 0;
         String[] label = new String[lines.size()], value = new String[lines.size()];
@@ -173,6 +180,44 @@ public abstract class HudModule extends Module {
         }
         for (int i = 0; i < lines.size(); i++) {
             int ty = y + 5 + i * lineH;
+            int vx = x + lead;
+            if (label[i] != null) {
+                ctx.drawText(tr, label[i], vx, ty, Draw.DIM, false);
+                vx += labelW + gap;
+            }
+            ctx.drawText(tr, value[i], vx, ty, cols != null ? cols.get(i) : color.get(), modern);
+        }
+    }
+
+    private void drawWithIcons(DrawContext ctx, List<String> lines, List<Integer> cols, List<net.minecraft.util.Identifier> icons) {
+        TextRenderer tr = MinecraftClient.getInstance().textRenderer;
+        boolean big = lines.size() == 1;
+        int is = big ? 16 : 9, lineH = big ? 11 : 12;
+        int labelW = 0, tw = 0;
+        String[] label = new String[lines.size()], value = new String[lines.size()];
+        for (int i = 0; i < lines.size(); i++) {
+            String l = lines.get(i);
+            int cut = l.indexOf(": ");
+            if (cut > 0) { label[i] = l.substring(0, cut); value[i] = l.substring(cut + 2); }
+            else { label[i] = null; value[i] = l; }
+            if (label[i] != null) labelW = Math.max(labelW, tr.getWidth(label[i]));
+        }
+        int gap = labelW > 0 ? 6 : 0;
+        for (int i = 0; i < lines.size(); i++) tw = Math.max(tw, (label[i] != null ? labelW + gap : 0) + tr.getWidth(value[i]));
+        boolean modern = background.get() && style.get().equals("Modern");
+        int lead = 6 + is + 6;
+        w = lead + tw + 7;
+        h = big ? is + 8 : lines.size() * lineH + 7;
+        box(ctx);
+        if (background.get() && !modern) ctx.fill(x + 1, y + 4, x + 3, y + h - 4, Draw.accent());
+        for (int i = 0; i < lines.size(); i++) {
+            int rowY = big ? y + 4 : y + 4 + i * lineH;
+            net.minecraft.util.Identifier icon = i < icons.size() ? icons.get(i) : null;
+            if (icon != null) {
+                int iy = big ? rowY : rowY + (lineH - 1 - is) / 2;
+                ctx.drawTexture(net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED, icon, x + 6, iy, 0f, 0f, is, is, 64, 64, 64, 64, 0xFFFFFFFF);
+            }
+            int ty = big ? y + (h - 8) / 2 : rowY + 1;
             int vx = x + lead;
             if (label[i] != null) {
                 ctx.drawText(tr, label[i], vx, ty, Draw.DIM, false);

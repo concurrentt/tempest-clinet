@@ -51,6 +51,12 @@ public final class TempestChat {
 
     public static Group group(String id) { return id == null ? null : GROUPS.get(id); }
 
+    /** The account was switched: the groups belong to the old account. */
+    public static void reset() {
+        GROUPS.clear();
+        lastGroupFetch = 0;
+    }
+
     /** Loads the groups you're in (on connect, and when asked). */
     public static void refreshGroups() {
         if (!TempestNet.signedIn() || System.currentTimeMillis() - lastGroupFetch < 2_000) return;
@@ -121,7 +127,7 @@ public final class TempestChat {
     }
 
     private static void finish(JsonObject r, Consumer<String> done) {
-        String msg = r == null ? "Couldn't reach the Tempest service" : r.has("error") ? r.get("error").getAsString() : null;
+        String msg = r == null ? (TempestNet.signedIn() ? "Couldn't reach the Tempest service" : "Not signed in to Tempest: " + TempestNet.status()) : r.has("error") ? r.get("error").getAsString() : null;
         if (done != null) MinecraftClient.getInstance().execute(() -> done.accept(msg));
     }
 

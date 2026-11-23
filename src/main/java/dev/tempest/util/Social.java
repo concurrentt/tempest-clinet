@@ -30,6 +30,17 @@ public final class Social {
     private Social() { }
 
     public static List<Friend> friends() { return friends; }
+
+    /** Forget the friends list (the account was switched); it's loaded again for the new account. */
+    public static void reset() {
+        friends = List.of();
+        incoming = List.of();
+        outgoing = List.of();
+        FRIEND_IDS.clear();
+        lastRefresh = 0;
+        loaded = false;
+        incomingCount = -1;
+    }
     public static List<UUID> incoming() { return incoming; }
     public static List<UUID> outgoing() { return outgoing; }
     public static boolean loaded() { return loaded; }
@@ -115,7 +126,7 @@ public final class Social {
         body.addProperty("uuid", id.toString());
         TempestNet.api(path, body).whenComplete((r, err) -> {
             String msg;
-            if (r == null) msg = "Couldn't reach the Tempest service";
+            if (r == null) msg = TempestNet.signedIn() ? "Couldn't reach the Tempest service" : "Not signed in to Tempest: " + TempestNet.status();
             else if (r.has("error")) msg = cap(r.get("error").getAsString());
             else if (r.has("result")) msg = switch (r.get("result").getAsString()) {
                 case "accepted" -> "They had already asked you - you're now friends!";

@@ -24,7 +24,7 @@ public final class ParticleFilterModule extends Module {
             ParticleTypes.DUST_PILLAR, ParticleTypes.FALLING_DUST);
 
     public ParticleFilterModule() {
-        super("particle_filter", "Particles", "Choose exactly which particle groups are hidden on your client.", Category.QOL, false);
+        super("particle_filter", "Particles", "Choose exactly which particle groups are hidden on your client.", Category.VISUALS, false);
         explosions = group("explosions", "Hide Explosions & Fireworks",
                 ParticleTypes.EXPLOSION, ParticleTypes.EXPLOSION_EMITTER, ParticleTypes.FIREWORK, ParticleTypes.POOF);
         group("smoke", "Hide Smoke", ParticleTypes.SMOKE, ParticleTypes.LARGE_SMOKE, ParticleTypes.WHITE_SMOKE,

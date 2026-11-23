@@ -15,7 +15,7 @@ public class TexturePainterModule extends Module {
 
     public TexturePainterModule() {
         super("texture_painter", "Tempest Editor", "Pack editor: recolour crystals, anchors, totems, armour, HUD, particles and sounds, or paint textures.",
-                Category.UTILITY, true);
+                Category.CLIENT, true);
         add(new ActionSetting("open_editor", "Tempest Editor", "Open", () -> {
             MinecraftClient c = MinecraftClient.getInstance();
             c.setScreen(new TempestEditorScreen(c.currentScreen));

@@ -14,7 +14,7 @@ import net.minecraft.util.hit.HitResult;
 /** Middle click a player to send them a Tempest friend request (they glow once they accept). */
 public final class MiddleClickFriendModule extends Module {
     public MiddleClickFriendModule() {
-        super("middle_click_friend", "Middle Click Friend", "Middle click a player to send them a Tempest friend request.", Category.UTILITY, false);
+        super("middle_click_friend", "Middle Click Friend", "Middle click a player to send them a Tempest friend request.", Category.CLIENT, false);
     }
 
     public static boolean onMiddleClick(MinecraftClient c) {

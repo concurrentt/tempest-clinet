@@ -44,14 +44,76 @@ public final class KillEffectsModule extends Module {
     private static final Random RNG = new Random();
 
     public KillEffectsModule() {
-        super("kill_effects", "Kill Effects", "Glowing effects in your theme colour where your opponent dies.", Category.PVP, false);
-        add(new ActionSetting("preview", "Preview", "Play", () -> {
+        super("kill_effects", "Kill Effects", "Glowing effects in your theme colour where your opponent dies.", Category.VISUALS, false);
+        add(new ActionSetting("preview", "Preview", "Open", () -> {
             MinecraftClient c = MinecraftClient.getInstance();
-            if (c.player == null) return;
-            Vec3d look = c.player.getRotationVec(1f);
-            Vec3d at = c.player.getEntityPos().add(look.x * 4, 0, look.z * 4);
-            start(at, 1.8);
+            c.setScreen(new dev.tempest.gui.KillEffectPreviewScreen(c.currentScreen));
         }));
+    }
+
+    public static String[] effects() { return EFFECTS.clone(); }
+    public int effectIndex() { return effect.index(); }
+    public void setEffect(String name) { effect.set(name); }
+    public boolean soundOn() { return sound.get(); }
+
+    /** Plays the chosen effect 4 blocks in front of you, in the world (from the preview window). */
+    public static void playInWorld() {
+        MinecraftClient c = MinecraftClient.getInstance();
+        if (c.player == null) return;
+        Vec3d look = c.player.getRotationVec(1f);
+        start(c.player.getEntityPos().add(look.x * 4, 0, look.z * 4), 1.8);
+    }
+
+    /** Receives the effect's geometry as quads, 4 vertices each (camera at the origin). Used by the preview window. */
+    public interface Sink {
+        void v(float x, float y, float z, int argb);
+    }
+
+    /**
+     * One effect playing at the origin, drawn into a {@link Sink} instead of the world - the preview window uses
+     * this so it shows exactly the same animation as a real kill.
+     */
+    public static final class Preview {
+        private Running run;
+
+        public Preview(int kind) { restart(kind); }
+
+        /** kind: index into {@link #effects()}; the last one ("Random") picks one. */
+        public void restart(int kind) { play(kind, true); }
+
+        /** Plays again without the sound (the window loops the effect). */
+        public void loop(int kind) { play(kind, false); }
+
+        private void play(int kind, boolean withSound) {
+            if (kind >= EFFECTS.length - 1) kind = RNG.nextInt(EFFECTS.length - 1);
+            run = new Running(kind, Vec3d.ZERO, 1.8, RNG.nextLong());
+            KillEffectsModule m = ModuleManager.get(KillEffectsModule.class);
+            if (withSound && m != null && m.sound.get()) previewSound(kind);
+        }
+
+        public String playing() { return EFFECTS[run.kind]; }
+        public boolean finished() { return run.finished(); }
+        public float progress() { return Math.min(1f, run.seconds() / run.duration()); }
+
+        /** Draws the current frame as seen from cam (feet of the effect at the origin). */
+        public void draw(Sink sink, Vec3d cam) {
+            KillEffectsModule m = ModuleManager.get(KillEffectsModule.class);
+            float detail = m == null ? 1f : switch (m.quality.get()) { case "Low" -> 0.45f; case "Medium" -> 0.7f; default -> 1f; };
+            run.draw(new G(sink), cam, Palette.of(Draw.accent() & 0xFFFFFF), detail);
+        }
+    }
+
+    /** The kill sound without a world (the preview can be opened from the menus). */
+    private static void previewSound(int kind) {
+        SoundEvent s = switch (kind) {
+            case 1 -> SoundEvents.ENTITY_FIREWORK_ROCKET_BLAST;
+            case 2 -> SoundEvents.ENTITY_LIGHTNING_BOLT_THUNDER;
+            case 3 -> SoundEvents.ENTITY_FIREWORK_ROCKET_TWINKLE;
+            case 4 -> SoundEvents.BLOCK_BEACON_ACTIVATE;
+            default -> SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME;
+        };
+        float pitch = switch (kind) { case 1 -> 0.7f; case 2 -> 1.4f; case 4 -> 1.6f; case 3 -> 1.0f; default -> 0.8f; };
+        try { dev.tempest.util.Keys.sound(s, 0.45f, pitch); } catch (Throwable ignored) { }
     }
 
     private static KillEffectsModule on() {
@@ -150,12 +212,17 @@ public final class KillEffectsModule extends Module {
     private static final class G {
         final VertexConsumer vc;
         final MatrixStack.Entry e;
+        final Sink sink;
 
-        G(VertexConsumer vc, MatrixStack.Entry e) { this.vc = vc; this.e = e; }
+        G(VertexConsumer vc, MatrixStack.Entry e) { this.vc = vc; this.e = e; this.sink = null; }
+        G(Sink sink) { this.vc = null; this.e = null; this.sink = sink; }
 
         static int argb(int rgb, float a) { return (Math.round(Math.max(0f, Math.min(1f, a)) * 255) << 24) | (rgb & 0xFFFFFF); }
 
-        void v(Vector3f p, int col) { vc.vertex(e, p.x, p.y, p.z).color(col); }
+        void v(Vector3f p, int col) {
+            if (sink != null) sink.v(p.x, p.y, p.z, col);
+            else vc.vertex(e, p.x, p.y, p.z).color(col);
+        }
 
         /** Quad drawn with both windings so it shows from either side. */
         void quad(Vector3f a, Vector3f b, Vector3f c, Vector3f d, int ca, int cb, int cc, int cd) {

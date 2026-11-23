@@ -28,7 +28,7 @@ public class ShulkerPreviewModule extends Module {
     private final BoolSetting capacityBar = add(new BoolSetting("capacity_bar", "Fullness Bar", true));
 
     public ShulkerPreviewModule() {
-        super("shulker_preview", "Shulker Preview", "See what's in a shulker without opening it: an icon of its contents on the item, a fullness bar, and a preview on hover.", Category.UTILITY, true);
+        super("shulker_preview", "Shulker Preview", "See what's in a shulker without opening it: an icon of its contents on the item, a fullness bar, and a preview on hover.", Category.QOL, true);
     }
 
     private static boolean drawingIcon;   // the icon itself goes through the same item drawing - never recurse

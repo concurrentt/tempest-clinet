@@ -18,7 +18,7 @@ public final class CapesModule extends Module {
 
     public CapesModule() {
         super("capes", "Capes", "Wear a Tempest cape. Other Tempest players see it too (Cosmetics -> Show Mine To Others).",
-                Category.RENDER, true);
+                Category.CLIENT, true);
     }
 
     /** Try-on from the cosmetics carousel (Right Shift menu). */

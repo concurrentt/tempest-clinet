@@ -10,88 +10,90 @@ public class ModuleManager {
     private static final Map<Class<?>, Module> BY_CLASS = new HashMap<>();
 
     public static void init() {
-        // HUD
+        // HUD - on-screen info
         register(new FpsModule());
         register(new CpsModule());
+        register(new PingModule());
         register(new KeystrokesModule());
+        register(new CoordinatesModule());
+        register(new PotionModule());
+        register(new ArmorHudModule());
+        register(new InventoryHudModule());
+        register(new AppleSkinModule());
+        register(new InfoBarModule());
+        register(new SessionModule());
+        register(new ServerAddressModule());
+        register(new ScoreboardModule());
+        register(new PackDisplayModule());
+        register(new SpotifyModule());
+        // PvP - combat
         register(new ReachModule());
         register(new ComboModule());
         register(new TargetHealthModule());
-        register(new PotionModule());
-        register(new AppleSkinModule());
-        register(new ArmorHudModule());
         register(new CooldownModule());
         register(new ShieldStatusModule());
-        register(new CoordinatesModule());
-        register(new PingModule());
-        register(new InventoryHudModule());
-        register(new SessionModule());
-        register(new InfoBarModule());
-        register(new ScoreboardModule());
-        register(new ServerAddressModule());
-        register(new ReplayModModule());
-        register(new PackDisplayModule());
-        register(new SpotifyModule());
-        // PvP
-        register(new TotemPopModule());
-        register(new AutoGgModule());
+        register(new HitboxModule());
+        register(new OldAnimationsModule());
         register(new ShieldFixesModule());
         register(new LowShieldsModule());
+        register(new TotemPopModule());
+        register(new TotemTweaksModule());
         register(new ClientSideCrystalsModule());
         register(new AlertsModule());
-        register(new HitboxModule());
-        register(new TotemTweaksModule());
-        register(new FriendsModule());
-        register(new MiddleClickFriendModule());
-        register(new OldAnimationsModule());
-        register(new KillEffectsModule());
-        // Render
+        register(new TierTaggerModule());
+        // Render - camera and world
         register(new ZoomModule());
-        register(new FullbrightModule());
         register(new FreelookModule());
-        register(new WhoAmIModule());
-        register(new CapesModule());
-        register(new CosmeticsModule());
-        register(new EmotesModule());
-        register(new TexturePainterModule());
-        register(new NametagsModule());
         register(new CinematicCameraModule());
+        register(new CustomFovModule());
+        register(new NametagsModule());
+        register(new WhoAmIModule());
         register(new WaypointsModule());
-        register(new ItemPhysicsModule());
-        register(new TimeChangerModule());
-        register(new BlockOutlineModule());
-        register(new MotionBlurModule());
         register(new XrayModule());
         register(new FakeChunksModule());
-
+        // Visuals - how the game looks
         register(new CustomSkyModule());
         register(new CinematicModule());
-        // Utility
-        register(new AntiLeakModule());
-        register(new MouseTweaksModule());
-        register(new ShulkerPreviewModule());
-        register(new ToggleSprintModule());
-        register(new ReconnectModule());
-        register(new ArmorSwapModule());
-        register(new TooltipInfoModule());
-        register(new ScreenshotToolsModule());
-        register(new StreamerModeModule());
-        register(new QuickServersModule());
-        // QOL
-        register(new LowFireModule());
-        register(new SmoothHotbarModule());
+        register(new FullbrightModule());
+        register(new TimeChangerModule());
+        register(new BlockOutlineModule());
+        register(new ItemPhysicsModule());
+        register(new MotionBlurModule());
+        register(new KillEffectsModule());
         register(new ParticleFilterModule());
-        register(new CustomFovModule());
+        register(new LowFireModule());
+        // QOL - smoother play
+        register(new ToggleSprintModule());
+        register(new MouseTweaksModule());
+        register(new ArmorSwapModule());
+        register(new SmoothHotbarModule());
+        register(new ShulkerPreviewModule());
+        register(new TooltipInfoModule());
         register(new FastScreensModule());
         register(new ClumpsModule());
+        // Utility - tools
+        register(new QuickServersModule());
+        register(new ReconnectModule());
+        register(new ScreenshotToolsModule());
+        register(new ReplayModModule());
+        register(new StreamerModeModule());
+        register(new AntiLeakModule());
         // Chat
+        register(new ChatTabsModule());
+        register(new ChatUpgradesModule());
         register(new ChatMentionsModule());
         register(new MessageStackingModule());
-        register(new ChatUpgradesModule());
-        register(new ChatTabsModule());
         register(new ChatAnimationModule());
-        // Client
+        register(new ChatMacrosModule());
+        register(new AutoGgModule());
+        // Client - Tempest itself
         register(new ClientSettingsModule());
+        register(new TexturePainterModule());
+        register(new CosmeticsModule());
+        register(new CapesModule());
+        register(new EmotesModule());
+        register(new FriendsModule());
+        register(new MiddleClickFriendModule());
 
         MODULES.forEach(Module::onInit);
     }

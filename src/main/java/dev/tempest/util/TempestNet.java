@@ -156,6 +156,23 @@ public final class TempestNet {
 
     public static boolean signedIn() { return token != null && System.currentTimeMillis() < tokenExpires; }
 
+    /** The Minecraft account was switched (Accounts screen): sign the old account out and sign in again as the new one. */
+    public static void accountChanged() {
+        if (token != null) post("/v1/logout", new JsonObject(), true);   // sends with the old account's token
+        token = null;
+        tokenExpires = 0;
+        retryAt = 0;
+        backoff = 60_000;
+        lastProblem = null;
+        lastError = "";
+        lastCosSent = null;
+        loggedOut = false;
+        lastHeartbeat = 0;
+        TEMPEST.clear();
+        ASKED.clear();
+        TempestLive.close();
+    }
+
     /** Send a heartbeat on the next tick (e.g. the Social menu opened), unless one went out in the last 10 s. */
     public static void heartbeatSoon() {
         if (System.currentTimeMillis() - lastHeartbeat > 10_000) lastHeartbeat = 0;
@@ -216,29 +233,19 @@ public final class TempestNet {
             if (r == null || !r.has("serverId")) throw new IllegalStateException("start refused");
             return r.get("serverId").getAsString();
         });
-        // the player key pair Mojang issues to every real account (offline / cracked accounts don't have one)
-        code.thenCombine(c.getProfileKeys().fetchKeyPair(), (serverId, keys) -> {
-            if (keys.isEmpty()) throw new IllegalStateException("no Mojang player key (offline account or chat keys unavailable)");
-            var pair = keys.get();
-            var data = pair.publicKey().data();
-            try {
-                java.security.Signature sig = java.security.Signature.getInstance("SHA256withRSA");
-                sig.initSign(pair.privateKey());
-                sig.update(("tempest-auth|" + serverId + "|" + id.toString().replace("-", "")).getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                java.util.Base64.Encoder b64 = java.util.Base64.getEncoder();
-                JsonObject finish = new JsonObject();
-                finish.addProperty("name", name);
-                finish.addProperty("serverId", serverId);
-                finish.addProperty("uuid", id.toString());
-                finish.addProperty("publicKey", b64.encodeToString(data.key().getEncoded()));
-                finish.addProperty("expiresAt", data.expiresAt().toEpochMilli());
-                finish.addProperty("keySignature", b64.encodeToString(data.keySignature()));
-                finish.addProperty("signature", b64.encodeToString(sig.sign()));
-                return finish;
-            } catch (java.security.GeneralSecurityException e) {
-                throw new IllegalStateException("could not sign: " + e.getMessage());
+        // Proof that you own the account, two ways - your Minecraft access token never goes to Tempest either way:
+        //  1) sign our one-time code with the player key pair Mojang issues (chat keys), or
+        //  2) if Mojang gives this account no key: the normal server-join handshake - the game tells Mojang it joined
+        //     "serverId" and the Tempest service asks Mojang (hasJoined), exactly like a Minecraft server does.
+        code.thenCompose(serverId -> c.getProfileKeys().fetchKeyPair().handle((keys, err) -> {
+            if (err == null && keys != null && keys.isPresent()) {
+                var pair = keys.get();
+                var data = pair.publicKey().data();
+                return CompletableFuture.completedFuture(keyProof(pair.privateKey(), data.key(), data.expiresAt().toEpochMilli(), data.keySignature(), name, id, serverId));
             }
-        }).thenCompose(finish -> post("/v1/auth/finish", finish, false)).whenComplete((r, err) -> {
+            return CompletableFuture.supplyAsync(() -> joinedProof(c, s, name, serverId));
+        }).thenCompose(f -> f)
+        ).thenCompose(finish -> post("/v1/auth/finish", finish, false)).whenComplete((r, err) -> {
             busy = false;
             if (err != null || r == null || !r.has("token")) {
                 Throwable cause = err != null && err.getCause() != null ? err.getCause() : err;
@@ -253,6 +260,42 @@ public final class TempestNet {
             lastHeartbeat = 0;   // send a heartbeat (with your server and privacy choices) right away
             lastCosSent = null;  // and your cosmetics
         });
+    }
+
+    private static JsonObject keyProof(java.security.PrivateKey priv, java.security.PublicKey pub, long expiresAt, byte[] keySignature,
+                                       String name, UUID id, String serverId) {
+        try {
+            java.security.Signature sig = java.security.Signature.getInstance("SHA256withRSA");
+            sig.initSign(priv);
+            sig.update(("tempest-auth|" + serverId + "|" + id.toString().replace("-", "")).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            java.util.Base64.Encoder b64 = java.util.Base64.getEncoder();
+            JsonObject finish = new JsonObject();
+            finish.addProperty("name", name);
+            finish.addProperty("serverId", serverId);
+            finish.addProperty("uuid", id.toString());
+            finish.addProperty("publicKey", b64.encodeToString(pub.getEncoded()));
+            finish.addProperty("expiresAt", expiresAt);
+            finish.addProperty("keySignature", b64.encodeToString(keySignature));
+            finish.addProperty("signature", b64.encodeToString(sig.sign()));
+            return finish;
+        } catch (java.security.GeneralSecurityException e) {
+            throw new IllegalStateException("could not sign: " + e.getMessage());
+        }
+    }
+
+    /** Server-join handshake with Mojang (the access token goes to Mojang's session server only). Blocking. */
+    private static JsonObject joinedProof(MinecraftClient c, Session s, String name, String serverId) {
+        try {
+            Accounts.joinServer(c, s, serverId);
+        } catch (Throwable e) {
+            Throwable t = e instanceof java.lang.reflect.InvocationTargetException && e.getCause() != null ? e.getCause() : e;
+            throw new IllegalStateException("join refused by Mojang: " + t.getClass().getSimpleName() + " " + t.getMessage());
+        }
+        JsonObject finish = new JsonObject();
+        finish.addProperty("name", name);
+        finish.addProperty("serverId", serverId);
+        finish.addProperty("method", "joined");
+        return finish;
     }
 
     // ------------------------------------------------------------------ lookup
@@ -313,7 +356,7 @@ public final class TempestNet {
     }
 
     private static void fail(String why) {
-        lastProblem = why.contains("no Mojang player key") ? "Needs a Microsoft account (online mode)"
+        lastProblem = why.contains("join refused") ? "Mojang won't let this account join servers"
                 : why.contains("unreachable") ? "Can't reach the Tempest service" : "Couldn't sign in - retrying";
         retryAt = System.currentTimeMillis() + backoff;
         backoff = Math.min(backoff * 2, 600_000);

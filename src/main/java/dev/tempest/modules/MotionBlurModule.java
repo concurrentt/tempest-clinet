@@ -19,7 +19,7 @@ public final class MotionBlurModule extends Module {
     private static boolean broken;
 
     public MotionBlurModule() {
-        super("motion_blur", "Motion Blur", "Blends frames together for a smooth motion trail.", Category.RENDER, false);
+        super("motion_blur", "Motion Blur", "Blends frames together for a smooth motion trail.", Category.VISUALS, false);
     }
 
     private static boolean ours(Identifier id) {

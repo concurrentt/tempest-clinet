@@ -15,7 +15,7 @@ public class TargetHealthModule extends HudModule {
     private LivingEntity last;
     private float shown = -1f, trail = -1f;
 
-    public TargetHealthModule() { super("target_health", "Target Health", "Health of the entity you are fighting.", Category.HUD, false, 120, 6); }
+    public TargetHealthModule() { super("target_health", "Target Health", "Health of the entity you are fighting.", Category.PVP, false, 120, 6); }
 
     @Override
     public void renderHud(DrawContext ctx, boolean preview) {

@@ -23,7 +23,7 @@ public final class LowShieldsModule extends Module {
 
     public LowShieldsModule() {
         super("low_shields", "Low Shields", "Moves the shield to the side of your screen and makes it small while blocking.",
-                Category.VISUALS, false);
+                Category.PVP, false);
     }
 
     /** Registers the built-in pack. Call once during client init. */

@@ -189,5 +189,37 @@ assert.deepEqual(wsC.sent.at(-1), { t: "group_gone", id: party.id });
 [s, b] = await call("/v1/chat/group/leave", { id: g.id }, tA); assert.equal(s, 200, "owner leaving ends it");
 [s, b] = await call("/v1/chat/groups", {}, tC); assert.deepEqual(b.groups, []);
 
+// ---- sign-in without a chat key: Mojang's hasJoined check (the access token only ever goes to Mojang)
+{
+  const joins = new Map();   // "name|serverId" -> profile Mojang would return
+  const fakeMojang = async (name, sid) => {
+    const p = joins.get(name.toLowerCase() + "|" + sid);
+    return p ? new Response(JSON.stringify(p), { status: 200 }) : new Response(null, { status: 204 });
+  };
+  const callJ = (body) => w.handle(new Request("https://t.dev/v1/auth/finish", {
+    method: "POST", body: JSON.stringify(body), headers: { "CF-Connecting-IP": "9.9.9." + (ip++ % 200) },
+  }), env, keys, fakeMojang).then(async (r) => [r.status, await r.json()]);
+  const JU = "abcdefab-1234-5678-9abc-def012345678";
+  let sid = await start("Rres");
+  let [st, bd] = await callJ({ name: "Rres", serverId: sid, method: "joined" });
+  assert.equal(st, 403, "no join recorded at Mojang");
+  joins.set("rres|" + sid, { id: JU.replace(/-/g, ""), name: "Rres" });
+  [st, bd] = await callJ({ name: "Rres", serverId: sid, method: "joined" });
+  assert.equal(st, 200, "joined sign-in");
+  assert.equal(bd.uuid, JU);
+  const [hs] = await call("/v1/heartbeat", {}, bd.token);
+  assert.equal(hs, 200, "joined token works");
+  // Mojang answering with another account is refused
+  sid = await start("Rres");
+  joins.set("rres|" + sid, { id: JU.replace(/-/g, ""), name: "SomeoneElse" });
+  [st] = await callJ({ name: "Rres", serverId: sid, method: "joined" });
+  assert.equal(st, 403, "name mismatch");
+  // the code is still tied to the name and must be ours
+  [st] = await callJ({ name: "Other", serverId: sid, method: "joined" });
+  assert.equal(st, 400, "code for another name");
+  [st] = await callJ({ name: "Rres", serverId: "f".repeat(40), method: "joined" });
+  assert.equal(st, 400, "made-up code");
+}
+
 console.log = quiet;
 console.log("all worker tests passed");

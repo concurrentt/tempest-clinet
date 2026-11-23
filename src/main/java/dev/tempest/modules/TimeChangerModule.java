@@ -16,7 +16,7 @@ public class TimeChangerModule extends Module {
 
     private static long cycle = 0;
 
-    public TimeChangerModule() { super("time_changer", "Time Changer", "Set the time of day and weather on your screen (client-side only).", Category.RENDER, false); }
+    public TimeChangerModule() { super("time_changer", "Time Changer", "Set the time of day and weather on your screen (client-side only).", Category.VISUALS, false); }
 
     @Override
     public void onTick(MinecraftClient c) { cycle += speed.getInt(); }

@@ -41,7 +41,7 @@ public class AutoGgModule extends Module {
             + "pummeled|finished( off)?|defeated|obliterated|annihilated|wrecked|thrown off|pushed|struck down|sniped)";
 
     public AutoGgModule() {
-        super("auto_gg", "Auto GG", "Sends gg after a kill, when a game ends or when you die.", Category.PVP, false);
+        super("auto_gg", "Auto GG", "Sends gg after a kill, when a game ends or when you die.", Category.CHAT, false);
     }
 
     private static AutoGgModule on() {

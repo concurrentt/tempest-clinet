@@ -17,7 +17,7 @@ import net.minecraft.screen.slot.SlotActionType;
 public class ArmorSwapModule extends Module {
     private final KeyBinding key = bindKey("armor_swap", "Swap Key", InputUtil.UNKNOWN_KEY.getCode());
 
-    public ArmorSwapModule() { super("armor_swap", "Armor Swap", "One key to swap chestplate <-> elytra.", Category.UTILITY, true); }
+    public ArmorSwapModule() { super("armor_swap", "Armor Swap", "One key to swap chestplate <-> elytra.", Category.QOL, true); }
 
     @Override
     public void onTick(MinecraftClient c) {

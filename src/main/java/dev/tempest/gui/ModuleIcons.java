@@ -28,7 +28,9 @@ public final class ModuleIcons {
         MODULES.put("ping", Items.REPEATER);
         MODULES.put("inventory_hud", Items.BARREL);
         MODULES.put("totem_pops", Items.TOTEM_OF_UNDYING);
+        MODULES.put("tier_tagger", Items.NETHERITE_SWORD);
         MODULES.put("auto_gg", Items.PAPER);
+        MODULES.put("chat_macros", Items.WRITABLE_BOOK);
         MODULES.put("zoom", Items.SPYGLASS);
         MODULES.put("fullbright", Items.GLOWSTONE);
         MODULES.put("freelook", Items.ENDER_EYE);

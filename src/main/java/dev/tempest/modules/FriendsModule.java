@@ -31,7 +31,7 @@ public class FriendsModule extends Module {
     public boolean alwaysOn() { return true; }
 
     public FriendsModule() {
-        super("friends", "Social", "Tempest friends: requests, who's online and which server they're on. Friends can glow too.", Category.UTILITY, true);
+        super("friends", "Social", "Tempest friends: requests, who's online and which server they're on. Friends can glow too.", Category.CLIENT, true);
         add(new ActionSetting("open_social", "Social Menu", "Open", () -> {
             MinecraftClient c = MinecraftClient.getInstance();
             c.setScreen(new SocialScreen(c.currentScreen));

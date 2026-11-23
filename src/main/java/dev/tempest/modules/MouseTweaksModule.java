@@ -10,7 +10,7 @@ public class MouseTweaksModule extends Module {
     private final BoolSetting collect = add(new BoolSetting("collect", "Drag Collect", true));
 
     public MouseTweaksModule() {
-        super("mouse_tweaks", "Mouse Tweaks", "Drag to spread (vanilla), drag to collect, shift-drag to move items.", Category.UTILITY, true);
+        super("mouse_tweaks", "Mouse Tweaks", "Drag to spread (vanilla), drag to collect, shift-drag to move items.", Category.QOL, true);
         keyHint = "Spread = hold left/right click and drag with items on your cursor (vanilla).";
     }
 

@@ -22,7 +22,7 @@ public class FullbrightModule extends Module {
     private static Double original = null;
     private static boolean applied;
 
-    public FullbrightModule() { super("fullbright", "Fullbright", "See everything, even in pitch-black caves.", Category.RENDER, false); }
+    public FullbrightModule() { super("fullbright", "Fullbright", "See everything, even in pitch-black caves.", Category.VISUALS, false); }
 
     @Override
     public void onInit() {

@@ -1,3 +1,33 @@
+## 0.21.0 - In-game account switcher
+- Kill Effects: "Preview" opens a small window that plays the chosen effect on a loop (works from the menus too),
+  with < > to switch effects, Replay, and "In world" to see it for real.
+- Cosmetics fit around armor: hats, halos, ears and horns sit on top of a helmet (or worn block / skull), crowns are
+  bands just outside the head so nothing pokes through, wings start behind a chestplate and a cape, and wings are
+  hidden while you wear an elytra instead of overlapping it.
+- Fix: the Tier Tagger and Custom Sky keys showed raw names in Controls.
+- Tier Tagger (PvP): players' PvP tiers in front of their names on nametags and in the tab list, like the
+  TierTagger mod - from MCTiers, NovaTiers (novatiers.com) or both. Pick a game mode per list or "Highest"; optional
+  peak tier, mode name, and a key to cycle the mode.
+- Armor HUD: in "Number" durability mode each piece gets a durability bar under it.
+- Mods menu reorganised: combat HUDs (Reach, Combo, Target Health, Cooldowns, Shield Status) are in PvP; looks
+  (Fullbright, Time Changer, Block Outline, Item Physics, Motion Blur, Particles, Low Fire, Kill Effects) in Visuals;
+  camera & world (FOV, Fake Chunks) in Render; Capes, Cosmetics, Emotes, Tempest Editor and Social in Client; Auto GG
+  in Chat; Toggle Sprint, Mouse Tweaks, Armor Swap, Shulker Preview, Tooltip Info in QOL.
+- Chat Macros (Chat): keys that send a message or a /command in game. Edit them from the mod's settings; each
+  macro has a cooldown so it can't spam.
+- Accounts (title screen: "Switch account" on your profile card, or the name chip top-right): add Microsoft
+  accounts with Microsoft's own code sign-in (microsoft.com/link) and switch between them and your launcher account
+  without restarting. Saved logins are encrypted on your PC (Windows data protection) and never sent to Tempest.
+  Needs a one-time Microsoft app ID (the screen explains how).
+- Tempest sign-in works for accounts Mojang gives no chat key: it falls back to the normal server-join check with
+  Mojang (like joining any server). Your access token still only goes to Mojang. Needs the updated worker (deploy.bat).
+- Social / chat: when this account isn't signed in to Tempest, buttons now say why (e.g. Mojang gave the account no
+  chat key) instead of "Couldn't reach the Tempest service".
+- Title screen: the favourite servers card sits in the very top-left corner.
+- Mods menu: "always on" mods are listed first in every category, then starred mods.
+- Tempest Editor: polished look pages - header tinted in the section's colour, status chip, sidebar with an accent
+  bar on the selected category, gradient cards that lift on hover and glow when selected.
+
 ## 0.20.1 - Inventory looks fix
 - Tempest Editor: an Inventory GUI look taken from one of your packs could come out see-through (some PvP packs ship
   "clear" inventories). Inventory looks are now always solid, and one you already applied is fixed the next time you

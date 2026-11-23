@@ -11,7 +11,7 @@ import net.minecraft.util.Formatting;
 import java.util.List;
 
 public class TooltipInfoModule extends Module {
-    public TooltipInfoModule() { super("tooltip_info", "Tooltip Info", "Adds durability to item tooltips without F3+H.", Category.UTILITY, true); }
+    public TooltipInfoModule() { super("tooltip_info", "Tooltip Info", "Adds durability to item tooltips without F3+H.", Category.QOL, true); }
 
     public static void addTooltip(ItemStack stack, TooltipType type, List<Text> lines) {
         TooltipInfoModule m = ModuleManager.get(TooltipInfoModule.class);

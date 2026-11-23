@@ -65,7 +65,7 @@ public class TempestTitleScreen extends Screen {
 
         sideCards = width >= 720;
         // favourite servers in the top-left corner, your profile card in the top-right corner
-        favW = 196; favH = 146; favX = 14; favY = 14;
+        favW = 196; favH = 146; favX = 6; favY = 6;
         profW = 176; profH = 116; profX = width - profW - 14; profY = 14;
     }
 
@@ -153,6 +153,8 @@ public class TempestTitleScreen extends Screen {
         if (sideCards) {
             renderFavorites(ctx, tr, mx, my, entrance(0.25f));
             renderProfile(ctx, tr, mx, my, entrance(0.30f));
+        } else {
+            renderAccountChip(ctx, tr, mx, my, entrance(0.30f));
         }
 
         // footer
@@ -279,7 +281,7 @@ public class TempestTitleScreen extends Screen {
         int rows = Math.min(favs.size(), 4);
         int h = 36 + Math.max(1, rows) * 26 + 10;
         favH = h;
-        favY = Math.max(14, height / 2 - h / 2);
+        favY = 6;   // pinned to the very top-left corner
         Draw.shadow(ctx, x, favY, favW, h, 10, 8);
         Draw.glass(ctx, x, favY, favW, h, 10, MenuKit.fa(Draw.bg(), e), MenuKit.fa(Draw.border(), e));
         Draw.text(ctx, tr, Draw.bold("\u2605 Favorites"), x + 12, favY + 11, MenuKit.fa(Draw.TEXT, e), false);
@@ -331,8 +333,9 @@ public class TempestTitleScreen extends Screen {
             MenuKit.tile(ctx, tr, x + 12, y + 12, 34, name, e);
         }
         Draw.text(ctx, tr, Draw.ellipsize(tr, name, profW - 70), x + 54, y + 16, MenuKit.fa(Draw.TEXT, e), false);
-        Draw.circle(ctx, x + 57, y + 33, 2, MenuKit.fa(0xFF2ECC71, e));
-        Draw.text(ctx, tr, "Ready to play", x + 63, y + 29, MenuKit.fa(Draw.DIM2, e), false);
+        float sp = Draw.hoverProgress("title_switch", Draw.hit(mx, my, profX + 54, profY + 26, profW - 64, 12));
+        Draw.text(ctx, tr, "⇄ Switch account", x + 54, y + 29,
+                MenuKit.fa(Draw.lerpColor(Draw.DIM2, Draw.withAlpha(Draw.accent(), 0xFF), sp), e), false);
         ctx.fill(x + 10, y + 54, x + profW - 10, y + 55, MenuKit.fa(Draw.border(), e));
         int bx = x + 10, bw = (profW - 28) / 2;
         smallButton(ctx, tr, "title_cust", bx, y + 64, bw, 20, "Customize", mx, my, e);
@@ -340,6 +343,26 @@ public class TempestTitleScreen extends Screen {
                 dev.tempest.util.Social.pendingCount() > 0 ? "Friends (" + dev.tempest.util.Social.pendingCount() + ")" : "Friends", mx, my, e);
         smallButton(ctx, tr, "title_hud", bx, y + 88, bw, 20, "Edit HUD", mx, my, e);
         smallButton(ctx, tr, "title_theme", bx + bw + 8, y + 88, bw, 20, "Theme", mx, my, e);
+    }
+
+    /** {x, y, w, h} of the small account chip shown top-right when the profile card doesn't fit. */
+    private int[] accountChip(TextRenderer tr) {
+        int w = tr.getWidth(playerName()) + 34;
+        return new int[]{width - w - 8, 6, w, 18};
+    }
+
+    private void renderAccountChip(DrawContext ctx, TextRenderer tr, int mx, int my, float e) {
+        if (e <= 0.01f) return;
+        int[] b = accountChip(tr);
+        float p = Draw.hoverProgress("title_acc_chip", Draw.hit(mx, my, b[0], b[1], b[2], b[3]));
+        Draw.panel(ctx, b[0], b[1], b[2], b[3], 9, MenuKit.fa(Draw.lerpColor(0xB0121319, 0xD0202230, p), e),
+                MenuKit.fa(Draw.lerpColor(0x26FFFFFF, Draw.withAlpha(Draw.accent(), 0xA0), p), e));
+        java.util.UUID uuid = null;
+        try { if (client != null && client.getSession() != null) uuid = client.getSession().getUuidOrNull(); } catch (Throwable ignored) { }
+        net.minecraft.util.Identifier head = dev.tempest.util.PlayerHeads.get(uuid);
+        if (head != null) ctx.drawTexture(net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED, head, b[0] + 4, b[1] + 3, 0f, 0f, 12, 12, 32, 32, 32, 32, MenuKit.fa(0xFFFFFFFF, e));
+        Draw.text(ctx, tr, playerName(), b[0] + 20, b[1] + 5, MenuKit.fa(Draw.lerpColor(0xFFC9CCD6, 0xFFFFFFFF, p), e), false);
+        Draw.text(ctx, tr, "⇄", b[0] + b[2] - 11, b[1] + 5, MenuKit.fa(Draw.withAlpha(Draw.accent(), 0xFF), e), false);
     }
 
     private void smallButton(DrawContext ctx, TextRenderer tr, String key, int x, int y, int w, int h, String label, int mx, int my, float e) {
@@ -410,7 +433,12 @@ public class TempestTitleScreen extends Screen {
             }
             return true;
         }
+        if (!sideCards) {
+            int[] ch = accountChip(textRenderer);
+            if (Draw.hit(mx, my, ch[0], ch[1], ch[2], ch[3])) { client.setScreen(new AccountsScreen(this)); return true; }
+        }
         if (sideCards) {
+            if (Draw.hit(mx, my, profX + 54, profY + 26, profW - 64, 12)) { client.setScreen(new AccountsScreen(this)); return true; }
             List<FavoriteServer> favs = TempestConfig.get().favoriteServers;
             int rows = Math.min(favs.size(), 4);
             for (int i = 0; i < rows; i++) {

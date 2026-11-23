@@ -11,7 +11,7 @@ public final class CustomFovModule extends Module {
     private final NumberSetting fov = add(new NumberSetting("fov", "Field of View", 90, 30, 160, 1));
 
     public CustomFovModule() {
-        super("custom_fov", "FOV", "Set your client-side field of view from 30 to 160 degrees.", Category.QOL, false);
+        super("custom_fov", "FOV", "Set your client-side field of view from 30 to 160 degrees.", Category.RENDER, false);
     }
 
     public static float fovScale() {

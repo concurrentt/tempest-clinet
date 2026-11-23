@@ -21,7 +21,7 @@ public class CooldownModule extends HudModule {
     private final BoolSetting chorus = add(new BoolSetting("chorus", "Chorus Fruit", false));
     private final BoolSetting eating = add(new BoolSetting("eating", "Eating / Gap Timer", true));
 
-    public CooldownModule() { super("cooldowns", "Cooldowns", "Pearl, shield and eating timers.", Category.HUD, false, 120, 250); }
+    public CooldownModule() { super("cooldowns", "Cooldowns", "Pearl, shield and eating timers.", Category.PVP, false, 120, 250); }
 
     private record Row(ItemStack icon, String label, float progress) { }
 

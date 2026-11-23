@@ -8,7 +8,7 @@ import net.minecraft.client.gui.DrawContext;
 import java.util.List;
 
 public class ComboModule extends HudModule {
-    public ComboModule() { super("combo", "Combo Counter", "Consecutive hits without taking damage.", Category.HUD, false, 6, 130); }
+    public ComboModule() { super("combo", "Combo Counter", "Consecutive hits without taking damage.", Category.PVP, false, 6, 130); }
 
     @Override
     public void renderHud(DrawContext ctx, boolean preview) {

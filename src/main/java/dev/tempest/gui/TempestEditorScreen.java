@@ -274,7 +274,10 @@ public class TempestEditorScreen extends Screen {
         int x = x0(), y = y0(), w = winW(), h = winH();
         Draw.shadow(ctx, x, y, w, h, 10, 12);
         Draw.glass(ctx, x, y, w, h, 10, 0xE40F1117, 0x40FFFFFF);
-        // header
+        int gc = 0xFF000000 | GROUP_GLOW[Math.min(group, GROUP_GLOW.length - 1)];
+        // header: a soft wash of the group's colour fading down from the top edge
+        Draw.roundRectV(ctx, x + 1, y + 1, w - 2, 34, 9, Draw.withAlpha(gc, 0x2C), Draw.withAlpha(gc, 0x00));
+        TempestLoading.drawGlow(ctx, x + 72, y + 16, 46, GROUP_GLOW[Math.min(group, GROUP_GLOW.length - 1)], 0.28f);
         boolean backHv = Draw.hit(mx, my, x + 10, y + 7, 46, 18);
         Draw.panel(ctx, x + 10, y + 7, 46, 18, 5, backHv ? 0xEC2A2C33 : 0xD81A1B20, 0x40FFFFFF);
         Draw.centered(ctx, tr, "< Back", x + 33, y + 12, 0xFFE4E6EC);
@@ -283,16 +286,23 @@ public class TempestEditorScreen extends Screen {
         Draw.text(ctx, tr, "Pick a look, then press Apply", x + 84, y + 17, 0xFF8B90A0, false);
         boolean dirty = dirty();
         String st = dirty ? "● Not applied yet" : "✔ Everything applied";
-        Draw.text(ctx, tr, st, x + w - 12 - tr.getWidth(st), y + 12, dirty ? 0xFFFFD27A : 0xFF6AF09A, false);
-        ctx.fill(x + 10, y + 30, x + w - 10, y + 31, 0x20FFFFFF);
+        int stW = tr.getWidth(st) + 14, stC = dirty ? 0xFFFFD27A : 0xFF6AF09A;
+        Draw.panel(ctx, x + w - 10 - stW, y + 8, stW, 16, 8, Draw.withAlpha(stC, 0x1E), Draw.withAlpha(stC, 0x60));
+        Draw.text(ctx, tr, st, x + w - 10 - stW + 7, y + 12, stC, false);
+        Draw.hairline(ctx, x + 10, y + 30, w - 20, gc & 0xFFFFFF, 0x50);
 
         // sidebar
         List<Category> cats = PackLooks.inGroup(PackLooks.GROUPS[group]);
+        Draw.panel(ctx, x + 7, y + 33, SIDE_W + 6, h - 33 - 42, 7, 0x50090A0F, 0x18FFFFFF);
         for (int i = 0; i < cats.size(); i++) {
             Category c = cats.get(i);
             int ry = y + 36 + i * 22;
             boolean sel = c == cat, hv = Draw.hit(mx, my, x + 10, ry, SIDE_W, 20);
-            if (sel || hv) Draw.panel(ctx, x + 10, ry, SIDE_W, 20, 5, sel ? 0xC0262A38 : 0x60262A38, sel ? 0x70FFFFFF : 0x30FFFFFF);
+            float sp = Draw.hoverProgress("ed_side" + group + "_" + i, sel || hv);
+            if (sp > 0.01f) Draw.panel(ctx, x + 10, ry, SIDE_W, 20, 5,
+                    sel ? Draw.withAlpha(Draw.lerpColor(0xFF262A38, gc, 0.18f), 0xD0) : Draw.withAlpha(0xFF262A38, Math.round(0x60 * sp)),
+                    sel ? Draw.withAlpha(gc, 0x70) : Draw.withAlpha(0xFFFFFFFF, Math.round(0x30 * sp)));
+            if (sel) Draw.roundRect(ctx, x + 10, ry + 4, 2, 12, 1, gc);
             item(ctx, c.icon(), x + 21, ry + 10, 0.75f);
             Draw.text(ctx, tr, Draw.ellipsize(tr, c.name(), SIDE_W - 34), x + 32, ry + 6, sel ? 0xFFFFFFFF : 0xFFC9CCD6, false);
             Look l = PackLooks.appliedLook(c.id());
@@ -340,8 +350,12 @@ public class TempestEditorScreen extends Screen {
             if (cy + CARD_H < gy - 4 || cy > gy + gh + 4) continue;
             boolean selected = look.look().equals(o.key), hv = Draw.hit(mx, my, cx, cy, CARD_W, CARD_H) && my >= gy && my < gy + gh;
             float p = Draw.hoverProgress("ed_card" + cat.id() + i, hv);
-            Draw.panel(ctx, cx, cy, CARD_W, CARD_H, 6, Draw.lerpColor(0xA0262833, 0xD0343745, p),
-                    selected ? Draw.withAlpha(Draw.accent(), 0xF0) : Draw.lerpColor(0x40FFFFFF, 0x90FFFFFF, p));
+            cy -= Math.round(p * 1.5f);   // hovered cards lift a little
+            if (selected) Draw.ring(ctx, cx - 2, cy - 2, CARD_W + 4, CARD_H + 4, 8, Draw.withAlpha(gc, 0x55));
+            Draw.roundRectV(ctx, cx, cy, CARD_W, CARD_H, 6, Draw.lerpColor(0xB02A2D38, 0xE03A3E4D, p), Draw.lerpColor(0xB01A1C24, 0xE0262935, p));
+            Draw.ring(ctx, cx, cy, CARD_W, CARD_H, 6,
+                    selected ? Draw.withAlpha(gc, 0xF0) : Draw.lerpColor(0x30FFFFFF, 0x80FFFFFF, p));
+            Draw.roundRect(ctx, cx + (CARD_W - 46) / 2, cy + 2, 46, 46, 5, 0x50000000);
             drawThumb(ctx, o, cx + (CARD_W - 40) / 2, cy + 5, 40);
             Draw.centered(ctx, tr, Draw.ellipsize(tr, o.name, CARD_W - 4), cx + CARD_W / 2, cy + 48, 0xFFFFFFFF);
             ctx.getMatrices().pushMatrix();
@@ -350,6 +364,7 @@ public class TempestEditorScreen extends Screen {
             Draw.spaced(ctx, tr, o.tag, 0, 0, o.tagColor, true, 1);
             ctx.getMatrices().popMatrix();
             if (selected) {
+                Draw.circle(ctx, cx + CARD_W - 7, cy + 7, 6, 0x60000000);
                 Draw.circle(ctx, cx + CARD_W - 7, cy + 7, 5, 0xFF2FA866);
                 Draw.centered(ctx, tr, "✔", cx + CARD_W - 7, cy + 3, 0xFFFFFFFF);
             }
@@ -359,7 +374,7 @@ public class TempestEditorScreen extends Screen {
 
         // bottom bar
         int by = y + h - 30;
-        ctx.fill(x + 10, by - 6, x + w - 10, by - 5, 0x20FFFFFF);
+        Draw.hairline(ctx, x + 10, by - 6, w - 20, 0xFFFFFF, 0x28);
         String[] labels = {"Packs Folder", "Delete", "Reset", "Close"};
         int bx = x + w - 10 - 86;
         boolean canApply = dirty;

@@ -21,7 +21,7 @@ public final class LowFireModule extends Module {
     private int settleTicks;
 
     public LowFireModule() {
-        super("low_fire", "Low Fire", "Lower or remove the fire on your screen and fire blocks on the ground.", Category.QOL, true);
+        super("low_fire", "Low Fire", "Lower or remove the fire on your screen and fire blocks on the ground.", Category.VISUALS, true);
     }
 
     /** Installs the fire model wrapper (render/LowFireModel). Called once at startup. */

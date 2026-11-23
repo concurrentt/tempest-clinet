@@ -4,6 +4,8 @@
 //   GET  /health                      -> { ok, service, online }
 //   POST /v1/auth/start   {name}      -> { serverId }
 //   POST /v1/auth/finish  {name, serverId, uuid, publicKey, expiresAt, keySignature, signature} -> { token, uuid, expiresIn }
+//   POST /v1/auth/finish  {name, serverId, method: "joined"} -> same; for accounts Mojang gives no chat key: the game
+//        told Mojang's session server it joined "serverId" (like joining any server), and we ask Mojang (hasJoined).
 //   POST /v1/heartbeat    (Bearer) {server?, public?, friends?} -> { ok, incoming }
 //   POST /v1/lookup       {uuids}     -> { tempest: [...], cosmetics: {uuid: {...}} }
 //   POST /v1/logout       (Bearer)    -> { ok }
@@ -204,6 +206,27 @@ export async function verifyProof(body, serverId, now, keysOverride) {
   } catch { return { why: "bad player key" }; }
   const msg = enc.encode(`tempest-auth|${serverId}|${uuid.replace(/-/g, "")}`);
   if (!(await crypto.subtle.verify("RSASSA-PKCS1-v1_5", playerKey, sig, msg))) return { why: "bad signature" };
+  return uuid;
+}
+
+/**
+ * Sign-in for accounts without a chat key: the same check every Minecraft server does. The game sent its own access
+ * token to Mojang (session/minecraft/join with our one-time code as the server id) - never to us - and Mojang tells us
+ * which account did that. Returns the verified uuid, or { why }.
+ */
+export async function verifyJoined(name, serverId, joinedOverride) {
+  let res;
+  try {
+    res = joinedOverride ? await joinedOverride(name, serverId)
+      : await fetch(`https://sessionserver.mojang.com/session/minecraft/hasJoined?username=${encodeURIComponent(name)}&serverId=${serverId}`, {
+        headers: { "User-Agent": "TempestClient-Auth/1.0" }, signal: AbortSignal.timeout(6000),
+      });
+  } catch { return { why: "Mojang session server unreachable" }; }
+  if (res.status !== 200) return { why: `Mojang has no join for this account (${res.status})` };
+  let j;
+  try { j = await res.json(); } catch { return { why: "bad reply from Mojang" }; }
+  const uuid = normUuid(j && j.id);
+  if (!uuid || typeof j.name !== "string" || j.name.toLowerCase() !== name.toLowerCase()) return { why: "Mojang returned another account" };
   return uuid;
 }
 
@@ -585,7 +608,7 @@ function presence(env) {
 }
 
 // ------------------------------------------------------------------ routes
-export async function handle(req, env, keysOverride = null) {
+export async function handle(req, env, keysOverride = null, joinedOverride = null) {
   const url = new URL(req.url);
   const path = url.pathname;
   const now = Date.now();
@@ -624,7 +647,8 @@ export async function handle(req, env, keysOverride = null) {
     if (typeof name !== "string" || !NAME_RE.test(name) || !(await checkChallenge(secret, name, serverId, now))) {
       return json(400, { error: "bad or expired code" });
     }
-    const r = await verifyProof(body, serverId, now, keysOverride);
+    const r = body.method === "joined" ? await verifyJoined(name, serverId, joinedOverride)
+      : await verifyProof(body, serverId, now, keysOverride);
     if (typeof r !== "string") {
       console.log(`auth/finish: refused ${name}: ${r.why}`);
       return json(403, { error: "could not verify account", why: r.why });

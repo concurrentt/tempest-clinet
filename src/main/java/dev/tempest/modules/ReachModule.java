@@ -23,7 +23,7 @@ public class ReachModule extends HudModule {
     private final NumberSetting hold = add(new NumberSetting("hold", "Hold Last Hit (s)", 5, 1, 30, 1));
 
     public ReachModule() {
-        super("reach", "Reach Display", "Distance of your hits, with average / longest / shortest.", Category.HUD, false, 6, 112);
+        super("reach", "Reach Display", "Distance of your hits, with average / longest / shortest.", Category.PVP, false, 6, 112);
         add(new ActionSetting("reset", "Reset Stats", "Reset", CombatTracker::resetReachStats));
     }
 

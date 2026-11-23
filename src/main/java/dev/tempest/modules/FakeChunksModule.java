@@ -42,7 +42,7 @@ public final class FakeChunksModule extends Module {
 
     public FakeChunksModule() {
         super("fake_chunks", "Fake Chunks", "Singleplayer: generates the land around your spawn in the background, like Chunky.",
-                Category.UTILITY, true);
+                Category.RENDER, true);
         add(new ActionSetting("progress", "Progress", "Show", () -> Chat.info(status())));
         add(new ActionSetting("restart", "Start Over Here", "Restart", FakeChunksModule::restartHere));
         keyHint = "Starts when you load a singleplayer world. Pauses while the game is busy.";

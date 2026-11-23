@@ -28,7 +28,7 @@ public final class CosmeticsModule extends Module {
 
     public CosmeticsModule() {
         super("cosmetics", "Cosmetics", "Wings and head pieces. Other Tempest players see yours, and you see theirs.",
-                Category.RENDER, true);
+                Category.CLIENT, true);
         add(new dev.tempest.module.ActionSetting("open_menu", "Cosmetics Menu", "Open", () -> {
             net.minecraft.client.MinecraftClient c = net.minecraft.client.MinecraftClient.getInstance();
             c.setScreen(new dev.tempest.gui.CosmeticsScreen(c.currentScreen, dev.tempest.gui.CosmeticsScreen.CAPES));

@@ -79,10 +79,12 @@ public final class NametagsModule extends Module {
                     || (m.showOnline.get() && dev.tempest.util.TempestNet.isTempestUser(p.getUuid())));
         int pops = TotemPopModule.onNametag() ? TotemPopModule.getPops(p.getUuid()) : 0;
         Text shield = ShieldStatusModule.badge(p);
-        if (!addLogo && pops <= 0 && shield == null) return name;
+        Text tier = TierTaggerModule.nametagPrefix(p.getUuid());
+        if (!addLogo && pops <= 0 && shield == null && tier == null) return name;
 
         MutableText out = Text.empty().styled(s -> s.withInsertion(MARK));
         if (addLogo) out.append(LOGO).append(Text.literal(" "));
+        if (tier != null) out.append(tier);
         out.append(name);
         if (pops > 0) out.append(Text.literal(" -" + pops).styled(st -> st.withColor(0xFF5A5A).withBold(true)));
         if (shield != null) out.append(shield);
@@ -100,9 +102,14 @@ public final class NametagsModule extends Module {
 
     /** Tab list: logo in front of Tempest users' names (applied in mixin/PlayerListHudMixin). */
     public static Text decorateTab(java.util.UUID id, Text name) {
+        if (name == null || MARK.equals(name.getStyle().getInsertion())) return name;
         NametagsModule m = on();
-        if (m == null || !m.tabList.get() || name == null || MARK.equals(name.getStyle().getInsertion())) return name;
-        if (!wantsLogo(m, id)) return name;
-        return Text.empty().styled(s -> s.withInsertion(MARK)).append(LOGO).append(Text.literal(" ")).append(name);
+        boolean logo = m != null && m.tabList.get() && wantsLogo(m, id);
+        Text tier = TierTaggerModule.tabPrefix(id);
+        if (!logo && tier == null) return name;
+        MutableText out = Text.empty().styled(s -> s.withInsertion(MARK));
+        if (logo) out.append(LOGO).append(Text.literal(" "));
+        if (tier != null) out.append(tier);
+        return out.append(name);
     }
 }

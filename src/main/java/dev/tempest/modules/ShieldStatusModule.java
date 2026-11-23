@@ -45,7 +45,7 @@ public class ShieldStatusModule extends HudModule {
 
     public ShieldStatusModule() {
         super("shield_status", "Shield Status", "Shield enabled / disabled on nametags and your HUD, with a fade as it comes back.",
-                Category.HUD, false, 120, 200);
+                Category.PVP, false, 120, 200);
     }
 
     private static ShieldStatusModule on() {

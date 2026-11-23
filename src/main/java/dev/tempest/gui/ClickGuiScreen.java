@@ -209,9 +209,12 @@ public class ClickGuiScreen extends Screen {
             }
             out.add(m);
         }
-        // starred mods come first; the rest keep their usual order
+        // "always on" (locked) mods first, then starred mods; the rest keep their usual order
         List<String> favs = TempestConfig.get().favoriteMods;
-        if (!favs.isEmpty()) out.sort((a, b) -> Boolean.compare(favs.contains(b.getId()), favs.contains(a.getId())));
+        out.sort((a, b) -> {
+            int c = Boolean.compare(b.alwaysOn(), a.alwaysOn());
+            return c != 0 ? c : Boolean.compare(favs.contains(b.getId()), favs.contains(a.getId()));
+        });
         return out;
     }
 

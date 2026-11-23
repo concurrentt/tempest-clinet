@@ -11,7 +11,7 @@ public class ToggleSprintModule extends Module {
     private final KeyBinding toggleKey = bindKey("toggle_sprint", "Toggle Key", InputUtil.UNKNOWN_KEY.getCode());
     private boolean toggled = false;
 
-    public ToggleSprintModule() { super("toggle_sprint", "Toggle Sprint", "Press a key once to keep sprinting while moving forward.", Category.UTILITY, true); }
+    public ToggleSprintModule() { super("toggle_sprint", "Toggle Sprint", "Press a key once to keep sprinting while moving forward.", Category.QOL, true); }
 
     @Override
     public void onTick(MinecraftClient client) {

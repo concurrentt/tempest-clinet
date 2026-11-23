@@ -21,7 +21,7 @@ public class EmotesModule extends Module {
 
     public EmotesModule() {
         super("emotes", "Emotes", "Wave, dance, dab and more. Other Tempest players see your emotes. Moving cancels one.",
-                Category.RENDER, true);
+                Category.CLIENT, true);
         add(new ActionSetting("open_wheel", "Emote Wheel", "Open", () -> {
             MinecraftClient c = MinecraftClient.getInstance();
             if (c.player != null) c.setScreen(new EmoteWheelScreen(false));

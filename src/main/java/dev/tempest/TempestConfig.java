@@ -43,8 +43,23 @@ public class TempestConfig {
     public Map<String, Long> playtimeServers = new LinkedHashMap<>();
     /** Auto-updater: a release version the player chose to skip ("Skip this version"). */
     public String skippedUpdate = "";
+    /**
+     * Accounts screen: the Application (client) ID of the Microsoft (Azure) app used to sign in to extra accounts.
+     * Not a secret - it only names the app on Microsoft's sign-in page. The logins themselves are never kept here.
+     */
+    public String accountsClientId = "";
     /** Name of the config last loaded or saved (shown as active in the Configs screen). */
     public String activeConfig = "";
+
+    /** Chat Macros: keys that send a chat message or command. */
+    public List<ChatMacro> chatMacros = new ArrayList<>();
+
+    public static class ChatMacro {
+        /** GLFW key code, -1 = no key yet. */
+        public int key = -1;
+        /** Message to send; starting with "/" makes it a command. */
+        public String text = "";
+    }
 
     public static TempestConfig get() { return instance; }
 

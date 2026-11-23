@@ -35,7 +35,7 @@ public final class BlockOutlineModule extends Module {
     private static boolean fillFailed;
 
     public BlockOutlineModule() {
-        super("block_outline", "Block Outline", "Change the outline colour and thickness, and fill the block you're looking at.", Category.RENDER, false);
+        super("block_outline", "Block Outline", "Change the outline colour and thickness, and fill the block you're looking at.", Category.VISUALS, false);
     }
 
     private static BlockOutlineModule on() {

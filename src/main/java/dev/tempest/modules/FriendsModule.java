@@ -24,7 +24,7 @@ public class FriendsModule extends Module {
     private final BoolSetting onlineToFriends = add(new BoolSetting("online_to_friends", "Show Friends I'm Online", true));
     private final BoolSetting shareServer = add(new BoolSetting("share_server", "Show Friends My Server", true));
     private final BoolSetting alerts = add(new BoolSetting("request_alerts", "Friend Request Alerts", true));
-    private final BoolSetting glow = add(new BoolSetting("glow", "Glow Friends (accepted only)", true));
+    private final BoolSetting glow = add(new BoolSetting("glow_friends", "Glow Friends", false));
     private final ColorSetting glowColor = add(new ColorSetting("glow_color", "Glow Color", 0xFF55FF55));
 
     @Override
@@ -85,6 +85,15 @@ public class FriendsModule extends Module {
     public static String keyName() {
         FriendsModule m = get();
         return m == null ? "U" : m.openKey.getBoundKeyLocalizedText().getString();
+    }
+
+    public static boolean glowOn() { FriendsModule m = get(); return m != null && m.glow.get(); }
+
+    public static void setGlow(boolean on) {
+        FriendsModule m = get();
+        if (m == null) return;
+        m.glow.set(on);
+        dev.tempest.TempestConfig.save();
     }
 
     public static int glowColor() {

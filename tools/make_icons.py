@@ -289,12 +289,14 @@ def g_board(p):
 
 
 def g_totem(p):
-    p.rrect(32, 10, 68, 44, 8)
-    p.frect(40, 22, 46, 28, 1)
-    p.frect(54, 22, 60, 28, 1)
-    p.line([(50, 46), (50, 84)], 10)
-    p.line([(18, 54), (82, 54)], 8)
-    p.line([(36, 88), (64, 88)], 8)
+    # totem of undying: rounded head with eyes, wings spread out, tapered body on a base
+    p.rrect(36, 8, 64, 34, 7, 6)
+    p.frect(42, 18, 47, 24, 1)
+    p.frect(53, 18, 58, 24, 1)
+    p.line([(36, 40), (12, 34), (16, 52), (36, 54)], 6, closed=True)
+    p.line([(64, 40), (88, 34), (84, 52), (64, 54)], 6, closed=True)
+    p.line([(37, 38), (63, 38), (59, 80), (41, 80)], 6, closed=True)
+    p.line([(34, 88), (66, 88)], 7)
 
 
 def g_chat(p):

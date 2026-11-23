@@ -41,7 +41,8 @@
     "OldAnimationsMixin",
     "ChatScreenMixin",
     "WorldRendererEffectsMixin",
-    "GameOptionsSaveMixin"
+    "GameOptionsSaveMixin",
+    "PlayerListHudMixin"
   ],
   "injectors": {
     "defaultRequire": 0

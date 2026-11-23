@@ -23,9 +23,13 @@ public final class NametagsModule extends Module {
     private final BoolSetting logoFriends = add(new BoolSetting("logo_friends", "Logo On Tempest Friends", true));
     private final BoolSetting showOnline = add(new BoolSetting("show_online", "Show Tempest Users", true));
     private final BoolSetting shareOnline = add(new BoolSetting("share_online", "Let Others See I Use Tempest", true));
+    private final BoolSetting tabList = add(new BoolSetting("tab_list", "Logo In Tab List", true));
 
     /** U+E000 in the tempest:icons font is the Tempest logo (textures/font/logo.png). */
     public static final Text LOGO = Text.literal("").styled(s -> s.withFont(new StyleSpriteSource.Font(Identifier.of("tempest", "icons"))));
+
+    /** U+E002 in the tempest:icons font is a small totem (textures/font/totem.png), used for the pop count. */
+    public static final Text TOTEM = Text.literal("\ue002").styled(s -> s.withFont(new StyleSpriteSource.Font(Identifier.of("tempest", "icons"))));
 
     /** Invisible marker on a decorated name so it is never decorated twice. */
     private static final String MARK = "tempest:nametag";
@@ -80,8 +84,26 @@ public final class NametagsModule extends Module {
         MutableText out = Text.empty().styled(s -> s.withInsertion(MARK));
         if (addLogo) out.append(LOGO).append(Text.literal(" "));
         out.append(name);
-        if (pops > 0) out.append(Text.literal(" -" + pops).formatted(Formatting.RED, Formatting.BOLD));
+        if (pops > 0) out.append(Text.literal(" ")).append(TOTEM).append(Text.literal(Integer.toString(pops))
+                .styled(st -> st.withColor(0xFF5A5A).withBold(true)));
         if (shield != null) out.append(shield);
         return out;
+    }
+
+    /** Should this player get the logo? You, accepted friends, and players the service says use Tempest. */
+    private static boolean wantsLogo(NametagsModule m, java.util.UUID id) {
+        if (m == null || !m.logo.get() || id == null) return false;
+        MinecraftClient mc = MinecraftClient.getInstance();
+        boolean self = mc.getSession() != null && id.equals(mc.getSession().getUuidOrNull());
+        return self || (m.logoFriends.get() && dev.tempest.util.Social.isFriend(id))
+                || (m.showOnline.get() && dev.tempest.util.TempestNet.isTempestUser(id));
+    }
+
+    /** Tab list: logo in front of Tempest users' names (applied in mixin/PlayerListHudMixin). */
+    public static Text decorateTab(java.util.UUID id, Text name) {
+        NametagsModule m = on();
+        if (m == null || !m.tabList.get() || name == null || MARK.equals(name.getStyle().getInsertion())) return name;
+        if (!wantsLogo(m, id)) return name;
+        return Text.empty().styled(s -> s.withInsertion(MARK)).append(LOGO).append(Text.literal(" ")).append(name);
     }
 }

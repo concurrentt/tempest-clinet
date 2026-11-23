@@ -216,9 +216,15 @@ public final class TempestNet {
     // ------------------------------------------------------------------ lookup
     private static void lookup(MinecraftClient c, long now) {
         List<UUID> ask = new ArrayList<>();
-        for (PlayerEntity p : c.world.getPlayers()) {
-            UUID id = p.getUuid();
-            if (p == c.player || id.version() != 4) continue;   // only real (premium) accounts
+        java.util.Set<UUID> seen = new java.util.HashSet<>();
+        List<UUID> candidates = new ArrayList<>();
+        for (PlayerEntity p : c.world.getPlayers()) if (p != c.player) candidates.add(p.getUuid());   // nearby first
+        if (c.getNetworkHandler() != null) {
+            for (var entry : c.getNetworkHandler().getPlayerList()) candidates.add(ProfileIds.of(entry.getProfile()));  // whole tab list
+        }
+        UUID me = c.player.getUuid();
+        for (UUID id : candidates) {
+            if (id == null || id.equals(me) || id.version() != 4 || !seen.add(id)) continue;   // only real (premium) accounts
             Long last = ASKED.get(id);
             if (last == null || now - last >= CACHE_MS) ask.add(id);
             if (ask.size() >= 200) break;

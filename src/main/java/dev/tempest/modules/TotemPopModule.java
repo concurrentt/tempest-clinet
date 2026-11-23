@@ -10,6 +10,7 @@ import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.text.Text;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,7 +24,7 @@ public class TotemPopModule extends Module {
     private final BoolSetting nametag = add(new BoolSetting("nametag", "Show On Nametag", true));
     private final BoolSetting showHotbarCount = add(new BoolSetting("hotbar_count", "Totem Count", true));
 
-    public TotemPopModule() { super("totem_pops", "Totem Pop Counter", "Shows how many totems each player has popped on their nametag (e.g. Steve -3). Resets on death.", Category.PVP, true); }
+    public TotemPopModule() { super("totem_pops", "Totem Pop Counter", "Shows how many totems each player has popped next to their name, with a totem icon. Resets on death.", Category.PVP, true); }
 
     /** Called from ClientPlayNetworkHandlerMixin for every entity status packet. */
     public static void onStatus(Entity e, byte status) {
@@ -61,15 +62,18 @@ public class TotemPopModule extends Module {
 
         int sw = ctx.getScaledWindowWidth();
         int sh = ctx.getScaledWindowHeight();
-        int x = sw / 2 - 8;
-        int y = sh - 59; // between hearts and hunger, above hotbar
+        String text = Integer.toString(count);
+        int tw = c.textRenderer.getWidth(Text.literal(text).styled(s -> s.withBold(true)));
+        int w = 4 + 16 + 3 + tw + 6, h = 18;
+        int x = sw / 2 - w / 2;
+        int y = sh - 60;   // between hearts and hunger, above the hotbar
 
-        ItemStack totem = new ItemStack(Items.TOTEM_OF_UNDYING);
-        ctx.drawItem(totem, x, y);
-        String text = String.valueOf(count);
-        int tw = c.textRenderer.getWidth(text);
-        // vanilla stack-count position: bottom-right of the 16x16 item, no gap
-        ctx.drawText(c.textRenderer, text, x + 19 - 2 - tw, y + 6 + 3, 0xFFFFFFFF, true);
+        // small glass pill: a warm edge that turns red when you're on your last totem
+        int edge = count == 1 ? 0xC0FF5A5A : count <= 3 ? 0xA0FFC857 : 0x50FFFFFF;
+        dev.tempest.gui.Draw.panel(ctx, x, y, w, h, 6, 0xB0101118, edge);
+        ctx.drawItem(new ItemStack(Items.TOTEM_OF_UNDYING), x + 3, y + 1);
+        int col = count == 1 ? 0xFFFF6B6B : count <= 3 ? 0xFFFFD36B : 0xFFFFFFFF;
+        ctx.drawText(c.textRenderer, Text.literal(text).styled(s -> s.withBold(true)), x + 4 + 16 + 3, y + 5, col, true);
     }
 
     private static int countTotems(MinecraftClient c) {

@@ -371,6 +371,17 @@ Changes:
 Build from the project directory with: gradle build
 
 
+
+## 0.19.1 - Social redesign, tab list logo, totem icons
+- Tempest logo in the tab list for Tempest users and friends (Nametags > Logo In Tab List). The online lookup now covers
+  everyone in the tab list, not just nearby players.
+- New logo glyph: solid white cloud with a violet bolt and a dark edge, readable on any background.
+- Totem pops on nametags show a small totem icon and the count; the hotbar totem counter is a pill that turns amber at 2-3
+  and red on your last totem; new totem icon in the mod list.
+- Friend glow is off by default (new setting) and can be switched from the Social menu sidebar.
+- Social menu redesigned: sidebar with your profile and status, sections with counts, friend search, hover actions,
+  empty states, toasts, smooth scrolling.
+
 ## 0.18.7 - Social menu
 - New Social menu (U, the Friends button on the main menu, or the Social chip in the Right Shift menu): Tempest friends with
   online status and the server they're on, friend requests (accept / decline / cancel), and adding people by name or from

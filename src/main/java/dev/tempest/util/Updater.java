@@ -86,6 +86,34 @@ public final class Updater {
         checkAsync();
     }
 
+    private static volatile boolean manual;
+    private static volatile String announced;
+
+    /** "Check for updates" button (main menu or in game): checks now and always says what it found. */
+    public static void checkNow() {
+        if (state == State.AVAILABLE) { announced = null; announce(); manualDone(); return; }
+        manual = true;
+        if (state == State.UP_TO_DATE || state == State.FAILED) state = State.IDLE;
+        checkAsync();
+    }
+
+    private static void manualDone() { manual = false; }
+
+    /** After a check: a pop-up (and a chat line in game) for a new version, once per version; results of a manual check. */
+    private static void announce() {
+        if (state == State.AVAILABLE && latest != null && !latest.equals(announced)) {
+            announced = latest;
+            dev.tempest.gui.TempestToast.showIcon("refresh", "Tempest update available", "v" + latest + " - install it from the main menu", 0x8E7CFF, 8000);
+            net.minecraft.client.MinecraftClient c = net.minecraft.client.MinecraftClient.getInstance();
+            c.execute(() -> { if (c.world != null) Chat.info("Tempest v" + latest + " is out (you have v" + currentVersion() + "). Install it from the main menu."); });
+        } else if (manual && state == State.UP_TO_DATE) {
+            dev.tempest.gui.TempestToast.showIcon("refresh", "Tempest is up to date", "You have the newest version, v" + currentVersion(), 0x43D17A, 4000);
+        } else if (manual && state == State.FAILED) {
+            dev.tempest.gui.TempestToast.showIcon("refresh", "Couldn't check for updates", error == null ? "Try again later" : error, 0xFF6B6B, 5000);
+        }
+        manual = false;
+    }
+
     public static void checkAsync() {
         if (state == State.CHECKING || state == State.DOWNLOADING || state == State.READY) return;
         state = State.CHECKING;
@@ -126,6 +154,8 @@ public final class Updater {
             } catch (Exception e) {
                 error = e.getMessage();
                 state = State.FAILED;
+            } finally {
+                announce();
             }
         });
     }

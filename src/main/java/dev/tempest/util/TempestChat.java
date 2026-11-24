@@ -166,11 +166,18 @@ public final class TempestChat {
                 if (m.has("g")) {
                     key = "g:" + m.get("g").getAsString();
                     if (group(m.get("g").getAsString()) == null) refreshGroups();
-                } else key = "pm:" + from;
+                } else {
+                    key = "pm:" + from;
+                    Messages.received(from, text, m.has("at") ? m.get("at").getAsLong() : 0);
+                }
                 c.execute(() -> {
                     show(key, line(key, from, text));
                     dev.tempest.modules.ChatTabsModule.onTempestMessage(key, from);
                 });
+            }
+            case "msgqueued" -> {
+                String key = "pm:" + (m.has("to") ? m.get("to").getAsString() : "");
+                c.execute(() -> system(key, "They're offline - they'll see it in Social > Messages for the next hour."));
             }
             case "msgfail" -> {
                 String key = m.has("g") ? "g:" + m.get("g").getAsString() : "pm:" + (m.has("to") ? m.get("to").getAsString() : "");

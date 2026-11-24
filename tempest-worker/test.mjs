@@ -165,6 +165,14 @@ obj.webSocketMessage(wsA, JSON.stringify({ t: "msg", to: B, text: "psst" }));
 assert.equal(wsB.sent.length, 0, "no messages to non-friends"); assert.deepEqual(wsA.sent.at(-1), { t: "msgfail", to: B, reason: "not friends" });
 obj.webSocketMessage(wsA, JSON.stringify({ t: "msg", to: C, text: "x".repeat(999), n: "bad name!" }));
 assert.equal(wsC.sent.at(-1).text.length, 256); assert.equal(wsC.sent.at(-1).n, null);
+// ---- stored DMs: kept, readable by both friends, newest per conversation in "recent"
+{
+  const h = obj.dmHistory(A, C);
+  assert.ok(Array.isArray(h.messages) && h.messages.length >= 1, "history has the message");
+  assert.deepEqual(obj.dmHistory(A, B), { error: "not friends" });
+  const r = obj.dmRecent(C);
+  assert.equal(r.conversations[0].uuid, A);
+}
 // ---- invites: friends only, plain server addresses only
 obj.webSocketMessage(wsA, JSON.stringify({ t: "invite", to: C, server: " Play.Example.NET:25565 ", n: "Steve" }));
 assert.deepEqual({ ...wsC.sent.at(-1), at: 0 }, { t: "invite", from: A, n: "Steve", server: "play.example.net:25565", at: 0 });

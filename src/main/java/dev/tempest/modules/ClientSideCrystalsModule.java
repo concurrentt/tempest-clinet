@@ -66,6 +66,57 @@ public final class ClientSideCrystalsModule extends Module {
         }
     }
 
+    // ---- hitting a crystal before the server's real one has arrived --------------------------------------------
+    // The crystal you see first is ours (a negative entity id the server doesn't know). Attacking it would send a hit
+    // for an id that doesn't exist, so nothing breaks until you click again - that's the "delay". Instead: hit the
+    // real crystal if it's already here, otherwise remember the hit and send it the moment the real one spawns.
+    private static net.minecraft.util.math.Vec3d pendingAt;
+    private static long pendingTime;
+
+    /** From ClientPlayerInteractionManager.attackEntity: true = handled here (don't send the original hit). */
+    public static boolean redirectAttack(net.minecraft.entity.player.PlayerEntity player, net.minecraft.entity.Entity target) {
+        if (!(target instanceof EndCrystalEntity fake) || target.getId() >= 0 || !FAKE_CRYSTALS.containsKey(target.getId())) return false;
+        MinecraftClient c = MinecraftClient.getInstance();
+        if (c.world == null || c.interactionManager == null) return false;
+        EndCrystalEntity real = realNear(c, fake.getEntityPos());
+        removeFake(c, fake.getId());
+        if (real != null) {
+            c.interactionManager.attackEntity(player, real);
+        } else {
+            pendingAt = fake.getEntityPos();
+            pendingTime = System.currentTimeMillis();
+        }
+        return true;
+    }
+
+    private static EndCrystalEntity realNear(MinecraftClient c, net.minecraft.util.math.Vec3d at) {
+        var list = c.world.getEntitiesByClass(EndCrystalEntity.class, new Box(at, at).expand(0.6), e -> e.getId() >= 0 && e.isAlive());
+        return list.isEmpty() ? null : list.get(0);
+    }
+
+    private static void removeFake(MinecraftClient c, int id) {
+        FAKE_CRYSTALS.remove(id);
+        var ent = c.world.getEntityById(id);
+        if (ent != null) try { ent.discard(); } catch (Throwable ignored) { }
+        try { c.world.removeEntity(id, net.minecraft.entity.Entity.RemovalReason.DISCARDED); } catch (Throwable ignored) { }
+    }
+
+    /** A real entity just spawned (ClientWorldMixin): swap out our stand-in at once and send a waiting hit. */
+    public static void onEntityAdded(net.minecraft.entity.Entity e) {
+        if (!(e instanceof EndCrystalEntity) || e.getId() < 0) return;
+        MinecraftClient c = MinecraftClient.getInstance();
+        if (c.world == null) return;
+        for (Integer id : new java.util.ArrayList<>(FAKE_CRYSTALS.keySet())) {
+            var f = c.world.getEntityById(id);
+            if (f != null && f.squaredDistanceTo(e) < 0.36) removeFake(c, id);
+        }
+        if (pendingAt != null && System.currentTimeMillis() - pendingTime < 600 && e.getEntityPos().squaredDistanceTo(pendingAt) < 0.5
+                && c.player != null && c.interactionManager != null) {
+            pendingAt = null;
+            c.interactionManager.attackEntity(c.player, e);
+        }
+    }
+
     public static void tick() {
         ClientSideCrystalsModule m = ModuleManager.get(ClientSideCrystalsModule.class);
         MinecraftClient c = MinecraftClient.getInstance();

@@ -30,9 +30,9 @@ import java.util.UUID;
  */
 public class SocialScreen extends Screen {
     private static final int SIDE_W = 132, PAD = 8, HEAD_H = 40, ROW = 34, NAV_H = 24;
-    private static final String[][] NAV = {{"people", "Friends"}, {"bell", "Requests"}, {"person_plus", "Add Friend"}};
+    private static final String[][] NAV = {{"people", "Friends"}, {"bell", "Requests"}, {"person_plus", "Add Friend"}, {"chat", "Messages"}};
 
-    /** kind: 0 section header, 1 friend, 2 incoming request, 3 sent request, 4 nearby player, 5 invite (text = server) */
+    /** kind: 0 section header, 1 friend, 2 incoming request, 3 sent request, 4 nearby player, 5 invite (text = server), 6 chat */
     private record Row(int kind, UUID id, String text, Social.Friend friend) { }
 
     private final Screen parent;
@@ -98,14 +98,45 @@ public class SocialScreen extends Screen {
             field.setWidth(cW() - 24 - 96);
             field.setPlaceholder(Text.literal("Minecraft name"));
             field.visible = true;
+        } else if (tab == 3 && chatWith != null) {
+            field.setX(cX() + 10);
+            field.setY(pY + pH - PAD - 16);
+            field.setWidth(cW() - 82);
+            field.setPlaceholder(Text.literal("Message " + dev.tempest.util.Social.nameOf(chatWith)));
+            field.visible = true;
         } else {
             field.visible = false;
         }
+        field.setMaxLength(tab == 3 ? 256 : 16);
+    }
+
+    /** Messages tab: the friend whose chat is open (null = the list of chats). */
+    private UUID chatWith;
+    private double chatScroll;
+
+    private void openChat(UUID friend) {
+        chatWith = friend;
+        chatScroll = 0;
+        field.setText("");
+        dev.tempest.util.Messages.markRead(friend);
+        dev.tempest.util.Messages.loadChat(friend);
+        layoutField();
+        setFocused(field);
+    }
+
+    private void sendChat() {
+        if (chatWith == null) return;
+        String err = dev.tempest.util.Messages.send(chatWith, field.getText());
+        if (err != null) { say(err, true); return; }
+        field.setText("");
+        chatScroll = 0;
     }
 
     private void setTab(int t) {
         if (t == tab) return;
         tab = t;
+        chatWith = null;
+        if (t == 3) dev.tempest.util.Messages.loadRecent();
         scroll = scrollTarget = scrollVel = 0;
         field.setText("");
         layoutField();
@@ -147,6 +178,18 @@ public class SocialScreen extends Screen {
                 for (Social.Friend f : on) out.add(new Row(1, f.id(), null, f));
                 if (!off.isEmpty()) out.add(new Row(0, null, "OFFLINE  —  " + off.size(), null));
                 for (Social.Friend f : off) out.add(new Row(1, f.id(), null, f));
+            }
+            case 3 -> {
+                List<UUID> chats = dev.tempest.util.Messages.conversations();
+                if (!chats.isEmpty()) {
+                    out.add(new Row(0, null, "LAST HOUR  —  " + chats.size(), null));
+                    for (UUID u : chats) out.add(new Row(6, u, null, Social.friend(u)));
+                }
+                List<Social.Friend> rest = new ArrayList<>();
+                for (Social.Friend f : Social.friends()) if (!chats.contains(f.id())) rest.add(f);
+                rest.sort((a, b) -> Boolean.compare(b.online(), a.online()));
+                if (!rest.isEmpty()) out.add(new Row(0, null, "START A CHAT", null));
+                for (Social.Friend f : rest) out.add(new Row(6, f.id(), null, f));
             }
             case 1 -> {
                 if (!Social.incoming().isEmpty()) {
@@ -203,6 +246,15 @@ public class SocialScreen extends Screen {
         renderSidebar(ctx, tr, mx, my);
         renderContentHeader(ctx, tr, mx, my);
 
+        if (tab == 3 && chatWith != null) {
+            renderChat(ctx, tr, mx, my);
+            drawToast(ctx, tr);
+            super.render(ctx, mx, my, delta);
+            if (open < 1f) Draw.roundRect(ctx, pX + 1, pY + 1, pW - 2, pH - 2, 10, Draw.withAlpha(Draw.solid(), Math.round(0x90 * (1f - open))));
+            pY = baseY;
+            return;
+        }
+
         // list with smooth scrolling
         List<Row> rows = rows();
         double maxScroll = Math.max(0, rows.size() * ROW - listH());
@@ -224,6 +276,44 @@ public class SocialScreen extends Screen {
 
         if (open < 1f) Draw.roundRect(ctx, pX + 1, pY + 1, pW - 2, pH - 2, 10, Draw.withAlpha(Draw.solid(), Math.round(0x90 * (1f - open))));
         pY = baseY;
+    }
+
+    // ------------------------------------------------------------------ Messages: one chat
+    private int chatBackX() { return cX() + cW() - 52; }
+    private int chatInputY() { return pY + pH - PAD - 22; }
+
+    private void renderChat(DrawContext ctx, TextRenderer tr, int mx, int my) {
+        dev.tempest.util.Messages.markRead(chatWith);
+        int x = cX(), w = cW(), top = cY() + 6, bottom = chatInputY() - 6;
+        // back button (top right of the header)
+        int bx = chatBackX(), by = pY + PAD + 9;
+        Draw.button(ctx, tr, bx, by, 52, 18, "Back", Draw.hit(mx, my, bx, by, 52, 18), 0x6B6F7E);
+
+        // messages, newest at the bottom, wrapped to the panel width
+        List<dev.tempest.util.Messages.Msg> msgs = dev.tempest.util.Messages.chat(chatWith);
+        int maxW = Math.round(w * 0.7f);
+        ctx.enableScissor(x - 2, top, x + w + 2, bottom);
+        int y = bottom + (int) Math.round(chatScroll);
+        for (int i = msgs.size() - 1; i >= 0 && y > top - 400; i--) {
+            var m = msgs.get(i);
+            List<net.minecraft.text.OrderedText> lines = tr.wrapLines(net.minecraft.text.StringVisitable.plain(m.text()), maxW - 12);
+            int bh = lines.size() * 10 + 8, bw = 0;
+            for (var l : lines) bw = Math.max(bw, tr.getWidth(l));
+            bw += 12;
+            y -= bh + 4;
+            int bxm = m.mine() ? x + w - bw - 4 : x + 4;
+            Draw.panel(ctx, bxm, y, bw, bh, 7, m.mine() ? Draw.withAlpha(Draw.accent(), 0x55) : Draw.card(), m.mine() ? Draw.withAlpha(Draw.accent(), 0x90) : Draw.border());
+            for (int k = 0; k < lines.size(); k++) ctx.drawText(tr, lines.get(k), bxm + 6, y + 5 + k * 10, Draw.TEXT, false);
+        }
+        ctx.disableScissor();
+        if (msgs.isEmpty()) Draw.centered(ctx, tr, "Say hi - messages are deleted after an hour", x + w / 2, (top + bottom) / 2, Draw.DIM);
+
+        // input box + send
+        int iy = chatInputY();
+        boolean f = field.isFocused();
+        Draw.panel(ctx, x, iy, w - 66, 20, 7, Draw.card(), f ? Draw.withAlpha(Draw.accent(), 0xB0) : Draw.border());
+        int sx = x + w - 60;
+        Draw.button(ctx, tr, sx, iy, 60, 20, "Send", Draw.hit(mx, my, sx, iy, 60, 20), Draw.accent() & 0xFFFFFF);
     }
 
     private void stepScroll(double max) {
@@ -278,6 +368,11 @@ public class SocialScreen extends Screen {
                 int pw = Draw.textW(tr, c) + 9, px = sx + SIDE_W - 12 - pw;
                 Draw.roundRect(ctx, px, mid - 6, pw, 12, 6, sel ? Draw.withAlpha(accent, 0x38) : Draw.header());
                 Draw.text(ctx, tr, c, px + 5, mid - 4, sel ? accent : Draw.DIM2, false);
+            } else if (i == 3 && dev.tempest.util.Messages.unreadCount() > 0) {
+                String c = Integer.toString(Math.min(9, dev.tempest.util.Messages.unreadCount()));
+                int pw = 12, px = sx + SIDE_W - 12 - pw;
+                Draw.roundRect(ctx, px, mid - 6, pw, 12, 6, Draw.accent());
+                Draw.text(ctx, tr, c, px + (pw - Draw.textW(tr, c)) / 2, mid - 4, 0xFFFFFFFF, false);
             } else if (i == 1 && !Social.incoming().isEmpty()) {
                 String c = Social.incoming().size() > 9 ? "9+" : Integer.toString(Social.incoming().size());
                 int pw = Math.max(12, Draw.textW(tr, c) + 8), px = sx + SIDE_W - 12 - pw;
@@ -307,6 +402,7 @@ public class SocialScreen extends Screen {
                 yield Social.loaded() ? on + " online · " + Social.friends().size() + " total" : "Loading…";
             }
             case 1 -> Social.incoming().size() + " waiting · " + Social.outgoing().size() + " sent";
+            case 3 -> chatWith == null ? "Messages are deleted after an hour" : "With " + Social.nameOf(chatWith);
             default -> "They'll show up under Requests until they accept";
         };
         Draw.text(ctx, tr, Draw.bold(title), x, y + 2, Draw.TEXT, false);
@@ -340,6 +436,7 @@ public class SocialScreen extends Screen {
                 else { icon = "people"; title = "No friends yet"; sub = "Add people in the Add Friend tab"; }
             }
             case 1 -> { icon = "bell"; title = "No friend requests"; sub = "Requests you send or get show up here"; }
+            case 3 -> { icon = "chat"; title = "No messages"; sub = "Add friends to message them - messages last an hour"; }
             default -> { icon = "person_plus"; title = "Add a friend"; sub = "Type their name above, or join a server to see players near you"; }
         }
         int cx = cX() + cW() / 2, cy = listTop() + Math.max(20, listH() / 2 - 34);
@@ -387,7 +484,7 @@ public class SocialScreen extends Screen {
         String name = r.kind() == 4 && r.text() != null ? r.text() : Social.nameOf(r.id());
         boolean online = r.friend() != null && r.friend().online();
         drawHead(ctx, tr, r.id(), name, x + 6, ry + 5, 20);
-        if (r.kind() == 1) {
+        if (r.kind() == 1 || (r.kind() == 6 && r.friend() != null)) {
             Draw.circle(ctx, x + 25, ry + 24, 4, Draw.solid());
             Draw.circle(ctx, x + 25, ry + 24, 3, online ? 0xFF43D17A : 0xFF6B6F7E);
         }
@@ -401,6 +498,15 @@ public class SocialScreen extends Screen {
                 if (f.online()) subCol = 0xFF8EE3AE;
             }
             case 2 -> sub = "Wants to be your friend";
+            case 6 -> {
+                var last = dev.tempest.util.Messages.last(r.id());
+                if (last == null) sub = r.friend() != null && r.friend().online() ? "Online · say hi" : "Offline · they'll see it later";
+                else {
+                    sub = (last.mine() ? "You: " : "") + last.text();
+                    if (dev.tempest.util.Messages.unread(r.id())) subCol = Draw.TEXT;
+                }
+                if (dev.tempest.util.Messages.unread(r.id())) Draw.circle(ctx, x + w - 12, ry + 14, 3, Draw.accent());
+            }
             case 5 -> { sub = "Invited you to " + r.text(); subCol = 0xFFB9AEFF; }
             case 3 -> sub = "Request sent · waiting for them";
             default -> {
@@ -490,6 +596,11 @@ public class SocialScreen extends Screen {
             return true;
         }
         if (tab == 2 && Draw.hit(mx, my, cX() + cW() - 86, cY() + 4, 86, 22)) { sendFromField(); return true; }
+        if (tab == 3 && chatWith != null) {
+            if (Draw.hit(mx, my, chatBackX(), pY + PAD + 9, 52, 18)) { chatWith = null; layoutField(); return true; }
+            if (Draw.hit(mx, my, cX() + cW() - 60, chatInputY(), 60, 20)) { sendChat(); return true; }
+            return false;
+        }
 
         if (my >= listTop() && my < listTop() + listH()) {
             List<Row> rows = rows();
@@ -497,6 +608,7 @@ public class SocialScreen extends Screen {
                 Row r = rows.get(i);
                 if (r.kind() == 0) continue;
                 int ry = listTop() + i * ROW - (int) Math.round(scroll);
+                if (r.kind() == 6 && Draw.hit(mx, my, cX(), ry, cW(), ROW - 4)) { openChat(r.id()); return true; }
                 String[] b = buttons(r);
                 for (int k = 0; k < b.length; k++) {
                     if (!Draw.hit(mx, my, btnX(k, b.length), ry + 5, 62, 16)) continue;
@@ -550,6 +662,11 @@ public class SocialScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyInput input) {
+        if (tab == 3 && chatWith != null && (input.key() == GLFW.GLFW_KEY_ENTER || input.key() == GLFW.GLFW_KEY_KP_ENTER)) {
+            sendChat();
+            return true;
+        }
+        if (tab == 3 && chatWith != null && input.key() == GLFW.GLFW_KEY_ESCAPE) { chatWith = null; layoutField(); return true; }
         if (tab == 2 && field.isFocused() && (input.key() == GLFW.GLFW_KEY_ENTER || input.key() == GLFW.GLFW_KEY_KP_ENTER)) {
             sendFromField();
             return true;
@@ -559,6 +676,7 @@ public class SocialScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
+        if (tab == 3 && chatWith != null) { chatScroll = Math.max(0, chatScroll + vertical * 20); return true; }
         scrollTarget = Math.max(0, Math.min(Math.max(0, rows().size() * ROW - listH()), scrollTarget - vertical * 40));
         return true;
     }

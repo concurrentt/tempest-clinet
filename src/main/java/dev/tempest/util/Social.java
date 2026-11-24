@@ -40,6 +40,7 @@ public final class Social {
         lastRefresh = 0;
         loaded = false;
         forgetStates();
+        Messages.reset();
         incomingCount = -1;
     }
     public static List<UUID> incoming() { return incoming; }
@@ -105,6 +106,12 @@ public final class Social {
             incomingCount = incoming.size();
             loaded = true;
         });
+    }
+
+    /** The friend with this id, or null. */
+    public static Friend friend(UUID id) {
+        for (Friend f : friends) if (f.id().equals(id)) return f;
+        return null;
     }
 
     /** Last known state of each friend, for "came online" / "joined your server" pop-ups (null until the first load). */

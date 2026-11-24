@@ -32,14 +32,21 @@ public class TotemPopModule extends HudModule {
         // -1, -1: not placed yet - it starts centred above the hotbar (see onTick) until you move it
         super("totem_pops", "Totem Pop Counter", "Shows how many totems each player has popped next to their name (e.g. Steve -3), and how many you have left.",
                 Category.PVP, true, -1, -1);
-        add(new dev.tempest.module.ActionSetting("reset", "Pop Counts", "Reset", () -> {
-            POPS.clear();
-            dev.tempest.util.Chat.info("Totem pop counts reset.");
-        }));
+        add(new dev.tempest.module.ActionSetting("reset", "Pop Counts", "Reset", TotemPopModule::resetPops));
     }
+
+    /** Clears every pop count (the Reset button and the Reset Pop Counts key). */
+    private static void resetPops() {
+        POPS.clear();
+        dev.tempest.util.Chat.info("Totem pop counts reset.");
+    }
+
+    private final net.minecraft.client.option.KeyBinding resetKey =
+            bindKey("totem_reset", "Reset Pop Counts Key", org.lwjgl.glfw.GLFW.GLFW_KEY_UNKNOWN);
 
     @Override
     public void onTick(MinecraftClient c) {
+        while (resetKey.wasPressed()) resetPops();
         if ((x < 0 || y < 0) && c.getWindow() != null) {
             int sw = c.getWindow().getScaledWidth(), sh = c.getWindow().getScaledHeight();
             setPos(Math.max(0, sw / 2 - 22), Math.max(0, sh - 60));

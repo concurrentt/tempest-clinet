@@ -32,7 +32,7 @@ public class ClientSettingsModule extends Module {
             net.minecraft.client.MinecraftClient c = net.minecraft.client.MinecraftClient.getInstance();
             c.setScreen(new dev.tempest.gui.ConfigsScreen(c.currentScreen));
         }));
-        add(new ActionSetting("check_now", "Check for updates now", "Check", () -> dev.tempest.util.Updater.checkAsync()));
+        add(new ActionSetting("check_now", "Check for updates now", "Check", () -> dev.tempest.util.Updater.checkNow()));
         keyHint = "Configs store enabled mods, settings and HUD layout under a name. Esc while binding a key unbinds it.";
     }
 

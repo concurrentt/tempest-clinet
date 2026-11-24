@@ -18,6 +18,8 @@ public class ZoomModule extends Module {
     private final NumberSetting level = add(new NumberSetting("level", "Zoom Level", 4.0, 1.5, 30.0, 0.5));
     private final BoolSetting smooth = add(new BoolSetting("smooth", "Smooth Zoom", true));
     private final BoolSetting scroll = add(new BoolSetting("scroll", "Scroll to Adjust", true));
+    /** Mouse sensitivity while zoomed, as a % of the normal zoomed sensitivity (100 = default). */
+    private final NumberSetting sensitivity = add(new NumberSetting("sensitivity", "Zoom Sensitivity %", 100, 10, 200, 5));
 
     public ZoomModule() { super("zoom", "Zoom", "Hold a key to zoom in. Scroll while zooming to adjust.", Category.RENDER, true); }
 
@@ -39,7 +41,10 @@ public class ZoomModule extends Module {
 
     public static double sensitivityScale() {
         float f = factor(1f);
-        return f <= 1.0001f ? 1.0 : (1.0 / f);
+        if (f <= 1.0001f) return 1.0;
+        ZoomModule m = ModuleManager.get(ZoomModule.class);
+        double pct = m != null ? m.sensitivity.get() / 100.0 : 1.0;
+        return pct / f;
     }
 
     public static boolean onScroll(double amount) {

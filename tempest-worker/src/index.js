@@ -20,6 +20,9 @@
 //        client -> {"t":"msg","g":"<group id>","text":"hi","n":"MyName"} message to your party / a group
 //        client -> {"t":"invite","to":"<uuid>","server":"play.example.net","n":"MyName"}  "come play with me" (friends only)
 //        server -> {"t":"invite","from":"...","n":"Name","server":"play.example.net","at":ms}
+//        server -> {"t":"msgqueued","to":"..."}   friend offline: kept for an hour, they see it in Messages later
+//   POST /v1/chat/dms  (Bearer)        -> { conversations: [{uuid, from, text, at}] }   last hour only
+//   POST /v1/chat/dm   (Bearer) {uuid} -> { messages: [{from, text, at}] }               last hour only
 //        server -> {"t":"invitefail","to":"...","reason":"not friends"|"offline"|"bad server"}
 //        server -> {"t":"msg","from":"...","n":"Name","to"?|"g"?,"gn"?,"text":"...","at":ms}
 //        server -> {"t":"msgfail","to"|"g","reason":"offline"|"not friends"|"no such group"}
@@ -52,6 +55,7 @@ const ONLINE_TTL_MS = 300_000;       // online for 5 min after the last heartbea
 const TOKEN_TTL_MS = 24 * 3600_000;  // sign in again once a day
 const CHALLENGE_TTL_MS = 60_000;     // time to finish the Mojang step
 const MAX_LOOKUP = 200;
+const DM_TTL_MS = 60 * 60_000;        // private messages are deleted after an hour
 const MAX_GROUP = 16;                // people in one party / group, you included
 const MAX_GROUPS = 10;               // groups one person can make
 
@@ -290,6 +294,9 @@ export class Presence extends DurableObject {
     this.sql.exec("CREATE INDEX IF NOT EXISTS requests_dst ON requests (dst)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS presence (uuid TEXT PRIMARY KEY, seen INTEGER NOT NULL, server TEXT, pub INTEGER NOT NULL, fr INTEGER NOT NULL)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS cosmetics (uuid TEXT PRIMARY KEY, data TEXT NOT NULL, at INTEGER NOT NULL)");
+    // private messages between friends, kept for one hour only (so friends can read what they missed)
+    this.sql.exec("CREATE TABLE IF NOT EXISTS dms (id INTEGER PRIMARY KEY AUTOINCREMENT, a TEXT NOT NULL, b TEXT NOT NULL, sender TEXT NOT NULL, text TEXT NOT NULL, at INTEGER NOT NULL)");
+    this.sql.exec("CREATE INDEX IF NOT EXISTS dms_pair ON dms (a, b, at)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS chatgroups (id TEXT PRIMARY KEY, name TEXT NOT NULL, kind TEXT NOT NULL, owner TEXT NOT NULL, members TEXT NOT NULL, at INTEGER NOT NULL)");
     this.msgRate = new Map();   // socket rate limiting (memory only)
     // "ping" is answered by Cloudflare itself, so keep-alives never wake this object or count as requests
@@ -530,8 +537,10 @@ export class Presence extends DurableObject {
     if (typeof m.to === "string") {
       const to = normUuid(m.to);
       if (!to || !this.isFriend(from, to)) { ws.send(JSON.stringify({ t: "msgfail", to: m.to, reason: "not friends" })); return; }
+      this.storeDm(from, to, text, at);
       const got = this.sendTo(to, { t: "msg", from, n, to, text, at });
-      if (!got) ws.send(JSON.stringify({ t: "msgfail", to, reason: "offline" }));
+      // offline: it's kept (for an hour) and shows up in their Messages tab when they come online
+      if (!got) ws.send(JSON.stringify({ t: "msgqueued", to }));
     } else if (typeof m.g === "string") {
       const g = this.group(m.g);
       if (!g || !g.members.includes(from)) { ws.send(JSON.stringify({ t: "msgfail", g: m.g, reason: "no such group" })); return; }
@@ -539,6 +548,41 @@ export class Presence extends DurableObject {
       for (const u of g.members) if (u !== from) got += this.sendTo(u, { t: "msg", from, n, g: g.id, gn: g.name, text, at });
       if (!got) ws.send(JSON.stringify({ t: "msgfail", g: g.id, reason: "offline" }));
     }
+  }
+
+  // ---- private messages: stored for DM_TTL_MS, then deleted
+  pair(x, y) { return x < y ? [x, y] : [y, x]; }
+
+  pruneDms(now) {
+    if (now - (this.lastDmPrune || 0) < 60_000) return;
+    this.lastDmPrune = now;
+    this.sql.exec("DELETE FROM dms WHERE at < ?", now - DM_TTL_MS);
+  }
+
+  storeDm(from, to, text, at) {
+    this.pruneDms(at);
+    const [a, b] = this.pair(from, to);
+    this.sql.exec("INSERT INTO dms (a, b, sender, text, at) VALUES (?, ?, ?, ?, ?)", a, b, from, text, at);
+  }
+
+  /** The last hour of messages with one friend, oldest first (max 200). */
+  dmHistory(me, other) {
+    other = normUuid(other);
+    if (!other || !this.isFriend(me, other)) return { error: "not friends" };
+    const now = Date.now();
+    this.pruneDms(now);
+    const [a, b] = this.pair(me, other);
+    const rows = this.rows("SELECT sender, text, at FROM dms WHERE a = ? AND b = ? AND at >= ? ORDER BY at DESC, id DESC LIMIT 200", a, b, now - DM_TTL_MS);
+    return { messages: rows.reverse().map((r) => ({ from: r.sender, text: r.text, at: r.at })) };
+  }
+
+  /** Your conversations from the last hour: the newest message of each. */
+  dmRecent(me) {
+    const now = Date.now();
+    this.pruneDms(now);
+    const rows = this.rows("SELECT a, b, sender, text, MAX(at) AS at FROM dms WHERE (a = ? OR b = ?) AND at >= ? GROUP BY a, b ORDER BY at DESC LIMIT 50",
+      me, me, now - DM_TTL_MS);
+    return { conversations: rows.map((r) => ({ uuid: r.a === me ? r.b : r.a, from: r.sender, text: r.text, at: r.at })) };
   }
 
   /** "Come play on my server": friends only, and only a plain server address (host or host:port). */
@@ -692,6 +736,8 @@ export async function handle(req, env, keysOverride = null, joinedOverride = nul
     const p = presence(env);
     let r;
     if (path === "/v1/chat/groups") r = { groups: await p.groupsOf(me) };
+    else if (path === "/v1/chat/dms") r = await p.dmRecent(me);
+    else if (path === "/v1/chat/dm") r = await p.dmHistory(me, body.uuid);
     else if (path === "/v1/chat/group/create") r = await p.createGroup(me, body);
     else if (path === "/v1/chat/group/update") r = await p.updateGroup(me, body);
     else if (path === "/v1/chat/group/leave") r = await p.leaveGroup(me, body);

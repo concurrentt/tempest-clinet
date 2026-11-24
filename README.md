@@ -1,3 +1,16 @@
+## 0.21.15 - Messages, snappier Clientside Crystals
+- Clientside Crystals: hitting a crystal right after placing it no longer feels delayed - the hit goes to the server's
+  real crystal (straight away, or the instant it appears) instead of being lost on the stand-in.
+- Minecraft's own menus (Options, Video, Controls...): flat rectangle buttons and sliders on the see-through background.
+- Zoom: new "Zoom Sensitivity %" setting for mouse speed while zoomed.
+- Totem Pop Counter: "Reset Pop Counts Key" - bind a key (in its settings or Controls) to clear pop counts.
+- Social menu: new Messages tab - chat with Tempest friends right in the menu, even when they're on another server.
+  Friends who are offline get your message when they come back. Messages are deleted after one hour.
+- Fixed: Tempest couldn't sign in on some setups ("no MinecraftSessionService field"), so those players never showed
+  the Tempest logo and their Social menu stayed on "Connecting".
+- Fullbright works again (lights the world like Night Vision); Chat Mentions highlights just your name and no longer
+  pings on your own messages; Combat Timer's end sound is off by default.
+
 ## 0.21.11 - Join and invite friends, friend pop-ups, Combat Timer
 - Social menu: "Invite" sends an online friend a "come play on my server" invite - they get a pop-up, a chat line
   with a [Join] button and a Join row at the top of their Social menu. Nothing joins until they click.

@@ -390,9 +390,21 @@ public class TempestTitleScreen extends Screen {
     private int pillW(TextRenderer tr, String label) { return Draw.textW(tr, label) + 30; }
 
     /** Small glowing pill above the version text while an update is offered / downloading / ready. */
+    private String checkLabel() {
+        return dev.tempest.util.Updater.state() == dev.tempest.util.Updater.State.CHECKING ? "Checking for updates\u2026" : "Check for updates";
+    }
+
     private void updatePill(DrawContext ctx, TextRenderer tr, int mx, int my, float e, float time) {
         String label = updateLabel();
-        if (label == null) return;
+        if (label == null) {
+            // no update known: a quiet "Check for updates" button in the same spot
+            String cl = checkLabel();
+            int w = Draw.textW(tr, cl) + 16, x = 8, y = height - 36;
+            boolean hv = Draw.hit(mx, my, x, y, w, 16);
+            Draw.panel(ctx, x, y, w, 16, 8, MenuKit.fa(hv ? Draw.cardHover() : Draw.card(), e), MenuKit.fa(hv ? Draw.withAlpha(Draw.accent(), 0xA0) : Draw.border(), e));
+            Draw.text(ctx, tr, cl, x + 8, y + 4, MenuKit.fa(hv ? 0xFFFFFFFF : 0xFFB8BED0, e), false);
+            return;
+        }
         int w = pillW(tr, label), h = 16, x = 8, y = height - 36;
         boolean hv = Draw.hit(mx, my, x, y, w, h);
         float pulse = 0.5f + 0.5f * (float) Math.sin(time * 2.4f);
@@ -418,6 +430,10 @@ public class TempestTitleScreen extends Screen {
         String upd = updateLabel();
         if (upd != null && Draw.hit(mx, my, 8, height - 36, pillW(textRenderer, upd), 16)) {
             client.setScreen(new UpdateScreen(this));
+            return true;
+        }
+        if (upd == null && Draw.hit(mx, my, 8, height - 36, Draw.textW(textRenderer, checkLabel()) + 16, 16)) {
+            dev.tempest.util.Updater.checkNow();
             return true;
         }
         for (Btn b : buttons) {

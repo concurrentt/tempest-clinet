@@ -21,6 +21,7 @@ public class TempestToast implements Toast {
     private final String title, line;
     private final int accent;
     private final long showMs;
+    private String icon = "people";
     private Visibility visibility = Visibility.SHOW;
 
     public TempestToast(UUID player, String title, String line, int accent, long showMs) {
@@ -36,6 +37,17 @@ public class TempestToast implements Toast {
         MinecraftClient c = MinecraftClient.getInstance();
         c.execute(() -> {
             if (c.getToastManager() != null) c.getToastManager().add(new TempestToast(player, title, line, accent, showMs));
+        });
+    }
+
+    /** A toast with an icon instead of a player face. */
+    public static void showIcon(String icon, String title, String line, int accent, long showMs) {
+        MinecraftClient c = MinecraftClient.getInstance();
+        c.execute(() -> {
+            if (c.getToastManager() == null) return;
+            TempestToast t = new TempestToast(null, title, line, accent, showMs);
+            t.icon = icon;
+            c.getToastManager().add(t);
         });
     }
 
@@ -58,7 +70,7 @@ public class TempestToast implements Toast {
             Draw.roundRect(ctx, hx - 1, hy - 1, hs + 2, hs + 2, 5, 0xFF0C0D12);
             ctx.drawTexture(RenderPipelines.GUI_TEXTURED, head, hx, hy, 0f, 0f, hs, hs, 32, 32, 32, 32, 0xFFFFFFFF);
         } else {
-            Icons.draw(ctx, "people", hx + 2, hy + 2, 16, 0xFFFFFFFF);
+            Icons.draw(ctx, icon, hx + 2, hy + 2, 16, 0xFFFFFFFF);
         }
         int tx = hx + hs + 7, tw = W - tx - 6;
         Draw.text(ctx, tr, Draw.trim(tr, title, tw), tx, 6, 0xFFFFFFFF, false);

@@ -51,6 +51,7 @@ public class ModuleManager {
         register(new WaypointsModule());
         register(new XrayModule());
         register(new FakeChunksModule());
+        register(new FpsSaverModule());
         // Visuals - how the game looks
         register(new CustomSkyModule());
         register(new CinematicModule());
@@ -79,6 +80,7 @@ public class ModuleManager {
         register(new StreamerModeModule());
         register(new AntiLeakModule());
         register(new FlySpeedModule());
+        register(new LightLevelsModule());
         // Chat
         register(new ChatTabsModule());
         register(new ChatUpgradesModule());

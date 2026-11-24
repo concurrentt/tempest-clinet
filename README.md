@@ -1,3 +1,11 @@
+## 0.21.10 - FPS Saver, Light Levels, Tempest logo for everyone
+- New: FPS Saver (Render) - skips drawing mobs hidden behind walls (players too, if you turn it on), entities further
+  than a set distance, far chests/signs/banners, and far particles. Only changes what you see.
+- New: Light Levels (Utility) - press F7 to mark where monsters can spawn: red any time, yellow at night.
+- Everyone on Tempest now always shows as a Tempest user (the logo above their name) to other Tempest users - the
+  "Let Others See I Use Tempest" setting is gone, and turning off the Nametags module no longer hides you.
+- Someone who has just started Tempest gets their logo within about 30 seconds instead of up to 2 minutes.
+
 ## 0.21.9 - Simpler Tempest Editor
 - Tempest Editor: a cleaner home page - a smaller title, plain flat tiles (no glows or underlines), the shortcuts
   (Configs, My Packs, Cosmetics, Painter) as one row of small buttons, and the status as a single line of text.

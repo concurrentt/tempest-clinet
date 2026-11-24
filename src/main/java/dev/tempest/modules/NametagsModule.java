@@ -22,7 +22,6 @@ public final class NametagsModule extends Module {
     private final BoolSetting logo = add(new BoolSetting("logo", "Tempest Logo", true));
     private final BoolSetting logoFriends = add(new BoolSetting("logo_friends", "Logo On Tempest Friends", true));
     private final BoolSetting showOnline = add(new BoolSetting("show_online", "Show Tempest Users", true));
-    private final BoolSetting shareOnline = add(new BoolSetting("share_online", "Let Others See I Use Tempest", true));
     private final BoolSetting tabList = add(new BoolSetting("tab_list", "Logo In Tab List", true));
 
     /** U+E000 in the tempest:icons font is the Tempest logo (textures/font/logo.png). */
@@ -56,8 +55,8 @@ public final class NametagsModule extends Module {
     /** Ask the online service which nearby players use Tempest. */
     public static boolean showOnline() { NametagsModule m = on(); return m != null && m.logo.get() && m.showOnline.get(); }
 
-    /** Tell the online service you're playing with Tempest (so others see your logo). */
-    public static boolean shareOnline() { NametagsModule m = on(); return m != null && m.shareOnline.get(); }
+    /** Everyone on Tempest shows as a Tempest user to other Tempest users (the logo above their name) - always on. */
+    public static boolean shareOnline() { return true; }
 
     /** Your own nametag in third person (vanilla never shows it). */
     public static boolean showOwnTag() {

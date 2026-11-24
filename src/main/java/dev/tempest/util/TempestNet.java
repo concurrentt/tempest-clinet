@@ -43,7 +43,7 @@ public final class TempestNet {
      */
     public static final String DEFAULT_URL = "https://tempest-backend.imamunchlmaoii.workers.dev";
 
-    private static final long HEARTBEAT_MS = 45_000, LOOKUP_MS = 10_000, CACHE_MS = 120_000;
+    private static final long HEARTBEAT_MS = 45_000, LOOKUP_MS = 10_000, CACHE_MS = 120_000, RECHECK_MS = 30_000;
 
     private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8)).build();
     /** uuid -> time we last learned they use Tempest */
@@ -311,7 +311,10 @@ public final class TempestNet {
         for (UUID id : candidates) {
             if (id == null || id.equals(me) || id.version() != 4 || !seen.add(id)) continue;   // only real (premium) accounts
             Long last = ASKED.get(id);
-            if (last == null || now - last >= CACHE_MS) ask.add(id);
+            // players not (yet) known to use Tempest are asked again after 30 s, so someone who just started Tempest
+            // gets their logo quickly; known users are re-checked every 2 minutes
+            long again = isTempestUser(id) ? CACHE_MS : RECHECK_MS;
+            if (last == null || now - last >= again) ask.add(id);
             if (ask.size() >= 200) break;
         }
         if (ask.isEmpty()) return;

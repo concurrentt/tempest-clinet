@@ -45,6 +45,8 @@ public final class ModuleIcons {
         MODULES.put("environment", Items.WATER_BUCKET);
         MODULES.put("anti_leak", Items.BARRIER);
         MODULES.put("fly_speed", Items.FEATHER);
+        MODULES.put("fps_saver", Items.REDSTONE);
+        MODULES.put("light_levels", Items.TORCH);
         MODULES.put("mouse_tweaks", Items.HOPPER);
         MODULES.put("shulker_preview", Items.SHULKER_BOX);
         MODULES.put("toggle_sprint", Items.LEATHER_BOOTS);

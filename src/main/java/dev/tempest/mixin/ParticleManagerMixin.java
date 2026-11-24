@@ -18,7 +18,7 @@ public abstract class ParticleManagerMixin {
     private void tempest$filterCreatedParticle(ParticleEffect effect, double x, double y, double z,
                                                 double velocityX, double velocityY, double velocityZ,
                                                 CallbackInfoReturnable<Particle> cir) {
-        if (ParticleFilterModule.hides(effect)) cir.setReturnValue(null);
+        if (ParticleFilterModule.hides(effect) || dev.tempest.modules.FpsSaverModule.skipParticle(x, y, z)) cir.setReturnValue(null);
     }
 
     // Keep a second guard at the public entry point in case a particle implementation bypasses the factory.
@@ -27,7 +27,7 @@ public abstract class ParticleManagerMixin {
     private void tempest$filterEffect(ParticleEffect effect, double x, double y, double z,
                                       double velocityX, double velocityY, double velocityZ,
                                       CallbackInfoReturnable<Particle> cir) {
-        if (ParticleFilterModule.hides(effect)) cir.setReturnValue(null);
+        if (ParticleFilterModule.hides(effect) || dev.tempest.modules.FpsSaverModule.skipParticle(x, y, z)) cir.setReturnValue(null);
     }
 
     // Some particle implementations (notably block debris) are submitted as ready-made instances.

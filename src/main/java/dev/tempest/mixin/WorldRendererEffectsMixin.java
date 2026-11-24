@@ -15,6 +15,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class WorldRendererEffectsMixin {
     @Inject(method = "pushEntityRenders", at = @At("TAIL"), require = 0)
     private void tempest$killEffects(MatrixStack matrices, @Coerce Object renderStates, OrderedRenderCommandQueue queue, CallbackInfo ci) {
+        dev.tempest.modules.FpsSaverModule.nextFrame();
+        dev.tempest.modules.LightLevelsModule.render(matrices, queue);
         KillEffectsModule.render(matrices, queue);
         dev.tempest.render.SkyLyrics.render(matrices, queue);
     }

@@ -20,6 +20,7 @@
     "EntityGlowMixin",
     "WorldRendererGlowMixin",
     "EntityRendererCullMixin",
+    "ActionBarCombatMixin",
     "BlockEntityDistanceMixin",
     "ParticleManagerMixin",
     "ParticleRendererMixin",

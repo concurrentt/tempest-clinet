@@ -1,3 +1,14 @@
+## 0.21.11 - Join and invite friends, friend pop-ups, Combat Timer
+- Social menu: "Invite" sends an online friend a "come play on my server" invite - they get a pop-up, a chat line
+  with a [Join] button and a Join row at the top of their Social menu. Nothing joins until they click.
+- Social menu: "Message" opens chat on the Private tab with that friend (Tempest DMs work across different servers).
+- Pop-ups when a friend comes online or joins your server (and, if you turn it on, goes offline) - Social settings.
+- New: Combat Timer (PvP) - counts down until you're out of combat. Starts when you hit a player or get hurt near one,
+  follows the server's own "Combat: 12s" / "no longer in combat" messages, and plays a sound when it's over.
+- Social menu: friends who are on a server get a "Join" button - one click takes you to the same server (it leaves
+  the world you're in first). Shows only when they share their server ("Show Friends My Server") and you're not
+  already there.
+
 ## 0.21.10 - FPS Saver, Light Levels, Tempest logo for everyone
 - New: FPS Saver (Render) - skips drawing mobs hidden behind walls (players too, if you turn it on), entities further
   than a set distance, far chests/signs/banners, and far particles. Only changes what you see.

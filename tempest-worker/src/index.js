@@ -18,6 +18,9 @@
 //        server -> {"t":"cos","uuid":"...","c":{...}}           a watched player changed cosmetics
 //        client -> {"t":"msg","to":"<uuid>","text":"hi","n":"MyName"}   private message to a friend
 //        client -> {"t":"msg","g":"<group id>","text":"hi","n":"MyName"} message to your party / a group
+//        client -> {"t":"invite","to":"<uuid>","server":"play.example.net","n":"MyName"}  "come play with me" (friends only)
+//        server -> {"t":"invite","from":"...","n":"Name","server":"play.example.net","at":ms}
+//        server -> {"t":"invitefail","to":"...","reason":"not friends"|"offline"|"bad server"}
 //        server -> {"t":"msg","from":"...","n":"Name","to"?|"g"?,"gn"?,"text":"...","at":ms}
 //        server -> {"t":"msgfail","to"|"g","reason":"offline"|"not friends"|"no such group"}
 //        server -> {"t":"group","g":{id,name,kind,owner,members}} / {"t":"group_gone","id":"..."}
@@ -45,7 +48,7 @@
 import { DurableObject } from "cloudflare:workers";
 import BUNDLED_KEYS from "./mojang-keys.json";
 
-const ONLINE_TTL_MS = 150_000;       // online for 2.5 min after the last heartbeat
+const ONLINE_TTL_MS = 300_000;       // online for 5 min after the last heartbeat (clients beat every 2 min)
 const TOKEN_TTL_MS = 24 * 3600_000;  // sign in again once a day
 const CHALLENGE_TTL_MS = 60_000;     // time to finish the Mojang step
 const MAX_LOOKUP = 200;
@@ -398,6 +401,8 @@ export class Presence extends DurableObject {
       ws.serializeAttachment({ u: a.u, w: w.slice(0, w.length - (w.length % 32)) });
     } else if (m.t === "msg") {
       this.chat(ws, a.u, m);
+    } else if (m.t === "invite") {
+      this.invite(ws, a.u, m);
     } else if (m.t === "emote") {
       const id = typeof m.id === "string" && /^[a-z_]{1,16}$/.test(m.id) ? m.id : null;
       this.broadcast(a.u, { t: "emote", uuid: a.u, id });
@@ -534,6 +539,19 @@ export class Presence extends DurableObject {
       for (const u of g.members) if (u !== from) got += this.sendTo(u, { t: "msg", from, n, g: g.id, gn: g.name, text, at });
       if (!got) ws.send(JSON.stringify({ t: "msgfail", g: g.id, reason: "offline" }));
     }
+  }
+
+  /** "Come play on my server": friends only, and only a plain server address (host or host:port). */
+  invite(ws, from, m) {
+    const to = typeof m.to === "string" ? normUuid(m.to) : null;
+    const server = typeof m.server === "string" ? m.server.trim().toLowerCase() : "";
+    if (!/^[a-z0-9]([a-z0-9-]{0,62}\.)*[a-z0-9-]{1,63}(:\d{1,5})?$/.test(server) || server.length > 253) {
+      ws.send(JSON.stringify({ t: "invitefail", to: m.to, reason: "bad server" }));
+      return;
+    }
+    if (!to || !this.isFriend(from, to)) { ws.send(JSON.stringify({ t: "invitefail", to: m.to, reason: "not friends" })); return; }
+    const n = typeof m.n === "string" && /^[A-Za-z0-9_]{1,16}$/.test(m.n) ? m.n : null;
+    if (!this.sendTo(to, { t: "invite", from, n, server, at: Date.now() })) ws.send(JSON.stringify({ t: "invitefail", to, reason: "offline" }));
   }
 
   webSocketClose(ws, code) {

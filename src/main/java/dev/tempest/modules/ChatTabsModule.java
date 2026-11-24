@@ -150,6 +150,20 @@ public final class ChatTabsModule extends Module {
         } catch (Throwable ignored) { }
     }
 
+    /**
+     * Opens chat on the Private tab, talking to this friend (the Social menu's "Message" button). Needs a world to
+     * chat in; false if Chat Tabs is off or you're in the menus.
+     */
+    public static boolean openPrivate(UUID friend) {
+        MinecraftClient c = MinecraftClient.getInstance();
+        if (on() == null || c.world == null) return false;
+        select("pm");
+        pmTarget = friend;
+        refresh();
+        c.setScreen(new net.minecraft.client.gui.screen.ChatScreen("", false));
+        return true;
+    }
+
     private static void select(String t) {
         if (!t.equals(tab)) { tab = t; refresh(); }
         UNREAD.remove(t);

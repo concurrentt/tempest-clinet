@@ -32,7 +32,7 @@ public class SocialScreen extends Screen {
     private static final int SIDE_W = 132, PAD = 8, HEAD_H = 40, ROW = 34, NAV_H = 24;
     private static final String[][] NAV = {{"people", "Friends"}, {"bell", "Requests"}, {"person_plus", "Add Friend"}};
 
-    /** kind: 0 section header, 1 friend, 2 incoming request, 3 sent request, 4 nearby player */
+    /** kind: 0 section header, 1 friend, 2 incoming request, 3 sent request, 4 nearby player, 5 invite (text = server) */
     private record Row(int kind, UUID id, String text, Social.Friend friend) { }
 
     private final Screen parent;
@@ -137,6 +137,11 @@ public class SocialScreen extends Screen {
                 for (Social.Friend f : Social.friends()) {
                     if (!q.isEmpty() && !Social.nameOf(f.id()).toLowerCase(Locale.ROOT).contains(q)) continue;
                     (f.online() ? on : off).add(f);
+                }
+                List<dev.tempest.util.Invites.Invite> inv = dev.tempest.util.Invites.received();
+                if (!inv.isEmpty() && q.isEmpty()) {
+                    out.add(new Row(0, null, "INVITES  —  " + inv.size(), null));
+                    for (var i : inv) out.add(new Row(5, i.from(), i.server(), null));
                 }
                 if (!on.isEmpty()) out.add(new Row(0, null, "ONLINE  —  " + on.size(), null));
                 for (Social.Friend f : on) out.add(new Row(1, f.id(), null, f));
@@ -379,7 +384,7 @@ public class SocialScreen extends Screen {
         float hv = anim("row" + tab + ":" + r.id(), over, 16f);
         Draw.panel(ctx, x, ry, w, h, 8, Draw.lerpColor(Draw.card(), Draw.cardHover(), hv), Draw.lerpColor(Draw.border(), Draw.withAlpha(Draw.accent(), 0x90), hv));
 
-        String name = r.text() != null ? r.text() : Social.nameOf(r.id());
+        String name = r.kind() == 4 && r.text() != null ? r.text() : Social.nameOf(r.id());
         boolean online = r.friend() != null && r.friend().online();
         drawHead(ctx, tr, r.id(), name, x + 6, ry + 5, 20);
         if (r.kind() == 1) {
@@ -396,6 +401,7 @@ public class SocialScreen extends Screen {
                 if (f.online()) subCol = 0xFF8EE3AE;
             }
             case 2 -> sub = "Wants to be your friend";
+            case 5 -> { sub = "Invited you to " + r.text(); subCol = 0xFFB9AEFF; }
             case 3 -> sub = "Request sent · waiting for them";
             default -> {
                 boolean uses = TempestNet.isTempestUser(r.id());
@@ -409,12 +415,14 @@ public class SocialScreen extends Screen {
         Draw.text(ctx, tr, Draw.trim(tr, sub, w - 36 - btnSpace), x + 32, ry + 17, subCol, false);
 
         // buttons: always on requests/add rows, on hover for friends (keeps the list calm)
-        boolean showButtons = r.kind() != 1 || hv > 0.05f || r.id().equals(armedRemove);
-        if (!showButtons) return;
+        // a friend's Join button always shows (it's the reason to open this list); the rest only on hover
+        boolean hovering = r.kind() != 1 || hv > 0.05f || r.id().equals(armedRemove);
         for (int k = 0; k < b.length; k++) {
+            if (!hovering && !b[k].equals("Join")) continue;
             int bx = btnX(k, b.length), by = ry + 5;
             boolean bh = Draw.hit(mx, my, bx, by, 62, 16);
-            if (k == 0 && (r.kind() == 2 || r.kind() == 4)) Draw.button(ctx, tr, bx, by, 62, 16, b[k], bh, Draw.accent() & 0xFFFFFF);
+            if (k == 0 && (r.kind() == 2 || r.kind() == 4 || r.kind() == 5 || b[k].equals("Join") || b[k].equals("Invite")))
+                Draw.button(ctx, tr, bx, by, 62, 16, b[k], bh, Draw.accent() & 0xFFFFFF);
             else if (b[k].equals("Sure?")) Draw.button(ctx, tr, bx, by, 62, 16, b[k], bh, 0xE0475B);
             else Draw.ghost(ctx, tr, bx, by, 62, 16, b[k], bh);
         }
@@ -422,12 +430,44 @@ public class SocialScreen extends Screen {
 
     private String[] buttons(Row r) {
         return switch (r.kind()) {
-            case 1 -> new String[]{r.id().equals(armedRemove) && System.currentTimeMillis() - armedAt < 3000 ? "Sure?" : "Remove"};
+            case 1 -> {
+                String remove = r.id().equals(armedRemove) && System.currentTimeMillis() - armedAt < 3000 ? "Sure?" : "Remove";
+                List<String> l = new ArrayList<>();
+                if (joinable(r.friend())) l.add("Join");
+                else if (canInvite(r.friend())) l.add("Invite");
+                if (r.friend() != null && r.friend().online()) l.add("Message");
+                l.add(remove);
+                yield l.toArray(new String[0]);
+            }
+            case 5 -> new String[]{"Join", "Dismiss"};
             case 2 -> new String[]{"Accept", "Decline"};
             case 3 -> new String[]{"Cancel"};
             case 4 -> new String[]{"Add"};
             default -> new String[0];
         };
+    }
+
+    /** The friend is online on a server you could join (not singleplayer, not hidden, not the one you're on). */
+    private boolean joinable(Social.Friend f) {
+        if (f == null || !f.online() || f.server() == null) return false;
+        String s = f.server().trim();
+        if (s.isEmpty() || s.equals("In game") || s.equals("Singleplayer") || s.contains(" ")) return false;
+        var here = client != null ? client.getCurrentServerEntry() : null;
+        return here == null || !norm(here.address).equals(norm(s));
+    }
+
+    /** You're on a server and this online friend isn't on it with you. */
+    private boolean canInvite(Social.Friend f) {
+        String mine = dev.tempest.util.Invites.myServer();
+        if (f == null || !f.online() || mine == null) return false;
+        return f.server() == null || !norm(f.server()).equals(norm(mine));
+    }
+
+    /** "Play.Hypixel.net:25565" -> "play.hypixel.net" so the same server matches however it was typed. */
+    private static String norm(String a) {
+        String h = a == null ? "" : a.trim().toLowerCase(java.util.Locale.ROOT);
+        if (h.endsWith(":25565")) h = h.substring(0, h.length() - 6);
+        return h.endsWith(".") ? h.substring(0, h.length() - 1) : h;
     }
 
     /** Buttons sit at the right of a row; index 0 is leftmost. */
@@ -471,6 +511,24 @@ public class SocialScreen extends Screen {
     private void press(Row r, String label) {
         UUID id = r.id();
         switch (label) {
+            case "Join" -> {
+                if (r.kind() == 5) {
+                    for (var i : dev.tempest.util.Invites.received()) if (i.from().equals(id)) { dev.tempest.util.Invites.join(i); return; }
+                    say("That invite expired", true);
+                    return;
+                }
+                Social.Friend f = r.friend();
+                if (f == null || !joinable(f) || client == null) return;
+                String addr = f.server().trim();
+                dev.tempest.util.ServerJoin.join(client, new net.minecraft.client.network.ServerInfo(addr, addr,
+                        net.minecraft.client.network.ServerInfo.ServerType.OTHER), this);
+            }
+            case "Invite" -> dev.tempest.util.Invites.send(id, m -> say(m, !m.startsWith("Invited")));
+            case "Message" -> {
+                if (!dev.tempest.modules.ChatTabsModule.openPrivate(id))
+                    say("Join a world (with Chat Tabs on) to message friends", true);
+            }
+            case "Dismiss" -> dev.tempest.util.Invites.dismiss(id);
             case "Remove" -> { armedRemove = id; armedAt = System.currentTimeMillis(); }
             case "Sure?" -> { armedRemove = null; Social.remove(id, m -> say(m != null ? m : "Removed " + Social.nameOf(id), m != null)); }
             case "Accept" -> Social.accept(id, m -> say(m != null ? m : "You and " + Social.nameOf(id) + " are now friends!", m != null));

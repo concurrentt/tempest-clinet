@@ -24,6 +24,9 @@ public class FriendsModule extends Module {
     private final BoolSetting onlineToFriends = add(new BoolSetting("online_to_friends", "Show Friends I'm Online", true));
     private final BoolSetting shareServer = add(new BoolSetting("share_server", "Show Friends My Server", true));
     private final BoolSetting alerts = add(new BoolSetting("request_alerts", "Friend Request Alerts", true));
+    private final BoolSetting onlineAlerts = add(new BoolSetting("online_alerts", "Pop-up When Friends Come Online", true));
+    private final BoolSetting offlineAlerts = add(new BoolSetting("offline_alerts", "Pop-up When Friends Go Offline", false));
+    private final BoolSetting joinAlerts = add(new BoolSetting("join_alerts", "Pop-up When Friends Join Your Server", true));
     private final BoolSetting glow = add(new BoolSetting("glow_friends", "Glow Friends", false));
     private final ColorSetting glowColor = add(new ColorSetting("glow_color", "Glow Color", 0xFF55FF55));
     private final BoolSetting lightGlow = add(new BoolSetting("light_glow", "Light Glow (more FPS)", true));
@@ -42,6 +45,14 @@ public class FriendsModule extends Module {
 
     @Override
     public void onInit() {
+        // "/tempest join": the [Join] button on a friend's invite in chat
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registry) -> dispatcher.register(
+                ClientCommandManager.literal("tempest").then(ClientCommandManager.literal("join").executes(ctx -> {
+                    MinecraftClient.getInstance().execute(() -> {
+                        if (!dev.tempest.util.Invites.joinLatest()) Chat.info("No invite to join (they expire after 10 minutes).");
+                    });
+                    return 1;
+                }))));
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registry) -> dispatcher.register(
                 ClientCommandManager.literal("tempest").then(ClientCommandManager.literal("friend")
                         .then(ClientCommandManager.literal("add").then(ClientCommandManager.argument("player", StringArgumentType.word())
@@ -66,6 +77,7 @@ public class FriendsModule extends Module {
     @Override
     public void onTick(MinecraftClient c) {
         while (openKey.wasPressed()) if (c.currentScreen == null) c.setScreen(new SocialScreen(null));
+        Social.poll();
     }
 
     /** Accepted Tempest friend (by account, not name). */
@@ -82,6 +94,9 @@ public class FriendsModule extends Module {
 
     public static boolean onlineToFriends() { FriendsModule m = get(); return m != null && m.isEnabled() && m.onlineToFriends.get(); }
     public static boolean shareServer() { FriendsModule m = get(); return m != null && m.shareServer.get(); }
+    public static boolean onlineAlerts() { FriendsModule m = get(); return m != null && m.isEnabled() && m.onlineAlerts.get(); }
+    public static boolean offlineAlerts() { FriendsModule m = get(); return m != null && m.isEnabled() && m.offlineAlerts.get(); }
+    public static boolean joinAlerts() { FriendsModule m = get(); return m != null && m.isEnabled() && m.joinAlerts.get(); }
     public static boolean requestAlerts() { FriendsModule m = get(); return m == null || m.alerts.get(); }
     public static String keyName() {
         FriendsModule m = get();

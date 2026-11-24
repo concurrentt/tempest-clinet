@@ -46,6 +46,7 @@ public final class CombatTracker {
 
     /** You hit an entity (ClientPlayerInteractionManager.attackEntity): reach, combo and target tracking. */
     public static void onHit(MinecraftClient c, net.minecraft.entity.Entity hit) {
+        dev.tempest.modules.CombatTimerModule.onAttack(hit);
         long now = System.currentTimeMillis();
         if (c.player == null || !(hit instanceof LivingEntity le)) return;
         {

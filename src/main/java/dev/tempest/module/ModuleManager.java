@@ -41,6 +41,7 @@ public class ModuleManager {
         register(new ClientSideCrystalsModule());
         register(new AlertsModule());
         register(new TierTaggerModule());
+        register(new CombatTimerModule());
         // Render - camera and world
         register(new ZoomModule());
         register(new FreelookModule());

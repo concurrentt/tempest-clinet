@@ -42,8 +42,10 @@ public final class TempestLive {
 
     /** Called every client tick by TempestNet with the current token (null = not signed in). */
     static void tick(MinecraftClient c, String base, String token) {
-        boolean want = token != null && c.world != null && c.player != null
-                && (Emotes.wanted() || RemoteCosmetics.seeOthers() || dev.tempest.modules.ChatTabsModule.tempestChatOn());
+        boolean inWorld = c.world != null && c.player != null;
+        // in a world for emotes/cosmetics/chat; anywhere (menus too) while you have friends, so invites reach you
+        boolean want = token != null && ((inWorld && (Emotes.wanted() || RemoteCosmetics.seeOthers()
+                || dev.tempest.modules.ChatTabsModule.tempestChatOn())) || Social.wanted());
         if (!want) { close(); return; }
         long now = System.currentTimeMillis();
         WebSocket w = ws;
@@ -52,7 +54,7 @@ public final class TempestLive {
             return;
         }
         if (now - lastPing >= PING_MS) { lastPing = now; send("ping"); }
-        if (now - lastWatchCheck >= WATCH_MS) {
+        if (inWorld && now - lastWatchCheck >= WATCH_MS) {
             lastWatchCheck = now;
             String watch = watchList(c);
             if (!watch.equals(lastWatch)) {
@@ -136,6 +138,7 @@ public final class TempestLive {
             JsonObject m = JsonParser.parseString(text).getAsJsonObject();
             String t = m.has("t") ? m.get("t").getAsString() : "";
             if (t.equals("msg") || t.equals("msgfail") || t.equals("group") || t.equals("group_gone")) { TempestChat.onLive(m); return; }
+            if (t.equals("invite") || t.equals("invitefail")) { Invites.onLive(m); return; }
             UUID id = m.has("uuid") ? UUID.fromString(m.get("uuid").getAsString()) : null;
             if (id == null) return;
             switch (t) {

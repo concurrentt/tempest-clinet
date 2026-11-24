@@ -39,6 +39,7 @@ public final class Social {
         FRIEND_IDS.clear();
         lastRefresh = 0;
         loaded = false;
+        forgetStates();
         incomingCount = -1;
     }
     public static List<UUID> incoming() { return incoming; }
@@ -95,6 +96,7 @@ public final class Social {
             }
             // online first, then by name
             fs.sort((a, b) -> a.online() != b.online() ? (a.online() ? -1 : 1) : nameOf(a.id()).compareToIgnoreCase(nameOf(b.id())));
+            alertChanges(fs);
             friends = Collections.unmodifiableList(fs);
             FRIEND_IDS.clear();
             for (Friend f : fs) FRIEND_IDS.add(f.id());
@@ -104,6 +106,49 @@ public final class Social {
             loaded = true;
         });
     }
+
+    /** Last known state of each friend, for "came online" / "joined your server" pop-ups (null until the first load). */
+    private static java.util.Map<UUID, Friend> lastState;
+
+    private static void alertChanges(List<Friend> now) {
+        java.util.Map<UUID, Friend> prev = lastState;
+        java.util.Map<UUID, Friend> next = new java.util.HashMap<>();
+        for (Friend f : now) next.put(f.id(), f);
+        lastState = next;
+        if (prev == null) return;                                    // first load: nothing "changed"
+        String mine = Invites.myServer();
+        for (Friend f : now) {
+            Friend p = prev.get(f.id());
+            if (p == null) continue;                                 // just became friends
+            String name = nameOf(f.id());
+            if (!p.online() && f.online()) {
+                if (dev.tempest.modules.FriendsModule.onlineAlerts())
+                    dev.tempest.gui.TempestToast.show(f.id(), name + " is online", where(f), 0x43D17A, 5000);
+            } else if (p.online() && !f.online()) {
+                if (dev.tempest.modules.FriendsModule.offlineAlerts())
+                    dev.tempest.gui.TempestToast.show(f.id(), name + " went offline", "See you later", 0x6B6F7E, 4000);
+            } else if (f.online() && mine != null && Invites.sameServer(f.server(), mine) && !Invites.sameServer(p.server(), mine)) {
+                if (dev.tempest.modules.FriendsModule.joinAlerts())
+                    dev.tempest.gui.TempestToast.show(f.id(), name + " joined your server", mine, 0x5AB4FF, 5000);
+            }
+        }
+    }
+
+    private static String where(Friend f) {
+        String s = f.server();
+        if (s == null) return "In the menus";
+        if (s.equals("In game") || s.equals("Singleplayer")) return s;
+        return "Playing on " + s;
+    }
+
+    /** Checks friends every 20 s for the pop-ups (FriendsModule tick), only while you have friends. */
+    public static void poll() {
+        if (!loaded || FRIEND_IDS.isEmpty() || !TempestNet.signedIn()) return;
+        if (System.currentTimeMillis() - lastRefresh > 20_000) refresh();
+    }
+
+    /** The account was switched: forget who was online. */
+    private static void forgetStates() { lastState = null; }
 
     // ------------------------------------------------------------------ actions (callback gets a message for the UI)
     public static void request(UUID id, Consumer<String> done) { act("/v1/friends/request", id, done); }

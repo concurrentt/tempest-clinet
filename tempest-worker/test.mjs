@@ -165,6 +165,13 @@ obj.webSocketMessage(wsA, JSON.stringify({ t: "msg", to: B, text: "psst" }));
 assert.equal(wsB.sent.length, 0, "no messages to non-friends"); assert.deepEqual(wsA.sent.at(-1), { t: "msgfail", to: B, reason: "not friends" });
 obj.webSocketMessage(wsA, JSON.stringify({ t: "msg", to: C, text: "x".repeat(999), n: "bad name!" }));
 assert.equal(wsC.sent.at(-1).text.length, 256); assert.equal(wsC.sent.at(-1).n, null);
+// ---- invites: friends only, plain server addresses only
+obj.webSocketMessage(wsA, JSON.stringify({ t: "invite", to: C, server: " Play.Example.NET:25565 ", n: "Steve" }));
+assert.deepEqual({ ...wsC.sent.at(-1), at: 0 }, { t: "invite", from: A, n: "Steve", server: "play.example.net:25565", at: 0 });
+obj.webSocketMessage(wsA, JSON.stringify({ t: "invite", to: B, server: "play.example.net" }));
+assert.deepEqual(wsA.sent.at(-1), { t: "invitefail", to: B, reason: "not friends" });
+obj.webSocketMessage(wsA, JSON.stringify({ t: "invite", to: C, server: "evil.com/\u00a7c path" }));
+assert.deepEqual(wsA.sent.at(-1), { t: "invitefail", to: C, reason: "bad server" });
 
 // ---- groups and party
 [s, b] = await call("/v1/chat/group/create", { name: "PvP Squad", members: [C] }, tA); assert.equal(s, 200);

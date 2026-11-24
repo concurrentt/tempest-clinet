@@ -1,3 +1,7 @@
+## 0.21.9 - Simpler Tempest Editor
+- Tempest Editor: a cleaner home page - a smaller title, plain flat tiles (no glows or underlines), the shortcuts
+  (Configs, My Packs, Cosmetics, Painter) as one row of small buttons, and the status as a single line of text.
+
 ## 0.21.8 - Friend request badge, lighter friend glow
 - Menu: the Social button shows a red "+N" badge when someone has sent you a friend request.
 - Glow Friends costs much less FPS: a new "Light Glow (more FPS)" option (on by default, in Social) draws a sharp

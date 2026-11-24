@@ -190,7 +190,7 @@ public class TempestEditorScreen extends Screen {
         scroll += (scrollTarget - scroll) * 0.35;
         float e = MenuKit.ease((System.nanoTime() - openedAt) / 1e9f / 0.25f);
         if (client != null && client.world == null) Draw.menuBackground(ctx, width, height);
-        else ctx.fillGradient(0, 0, width, height, MenuKit.fa(0x88000000, e), MenuKit.fa(0x68000000, e));
+        else ctx.fill(0, 0, width, height, MenuKit.fa(0xA8000000, e));
         if (group < 0) renderHub(ctx, textRenderer, mx, my, e);
         else renderGroup(ctx, textRenderer, mx, my);
         super.render(ctx, mx, my, delta);
@@ -218,45 +218,49 @@ public class TempestEditorScreen extends Screen {
     private int tilesY() { return height / 2 - TILE / 2 - 14; }
     private int tileSize() { return Math.min(TILE, (width - 24 - (PackLooks.GROUPS.length - 1) * TILE_GAP) / PackLooks.GROUPS.length); }
 
+    // shortcut buttons under the tiles: one row of small pills (icon + label), each sized to its label
+    private static final int SHORT_H = 20, SHORT_GAP = 6;
+    private int shortY() { return tilesY() + tileSize() + 14; }
+    private int shortW(int i) { return 8 + 12 + 5 + Draw.textW(textRenderer, SHORTCUTS[i][1]) + 9; }
+    private int shortX(int i) {
+        int total = (SHORTCUTS.length - 1) * SHORT_GAP;
+        for (int k = 0; k < SHORTCUTS.length; k++) total += shortW(k);
+        int x = width / 2 - total / 2;
+        for (int k = 0; k < i; k++) x += shortW(k) + SHORT_GAP;
+        return x;
+    }
+
+    /** The hub: a plain title, one row of flat category tiles, a row of small shortcut pills and one line of status. */
     private void renderHub(DrawContext ctx, TextRenderer tr, int mx, int my, float e) {
         int ts = tileSize(), n = PackLooks.GROUPS.length;
         int tx0 = width / 2 - (n * (ts + TILE_GAP) - TILE_GAP) / 2, ty = tilesY();
-        TempestLoading.drawGlow(ctx, width / 2, ty + ts / 2, Math.round(width * 0.9f), Draw.accent(), 0.14f * e);
-        MenuKit.scaledCentered(ctx, tr, Draw.bold("Tempest Editor"), width / 2f, ty - 46, 2.6f, MenuKit.fa(0xFFFFFFFF, e), true);
-        Draw.centered(ctx, tr, "Pack Editor", width / 2, ty - 18, MenuKit.fa(0xFFB0B4C4, e));
+        MenuKit.scaledCentered(ctx, tr, Draw.bold("Tempest Editor"), width / 2f, ty - 30, 1.6f, MenuKit.fa(0xFFFFFFFF, e), false);
 
         for (int i = 0; i < n; i++) {
             int x = tx0 + i * (ts + TILE_GAP);
             boolean hv = Draw.hit(mx, my, x, ty, ts, ts);
             float p = Draw.hoverProgress("ed_tile" + i, hv);
-            int yy = ty - Math.round(3 * p);
-            if (p > 0.02f) Draw.shadow(ctx, x, yy, ts, ts, 8, Math.round(6 * p));
-            Draw.panel(ctx, x, yy, ts, ts, 8, MenuKit.fa(Draw.lerpColor(0x90181A22, 0xC0262A38, p), e),
-                    MenuKit.fa(Draw.lerpColor(0x40FFFFFF, Draw.withAlpha(Draw.accent(), 0xC0), p), e));
-            if (p > 0.02f) TempestLoading.drawGlow(ctx, x + ts / 2, yy + ts / 2 - 8, Math.round(ts * 1.3f), GROUP_GLOW[i], 0.35f * p * e);
-            int is = Math.round(ts * 0.46f + 4 * p);
-            hubIcon(ctx, HUB_NAMES[i], x + (ts - is) / 2, yy + ts / 2 - 8 - is / 2, is, e);
-            String label = PackLooks.GROUPS[i];
-            Draw.centered(ctx, tr, label, x + ts / 2, yy + ts - 22, MenuKit.fa(0xFFFFFFFF, e));
-            ctx.fill(x + ts / 2 - 8, yy + ts - 11, x + ts / 2 + 8, yy + ts - 10, MenuKit.fa(Draw.lerpColor(0x50FFFFFF, Draw.accent(), p), e));
-            if (groupChanged(i)) Draw.circle(ctx, x + ts - 8, yy + 8, 2, MenuKit.fa(Draw.accent(), e));
+            Draw.panel(ctx, x, ty, ts, ts, 8, MenuKit.fa(Draw.lerpColor(0xB0121318, 0xD01C1F28, p), e),
+                    MenuKit.fa(Draw.lerpColor(0x22FFFFFF, Draw.withAlpha(Draw.accent(), 0xB0), p), e));
+            int is = Math.round(ts * 0.42f);
+            hubIcon(ctx, HUB_NAMES[i], x + (ts - is) / 2, ty + ts / 2 - 7 - is / 2, is, e);
+            Draw.centered(ctx, tr, PackLooks.GROUPS[i], x + ts / 2, ty + ts - 20, MenuKit.fa(Draw.lerpColor(0xFFC8CCD8, 0xFFFFFFFF, p), e));
+            if (groupChanged(i)) Draw.circle(ctx, x + ts - 8, ty + 8, 2, MenuKit.fa(Draw.accent(), e));
         }
 
-        int bw = 62, bh = 32, by = ty + ts + 18;
-        int bx0 = width / 2 - (SHORTCUTS.length * (bw + 6) - 6) / 2;
+        int by = shortY();
         for (int i = 0; i < SHORTCUTS.length; i++) {
-            int x = bx0 + i * (bw + 6);
-            boolean hv = Draw.hit(mx, my, x, by, bw, bh);
+            int x = shortX(i), w = shortW(i);
+            boolean hv = Draw.hit(mx, my, x, by, w, SHORT_H);
             float p = Draw.hoverProgress("ed_short" + i, hv);
-            Draw.panel(ctx, x, by, bw, bh, 6, MenuKit.fa(Draw.lerpColor(0x90181A22, 0xC0262A38, p), e), MenuKit.fa(Draw.lerpColor(0x40FFFFFF, 0x90FFFFFF, p), e));
-            hubIcon(ctx, SHORTCUTS[i][0], x + bw / 2 - 7, by + 3, 14, e);
-            Draw.centered(ctx, tr, SHORTCUTS[i][1], x + bw / 2, by + 19, MenuKit.fa(0xFFE4E6EC, e));
+            Draw.panel(ctx, x, by, w, SHORT_H, SHORT_H / 2, MenuKit.fa(Draw.lerpColor(0xB0121318, 0xD01C1F28, p), e),
+                    MenuKit.fa(Draw.lerpColor(0x22FFFFFF, 0x70FFFFFF, p), e));
+            hubIcon(ctx, SHORTCUTS[i][0], x + 8, by + (SHORT_H - 12) / 2, 12, e);
+            Draw.text(ctx, tr, SHORTCUTS[i][1], x + 8 + 12 + 5, by + (SHORT_H - 8) / 2, MenuKit.fa(Draw.lerpColor(0xFFC8CCD8, 0xFFFFFFFF, p), e), false);
         }
         boolean recent = System.currentTimeMillis() - statusAt < 8000 && !status.isEmpty();
         String info = recent ? status : dirty() ? "You have looks that aren't applied yet" : "Looks are saved into the \"" + CustomPack.NAME + "\" pack";
-        int iw = Draw.textW(tr, info) + 20, iy = by + bh + 12;
-        Draw.panel(ctx, width / 2 - iw / 2, iy, iw, 16, 4, MenuKit.fa(0xA0101218, e), MenuKit.fa(0x40FFFFFF, e));
-        Draw.centered(ctx, tr, info, width / 2, iy + 4, MenuKit.fa(dirty() ? 0xFFFFD27A : 0xFFD0D3DC, e));
+        Draw.centered(ctx, tr, info, width / 2, by + SHORT_H + 12, MenuKit.fa(dirty() ? 0xFFFFD27A : 0x99FFFFFF, e));
         Draw.text(ctx, tr, "Esc to close", 8, height - 14, 0x80FFFFFF, false);
     }
 
@@ -583,10 +587,8 @@ public class TempestEditorScreen extends Screen {
                 return true;
             }
         }
-        int bw = 62, bh = 32, by = ty + ts + 18;
-        int bx0 = width / 2 - (SHORTCUTS.length * (bw + 6) - 6) / 2;
         for (int i = 0; i < SHORTCUTS.length; i++) {
-            if (!Draw.hit(mx, my, bx0 + i * (bw + 6), by, bw, bh) || client == null) continue;
+            if (!Draw.hit(mx, my, shortX(i), shortY(), shortW(i), SHORT_H) || client == null) continue;
             switch (i) {
                 case 0 -> client.setScreen(new ConfigsScreen(this));
                 case 1 -> {

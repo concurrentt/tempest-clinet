@@ -1,3 +1,9 @@
+## 0.21.8 - Friend request badge, lighter friend glow
+- Menu: the Social button shows a red "+N" badge when someone has sent you a friend request.
+- Glow Friends costs much less FPS: a new "Light Glow (more FPS)" option (on by default, in Social) draws a sharp
+  outline in 2 screen passes instead of vanilla's soft blurred one (4 passes). Turn it off for the soft look.
+- Mods menu: the search box just says "Search mods" (the filter hints are gone; the filters still work).
+
 ## 0.21.7 - Fly Speed, armor bars under each piece
 - New: Fly Speed (Utility) - choose how fast you fly in creative, from 0.5x to 10x the normal speed.
 - Armor HUD: the durability bars (Number mode) now sit right under the armor piece they belong to.

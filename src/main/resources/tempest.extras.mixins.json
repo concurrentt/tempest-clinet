@@ -18,6 +18,7 @@
     "WorldTimeMixin",
     "ItemEntityRendererMixin",
     "EntityGlowMixin",
+    "WorldRendererGlowMixin",
     "ParticleManagerMixin",
     "ParticleRendererMixin",
     "SplashOverlayMixin",

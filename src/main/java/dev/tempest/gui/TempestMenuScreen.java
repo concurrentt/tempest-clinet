@@ -155,6 +155,15 @@ public class TempestMenuScreen extends Screen {
         int col = MenuKit.fa(Draw.lerpColor(0xFFB8BED0, 0xFFFFFFFF, p), e);
         Icons.draw(ctx, CHIPS[i][1], sx, y + (CHIP_H - is) / 2, is, col);
         Draw.text(ctx, tr, label, sx + is + 5, y + (CHIP_H - 8) / 2, col, false);
+        // Social: a red "+N" badge on the corner while friend requests are waiting
+        int pending = "social".equals(CHIPS[i][0]) ? dev.tempest.util.Social.pendingCount() : 0;
+        if (pending > 0) {
+            String b = "+" + Math.min(pending, 99);
+            int bw = Draw.textW(tr, b) + 8, bh = 11;
+            int bx = x + w - bw + 4, by = y - 5;
+            Draw.panel(ctx, bx, by, bw, bh, bh / 2, MenuKit.fa(0xFFE5484D, e), MenuKit.fa(0xFF15161C, e));
+            Draw.text(ctx, tr, b, bx + 4, by + 2, MenuKit.fa(0xFFFFFFFF, e), false);
+        }
     }
 
     // ---------------------------------------------------------------- input

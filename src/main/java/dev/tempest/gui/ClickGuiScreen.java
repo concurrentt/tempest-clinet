@@ -120,7 +120,7 @@ public class ClickGuiScreen extends Screen {
         String old = search != null ? search.getText() : "";
         search = new TextFieldWidget(textRenderer, 0, 0, searchW() - 78, 12, Text.literal("Search"));
         search.setDrawsBackground(false);
-        search.setPlaceholder(Text.literal("Search mods...  is:on  cat:pvp"));
+        search.setPlaceholder(Text.literal("Search mods"));
         search.setMaxLength(64);
         search.setText(old);
         search.setChangedListener(s -> scrollTarget = 0);

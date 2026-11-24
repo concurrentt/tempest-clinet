@@ -26,6 +26,7 @@ public class FriendsModule extends Module {
     private final BoolSetting alerts = add(new BoolSetting("request_alerts", "Friend Request Alerts", true));
     private final BoolSetting glow = add(new BoolSetting("glow_friends", "Glow Friends", false));
     private final ColorSetting glowColor = add(new ColorSetting("glow_color", "Glow Color", 0xFF55FF55));
+    private final BoolSetting lightGlow = add(new BoolSetting("light_glow", "Light Glow (more FPS)", true));
 
     @Override
     public boolean alwaysOn() { return true; }
@@ -95,6 +96,18 @@ public class FriendsModule extends Module {
         m.glow.set(on);
         dev.tempest.TempestConfig.save();
     }
+
+    /**
+     * Light Glow: a sharp 1 px outline drawn in 2 screen passes instead of vanilla's soft one (4 passes with a blur),
+     * so glowing costs about half as much. Applies to every glowing outline while it's on.
+     */
+    public static boolean lightGlow() { FriendsModule m = get(); return m != null && m.lightGlow.get(); }
+
+    private static final net.minecraft.util.Identifier VANILLA_OUTLINE = net.minecraft.util.Identifier.ofVanilla("entity_outline");
+    private static final net.minecraft.util.Identifier LIGHT_OUTLINE = net.minecraft.util.Identifier.of("tempest", "entity_outline_light");
+
+    /** The glow-outline post effect to use (WorldRendererGlowMixin). */
+    public static net.minecraft.util.Identifier outlineEffect() { return lightGlow() ? LIGHT_OUTLINE : VANILLA_OUTLINE; }
 
     public static int glowColor() {
         FriendsModule m = ModuleManager.get(FriendsModule.class);

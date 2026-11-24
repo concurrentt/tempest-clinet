@@ -26,7 +26,7 @@ public class TempestMenuScreen extends Screen {
     // ---------------------------------------------------------------- layout
     private static final String[][] CHIPS = {{"hud", "layout", "Edit HUD"}, {"sky", "planet_stars", "Custom Sky"}, {"theme", "palette", "Theme"},
             {"editor", "brush", "Editor"}, {"social", "people", "Social"}, {"settings", "gear", "Settings"}};
-    private static final int CHIP_W = 68, CHIP_H = 20;
+    private static final int CHIP_H = 20, CHIP_PAD = 9, CHIP_ICON = 9, CHIP_GAP = 5;
 
     private int logoSize() { return Math.max(64, Math.min(104, Math.round(height * 0.15f))); }
     private int baseLogoY() { return Math.max(10, Math.round(height * 0.27f) - logoSize() / 2 - 10); }
@@ -37,7 +37,15 @@ public class TempestMenuScreen extends Screen {
     private int midX() { return rowX() + SIDE + GAP; }
     private int rightX() { return midX() + MID_W + GAP; }
     private int chipsY() { return rowY() + BTN_H + 10; }
-    private int chipX(int i) { return width / 2 - (CHIPS.length * CHIP_W + (CHIPS.length - 1) * GAP) / 2 + i * (CHIP_W + GAP); }
+    /** Each chip is as wide as its icon and label plus even padding, so short and long labels both fit snugly. */
+    private int chipW(int i) { return CHIP_PAD + CHIP_ICON + 5 + Draw.textW(textRenderer, CHIPS[i][2]) + CHIP_PAD; }
+    private int chipX(int i) {
+        int total = (CHIPS.length - 1) * CHIP_GAP;
+        for (int k = 0; k < CHIPS.length; k++) total += chipW(k);
+        int x = width / 2 - total / 2;
+        for (int k = 0; k < i; k++) x += chipW(k) + CHIP_GAP;
+        return x;
+    }
 
     private float intro() { return intro(0f); }
 
@@ -136,13 +144,14 @@ public class TempestMenuScreen extends Screen {
     }
 
     private void chip(DrawContext ctx, TextRenderer tr, int i, int x, int y, int mx, int my, float e) {
-        boolean hv = Draw.hit(mx, my, x, y, CHIP_W, CHIP_H);
+        int w = chipW(i);
+        boolean hv = Draw.hit(mx, my, x, y, w, CHIP_H);
         float p = Draw.hoverProgress("tm_chip" + i, hv);
-        Draw.panel(ctx, x, y, CHIP_W, CHIP_H, CHIP_H / 2, MenuKit.fa(Draw.lerpColor(0x8015161C, 0xB8242838, p), e),
+        Draw.panel(ctx, x, y, w, CHIP_H, CHIP_H / 2, MenuKit.fa(Draw.lerpColor(0x8015161C, 0xB8242838, p), e),
                 MenuKit.fa(Draw.lerpColor(0x26FFFFFF, Draw.withAlpha(Draw.accent(), 0xA0), p), e));
         String label = CHIPS[i][2];
-        int is = 9, total = is + 5 + Draw.textW(tr, label);
-        int sx = x + (CHIP_W - total) / 2;
+        int is = CHIP_ICON;
+        int sx = x + CHIP_PAD;
         int col = MenuKit.fa(Draw.lerpColor(0xFFB8BED0, 0xFFFFFFFF, p), e);
         Icons.draw(ctx, CHIPS[i][1], sx, y + (CHIP_H - is) / 2, is, col);
         Draw.text(ctx, tr, label, sx + is + 5, y + (CHIP_H - 8) / 2, col, false);
@@ -166,7 +175,7 @@ public class TempestMenuScreen extends Screen {
             return true;
         }
         for (int i = 0; i < CHIPS.length; i++) {
-            if (!Draw.hit(mx, my, chipX(i), chipsY(), CHIP_W, CHIP_H) || client == null) continue;
+            if (!Draw.hit(mx, my, chipX(i), chipsY(), chipW(i), CHIP_H) || client == null) continue;
             switch (CHIPS[i][0]) {
                 case "hud" -> client.setScreen(new HudEditorScreen(this));
                 case "sky" -> client.setScreen(ClickGuiScreen.openTo(dev.tempest.module.Category.VISUALS, this));

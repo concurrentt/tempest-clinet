@@ -48,7 +48,7 @@ public class ArmorHudModule extends HudModule {
 
     private void renderVertical(DrawContext ctx, TextRenderer tr, List<ItemStack> items) {
         boolean bars = display.is("Number");
-        int row = 18;
+        int row = bars ? 20 : 18;
         w = 62;
         h = items.size() * row + 4;
         box(ctx);
@@ -58,7 +58,7 @@ public class ArmorHudModule extends HudModule {
             if (s.isEmpty()) continue;
             ctx.drawItem(s, x + 2, iy);
             drawDurability(ctx, tr, s, x + 22, iy + 4);
-            if (bars) durabilityBar(ctx, s, x + 22, iy + 14, 26);   // a short bar right under the number
+            if (bars) durabilityBar(ctx, s, x + 2, iy + 17, 16);    // right under the piece it belongs to
         }
     }
 

@@ -44,6 +44,7 @@ public final class ModuleIcons {
         MODULES.put("totem_tweaks", Items.TOTEM_OF_UNDYING);
         MODULES.put("environment", Items.WATER_BUCKET);
         MODULES.put("anti_leak", Items.BARRIER);
+        MODULES.put("fly_speed", Items.FEATHER);
         MODULES.put("mouse_tweaks", Items.HOPPER);
         MODULES.put("shulker_preview", Items.SHULKER_BOX);
         MODULES.put("toggle_sprint", Items.LEATHER_BOOTS);

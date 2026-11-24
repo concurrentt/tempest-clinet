@@ -78,6 +78,7 @@ public class ModuleManager {
         register(new ReplayModModule());
         register(new StreamerModeModule());
         register(new AntiLeakModule());
+        register(new FlySpeedModule());
         // Chat
         register(new ChatTabsModule());
         register(new ChatUpgradesModule());

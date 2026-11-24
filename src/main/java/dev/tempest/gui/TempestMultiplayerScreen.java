@@ -140,7 +140,7 @@ public class TempestMultiplayerScreen extends Screen {
             boolean sel = i == selected;
             String key = "mp" + s.address;
             MenuKit.row(ctx, key, x, ry, w, ROW, hv, sel, e);
-            byte[] png = r != null && r.favicon != null ? r.favicon : s.getFavicon() != null ? s.getFavicon() : r != null ? r.webIcon : null;
+            byte[] png = r != null && r.favicon != null ? r.favicon : s.getFavicon();
             if (r != null && r.favicon != null && !java.util.Arrays.equals(r.favicon, s.getFavicon())) s.setFavicon(r.favicon);   // remembered in servers.dat
             Identifier icon = ServerIcons.get(s.address, png);
             if (icon != null) MenuKit.serverIcon(ctx, icon, x + 7, ry + 6, 26, e);

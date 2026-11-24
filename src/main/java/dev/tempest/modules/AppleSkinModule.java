@@ -53,16 +53,9 @@ public class AppleSkinModule extends HudModule {
             predictedSat = Math.min(predictedFood, saturation + heldFood.nutrition() * heldFood.saturation() * 2.0f);
         }
 
-        // Restored hunger: a gold glow over the shanks the held food will fill, with flashing shanks on top.
+        // Restored hunger: flashing shanks where the held food would fill the bar.
         if (previewing) {
-            int from = food / 2, to = Math.min(10, (predictedFood + 1) / 2);
-            if (to > from) {
-                int x1 = right - (to - 1) * 8 - 9, x2 = right - from * 8;
-                int glowA = (int) (0x30 + 0x40 * pulse);
-                dev.tempest.gui.Draw.roundRect(ctx, x1 - 1, top - 1, x2 - x1 + 1, 11, 3, (glowA << 24) | 0xFFC83D);
-                ctx.fill(x1, top + 10, x2 - 1, top + 11, ((int) (0xA0 + 0x5F * pulse) << 24) | 0xFFD34D);
-            }
-            int alpha = (int) (0xE0 * Math.max(0.75f, pulse));
+            int alpha = (int) (0xCC * pulse);
             for (int i = food / 2; i < (predictedFood + 1) / 2 && i < 10; i++) {
                 int iconX = right - i * 8 - 9;
                 int levelInIcon = predictedFood - i * 2;

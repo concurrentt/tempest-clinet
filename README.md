@@ -1,11 +1,17 @@
+## 0.21.7 - Fly Speed, armor bars under each piece
+- New: Fly Speed (Utility) - choose how fast you fly in creative, from 0.5x to 10x the normal speed.
+- Armor HUD: the durability bars (Number mode) now sit right under the armor piece they belong to.
+- Mods menu: the shortcut buttons along the bottom (Edit HUD, Custom Sky, ...) are sized to fit their labels.
+- AppleSkin: the food preview is back to how it was in 0.21.5 (no gold glow or "+N" label).
+- Server icons: removed the website-icon fallback - servers show only their own icon again.
+
 ## 0.21.6 - Spotify covers, clearer AppleSkin, slimmer armor bars
 - Spotify: covers now load for every song Spotify shows one for. Tempest reads the cover straight from Windows
   properly (it could come back empty before and never retry), waits a moment after a song change so it doesn't
   show the previous song's cover, and if Windows has none it tries Deezer as well as iTunes.
-- AppleSkin: holding food now shows a gold glow over the shanks it will fill, with brighter flashing shanks.
-- Servers with no icon: Tempest also looks for an icon on the server's store site (store.<domain>, where most
-  servers keep their Tebex store) and www.<domain>, and accepts small 16 px website icons too.
-- Armor HUD: the durability bars (Number mode) are thinner and shorter - a slim bar under the number.
+- AppleSkin: holding food shows a gold glow over the shanks it will fill and "+N" above them.
+- Servers with no icon: Tempest also looks for an icon on the server's store and www sites.
+- Armor HUD: the durability bars (Number mode) are thinner and shorter.
 
 ## 0.21.5 - Window icon, menu fixes
 - Servers that send no icon (like crystalbox.org) show their website's icon instead of the globe.

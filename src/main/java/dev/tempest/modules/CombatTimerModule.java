@@ -152,7 +152,6 @@ public class CombatTimerModule extends HudModule {
         if (!preview && serverText != null && now - serverTextAt < 1500) {
             w = Draw.textW(c.textRenderer, serverText) + 14;
             h = 18;
-            if (background.get()) Draw.panel(ctx, x, y, w, h, 6, Draw.withAlpha(0x140A0C, Math.max(0x40, alpha())), 0x60FF4D4D);
             ctx.drawTextWithShadow(c.textRenderer, serverText, x + 7, y + 5, 0xFFFFFFFF);
             return;
         }
@@ -165,7 +164,6 @@ public class CombatTimerModule extends HudModule {
         boolean ending = left < 3;
         float pulse = ending ? 0.5f + 0.5f * (float) Math.sin(now / 90.0) : 1f;
         int red = Draw.lerpColor(0xFFFF4D4D, 0xFFFFB0B0, ending ? 1 - pulse : 0);
-        if (background.get()) Draw.panel(ctx, x, y, w, h, 6, Draw.withAlpha(0x140A0C, Math.max(0x40, alpha())), Draw.withAlpha(red, 0xA0));
         String label = "COMBAT";
         String time = String.format(Locale.ROOT, "%.1fs", left);
         Draw.text(ctx, c.textRenderer, label, x + 7, y + 5, 0xFFFFFFFF, true);

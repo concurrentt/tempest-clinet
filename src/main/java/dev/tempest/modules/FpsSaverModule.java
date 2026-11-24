@@ -76,6 +76,7 @@ public class FpsSaverModule extends Module {
         Vec3d cam = c.gameRenderer.getCamera().getCameraPos();
         double d2 = e.squaredDistanceTo(cam);
         boolean player = e instanceof PlayerEntity;
+        if (player && dev.tempest.util.Social.isFriend(e.getUuid())) return false;   // Tempest friends are always drawn
 
         if (!player) {
             double max = m.entityDistance.get();

@@ -416,8 +416,10 @@ public final class Accounts {
      * any online-mode server. The access token goes to Mojang's session server only. Blocking; throws if Mojang refuses.
      */
     public static void joinServer(MinecraftClient c, Session s, String serverId) throws Exception {
-        Field f = field(MinecraftClient.class, MinecraftSessionService.class);
-        MinecraftSessionService ss = (MinecraftSessionService) f.get(c);
+        // 1.21.11 keeps the session service in ApiServices; older versions had a field on MinecraftClient
+        MinecraftSessionService ss;
+        try { ss = c.getApiServices().sessionService(); }
+        catch (Throwable t) { ss = (MinecraftSessionService) field(MinecraftClient.class, MinecraftSessionService.class).get(c); }
         for (Method m : MinecraftSessionService.class.getMethods()) {
             if (!m.getName().equals("joinServer") || m.getParameterCount() != 3) continue;
             Class<?> first = m.getParameterTypes()[0];

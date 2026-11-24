@@ -21,6 +21,7 @@
     "WorldRendererGlowMixin",
     "EntityRendererCullMixin",
     "ActionBarCombatMixin",
+    "FullbrightLightmapMixin",
     "BlockEntityDistanceMixin",
     "ParticleManagerMixin",
     "ParticleRendererMixin",

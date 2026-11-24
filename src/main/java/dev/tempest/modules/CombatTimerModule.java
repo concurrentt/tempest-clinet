@@ -29,7 +29,7 @@ import java.util.regex.Pattern;
  */
 public class CombatTimerModule extends HudModule {
     private final NumberSetting length = add(new NumberSetting("length", "Combat Length (s)", 15, 5, 60, 1));
-    private final BoolSetting endSound = add(new BoolSetting("end_sound", "Sound When Over", true));
+    private final BoolSetting endSound = add(new BoolSetting("end_ping", "Sound When Over", false));
 
     private static final Pattern END = Pattern.compile(
             "(no longer|not) in combat|out of combat|left combat|combat( tag)?( has)? (ended|expired|is over|over)"

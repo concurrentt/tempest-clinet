@@ -23,10 +23,28 @@ public class ChatMentionsModule extends Module {
         MinecraftClient c = MinecraftClient.getInstance();
         if (c.player == null) return t;
         String name = c.player.getName().getString();
-        if (raw.startsWith("<" + name + ">") || raw.startsWith("[Tempest]")) return t;
-        if (!raw.toLowerCase(Locale.ROOT).contains(name.toLowerCase(Locale.ROOT))) return t;
+        if (raw.startsWith("[Tempest]")) return t;
+        String low = raw.toLowerCase(Locale.ROOT), lname = name.toLowerCase(Locale.ROOT);
+        int first = low.indexOf(lname);
+        if (first < 0) return t;
+        // your own message ("<you> hi", "IRON you: hi", "you » hi"): no sound, nothing to highlight
+        String after = low.substring(first + lname.length()).stripLeading();
+        if (first < 40 && (after.startsWith(":") || after.startsWith(">") || after.startsWith("»") || after.startsWith("]"))) return t;
         if (m.sound.get()) dev.tempest.util.Keys.sound(SoundEvents.BLOCK_NOTE_BLOCK_PLING.value(), 1f, 1.5f);
+        // colour just your name (bold), keeping the rest of the message's own colours
         int rgb = m.highlight.get() & 0xFFFFFF;
-        return t.copy().styled(s -> s.withColor(rgb));
+        net.minecraft.text.MutableText out = Text.empty();
+        t.visit((style, str) -> {
+            String sl = str.toLowerCase(Locale.ROOT);
+            int from = 0, k;
+            while ((k = sl.indexOf(lname, from)) >= 0) {
+                if (k > from) out.append(Text.literal(str.substring(from, k)).setStyle(style));
+                out.append(Text.literal(str.substring(k, k + name.length())).setStyle(style.withColor(rgb).withBold(true)));
+                from = k + name.length();
+            }
+            if (from < str.length()) out.append(Text.literal(str.substring(from)).setStyle(style));
+            return java.util.Optional.empty();
+        }, net.minecraft.text.Style.EMPTY);
+        return out;
     }
 }

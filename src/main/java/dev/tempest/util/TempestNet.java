@@ -359,7 +359,7 @@ public final class TempestNet {
     }
 
     private static void fail(String why) {
-        lastProblem = why.contains("join refused") ? "Mojang won't let this account join servers"
+        lastProblem = why.contains("join refused") ? "Mojang refused: " + why.substring(why.indexOf("join refused by Mojang:") + 23).trim()
                 : why.contains("unreachable") ? "Can't reach the Tempest service" : "Couldn't sign in - retrying";
         retryAt = System.currentTimeMillis() + backoff;
         backoff = Math.min(backoff * 2, 600_000);

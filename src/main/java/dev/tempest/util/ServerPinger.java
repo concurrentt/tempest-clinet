@@ -39,8 +39,8 @@ public final class ServerPinger {
             .connectTimeout(java.time.Duration.ofSeconds(5)).followRedirects(java.net.http.HttpClient.Redirect.NORMAL).build();
 
     /**
-     * The icon of the website behind a server address ("play.example.net:25565" -> example.net), at least 32 px,
-     * via Google's favicon service. Blocking; called on the ping threads.
+     * The icon of the website behind a server address ("play.example.net:25565" -> play.example.net, example.net,
+     * www.example.net, store.example.net - the first that has one), via Google's favicon service. Blocking; called on the ping threads.
      */
     private static byte[] webIcon(String address) {
         String host = address.trim().toLowerCase(java.util.Locale.ROOT);
@@ -52,15 +52,22 @@ public final class ServerPinger {
         byte[] known = WEB_ICONS.get(domain);
         if (known != null) return known.length == 0 ? null : known;
         byte[] found = new byte[0];
-        try {
-            var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(
-                    "https://www.google.com/s2/favicons?sz=64&domain_url=https://" + domain)).timeout(java.time.Duration.ofSeconds(6)).GET().build();
-            var res = HTTP.send(req, java.net.http.HttpResponse.BodyHandlers.ofByteArray());
-            if (res.statusCode() == 200 && res.body().length > 0) {
-                java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(res.body()));
-                if (img != null && img.getWidth() >= 32 && img.getHeight() >= 32) found = res.body();   // skip tiny 16 px blobs
-            }
-        } catch (Exception ignored) { }
+        // The address's own host, the main domain, then the sites servers usually have (store.x is the Tebex
+        // store most servers link to - often the only site a server has).
+        java.util.LinkedHashSet<String> sites = new java.util.LinkedHashSet<>();
+        sites.add(host); sites.add(domain); sites.add("www." + domain); sites.add("store." + domain);
+        for (String site : sites) {
+            try {
+                var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(
+                        "https://www.google.com/s2/favicons?sz=64&domain_url=https://" + site)).timeout(java.time.Duration.ofSeconds(6)).GET().build();
+                var res = HTTP.send(req, java.net.http.HttpResponse.BodyHandlers.ofByteArray());
+                // Google answers 404 (with its generic globe) when it knows no icon for the site
+                if (res.statusCode() == 200 && res.body().length > 0) {
+                    java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(res.body()));
+                    if (img != null && img.getWidth() >= 16 && img.getHeight() >= 16) { found = res.body(); break; }
+                }
+            } catch (Exception ignored) { }
+        }
         WEB_ICONS.put(domain, found);
         return found.length == 0 ? null : found;
     }

@@ -1,3 +1,12 @@
+## 0.21.6 - Spotify covers, clearer AppleSkin, slimmer armor bars
+- Spotify: covers now load for every song Spotify shows one for. Tempest reads the cover straight from Windows
+  properly (it could come back empty before and never retry), waits a moment after a song change so it doesn't
+  show the previous song's cover, and if Windows has none it tries Deezer as well as iTunes.
+- AppleSkin: holding food now shows a gold glow over the shanks it will fill, with brighter flashing shanks.
+- Servers with no icon: Tempest also looks for an icon on the server's store site (store.<domain>, where most
+  servers keep their Tebex store) and www.<domain>, and accepts small 16 px website icons too.
+- Armor HUD: the durability bars (Number mode) are thinner and shorter - a slim bar under the number.
+
 ## 0.21.5 - Window icon, menu fixes
 - Servers that send no icon (like crystalbox.org) show their website's icon instead of the globe.
 - Mods menu: your name and face show in the corner card from the main menu too (not "Player").

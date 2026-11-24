@@ -48,7 +48,7 @@ public class ArmorHudModule extends HudModule {
 
     private void renderVertical(DrawContext ctx, TextRenderer tr, List<ItemStack> items) {
         boolean bars = display.is("Number");
-        int row = bars ? 21 : 18;
+        int row = 18;
         w = 62;
         h = items.size() * row + 4;
         box(ctx);
@@ -58,7 +58,7 @@ public class ArmorHudModule extends HudModule {
             if (s.isEmpty()) continue;
             ctx.drawItem(s, x + 2, iy);
             drawDurability(ctx, tr, s, x + 22, iy + 4);
-            if (bars) durabilityBar(ctx, s, x + 2, iy + 17, w - 6);
+            if (bars) durabilityBar(ctx, s, x + 22, iy + 14, 26);   // a short bar right under the number
         }
     }
 
@@ -68,9 +68,9 @@ public class ArmorHudModule extends HudModule {
         int max = Math.max(1, s.getMaxDamage());
         float f = Math.max(0f, Math.min(1f, (max - s.getDamage()) / (float) max));
         int col = f > 0.6f ? 0xFF55FF55 : f > 0.3f ? 0xFFFFD83A : 0xFFFF5555;
-        Draw.roundRect(ctx, bx, by, bw, 3, 1, 0xB0000000);
-        int fw = Math.round((bw - 2) * f);
-        if (fw > 0) Draw.roundRect(ctx, bx + 1, by + 1, fw, 1, 0, col);
+        Draw.roundRect(ctx, bx, by, bw, 2, 1, 0x90000000);
+        int fw = Math.round(bw * f);
+        if (fw > 0) Draw.roundRect(ctx, bx, by, fw, 2, 1, col);
     }
 
     private void renderHotbar(DrawContext ctx, TextRenderer tr, List<ItemStack> items) {
@@ -78,7 +78,7 @@ public class ArmorHudModule extends HudModule {
         int pad = 2;
         boolean bars = display.is("Number");
         w = items.size() * slot + pad * 2;
-        h = bars ? 32 : 28;
+        h = bars ? 31 : 28;
         box(ctx);
         for (int i = 0; i < items.size(); i++) {
             ItemStack s = items.get(i);
@@ -87,7 +87,7 @@ public class ArmorHudModule extends HudModule {
             Draw.roundRect(ctx, sx, sy, 18, 18, 3, 0x55202028);
             if (s.isEmpty()) continue;
             ctx.drawItem(s, sx + 1, sy + 1);
-            if (bars) durabilityBar(ctx, s, sx, sy + 19, 18);
+            if (bars) durabilityBar(ctx, s, sx + 3, sy + 19, 12);
             if (s.isDamageable() && !display.is("Off")) {
                 int max = s.getMaxDamage();
                 int left = max - s.getDamage();

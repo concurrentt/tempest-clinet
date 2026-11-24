@@ -118,7 +118,7 @@ public final class NowPlaying {
             "[void][Windows.Storage.Streams.DataReader,Windows.Storage.Streams,ContentType=WindowsRuntime]",
             "$mgr = Await ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])",
             "$any = $env:TEMPEST_ANY -eq '1'",
-            "$last = ''",
+            "$last = ''; $prev = ''; $stable = 0",
             "while ($true) {",
             "  if (-not (Get-Process -Id ([int]$env:TEMPEST_PID) -ErrorAction SilentlyContinue)) { exit }",
             "  $s = $null",
@@ -134,14 +134,18 @@ public final class NowPlaying {
             "        pos = [long]$tl.Position.TotalMilliseconds; end = [long]$tl.EndTime.TotalMilliseconds;",
             "        at = [long]$tl.LastUpdatedTime.ToUnixTimeMilliseconds(); playing = ($pb.PlaybackStatus.ToString() -eq 'Playing') }",
             "      $key = \"$($p.Title)|$($p.Artist)|$($p.AlbumTitle)\"",
-            "      if ($key -ne $last -and $p.Thumbnail -ne $null) {",
+            // Spotify keeps the previous song's cover for a moment after a change: wait until the song has been
+            // the same for one more poll, then copy the cover into a .NET stream (reliable, unlike DataReader
+            // .ReadBytes, which PowerShell can hand back empty) and only call it done once real bytes arrived
+            "      if ($key -ne $prev) { $prev = $key; $stable = 0 } else { $stable++ }",
+            "      if ($key -ne $last -and $stable -ge 1 -and $p.Thumbnail -ne $null) {",
             "        try {",
             "          $st = Await ($p.Thumbnail.OpenReadAsync()) ([Windows.Storage.Streams.IRandomAccessStreamWithContentType])",
             "          if ($st -ne $null -and $st.Size -gt 0 -and $st.Size -lt 4000000) {",
-            "            $r = [Windows.Storage.Streams.DataReader]::new($st.GetInputStreamAt(0))",
-            "            [void](Await ($r.LoadAsync([uint32]$st.Size)) ([uint32]))",
-            "            $b = New-Object byte[] ([int]$st.Size); $r.ReadBytes($b)",
-            "            $o.art = [Convert]::ToBase64String($b); $last = $key",
+            "            $ns = [System.IO.WindowsRuntimeStreamExtensions]::AsStreamForRead($st.GetInputStreamAt(0))",
+            "            $ms = New-Object System.IO.MemoryStream; $ns.CopyTo($ms); $ns.Dispose()",
+            "            $b = $ms.ToArray()",
+            "            if ($b.Length -gt 64 -and ($b | Select-Object -First 16 | Where-Object { $_ -ne 0 })) { $o.art = [Convert]::ToBase64String($b); $last = $key }",
             "          }",
             "        } catch { }",
             "      }",
@@ -269,8 +273,37 @@ public final class NowPlaying {
         Lyrics.prefetch(track);
     }
 
-    /** Cover from the iTunes search (no account needed): best match for "artist title", 600px. */
+    /** Cover looked up online when the player gives none: iTunes first, then Deezer. */
     private static void coverOnline(String key, String title, String artist) {
+        coverItunes(key, title, artist);
+        Track now = track;
+        if (now != null && now.key.equals(key) && !key.equals(artFor)) coverDeezer(key, title, artist);
+    }
+
+    /** Deezer search (no account needed): the album cover of the best "artist + title" match, 1000px. */
+    private static void coverDeezer(String key, String title, String artist) {
+        try {
+            String q = java.net.URLEncoder.encode(artist.isBlank() ? title : "artist:\"" + artist + "\" track:\"" + title + "\"", StandardCharsets.UTF_8);
+            HttpResponse<String> r = HTTP.send(HttpRequest.newBuilder(URI.create("https://api.deezer.com/search?limit=1&q=" + q))
+                    .timeout(Duration.ofSeconds(8)).build(), HttpResponse.BodyHandlers.ofString());
+            if (r.statusCode() != 200) return;
+            JsonObject o = JsonParser.parseString(r.body()).getAsJsonObject();
+            if (!o.has("data") || o.getAsJsonArray("data").isEmpty()) return;
+            JsonObject hit = o.getAsJsonArray("data").get(0).getAsJsonObject();
+            if (!hit.has("album")) return;
+            JsonObject al = hit.getAsJsonObject("album");
+            String url = al.has("cover_xl") ? al.get("cover_xl").getAsString() : al.has("cover_big") ? al.get("cover_big").getAsString() : null;
+            if (url == null || url.isBlank()) return;
+            Track now = track;
+            if (now == null || !now.key.equals(key) || key.equals(artFor)) return;
+            HttpResponse<byte[]> img = HTTP.send(HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8)).build(),
+                    HttpResponse.BodyHandlers.ofByteArray());
+            if (img.statusCode() == 200) setArt(key, img.body());
+        } catch (Exception ignored) { }
+    }
+
+    /** iTunes search (no account needed): best match for "artist title", 600px. */
+    private static void coverItunes(String key, String title, String artist) {
         try {
             String q = java.net.URLEncoder.encode((artist + " " + title).trim(), StandardCharsets.UTF_8);
             HttpResponse<String> r = HTTP.send(HttpRequest.newBuilder(URI.create(

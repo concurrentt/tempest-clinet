@@ -1,3 +1,7 @@
+## 0.21.16 - Color Saturation
+- New: Color Saturation (Visuals) - make the game more vivid (up to 200%) or wash it out to black and white (0%).
+  A full-screen effect on your screen only; it steps aside while the game uses its own (spectating a creeper etc.).
+
 ## 0.21.15 - Messages, snappier Clientside Crystals
 - Clientside Crystals: hitting a crystal right after placing it no longer feels delayed - the hit goes to the server's
   real crystal (straight away, or the instant it appears) instead of being lost on the stand-in.

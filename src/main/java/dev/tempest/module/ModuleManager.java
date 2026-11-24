@@ -57,6 +57,7 @@ public class ModuleManager {
         register(new CustomSkyModule());
         register(new CinematicModule());
         register(new FullbrightModule());
+        register(new SaturationModule());
         register(new TimeChangerModule());
         register(new BlockOutlineModule());
         register(new ItemPhysicsModule());

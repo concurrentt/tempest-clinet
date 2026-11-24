@@ -55,6 +55,7 @@ const ONLINE_TTL_MS = 300_000;       // online for 5 min after the last heartbea
 const TOKEN_TTL_MS = 24 * 3600_000;  // sign in again once a day
 const CHALLENGE_TTL_MS = 60_000;     // time to finish the Mojang step
 const MAX_LOOKUP = 200;
+const LOGO_FRESH_MS = 170_000;      // a Tempest logo needs a check-in within this long
 const DM_TTL_MS = 60 * 60_000;        // private messages are deleted after an hour
 const MAX_GROUP = 16;                // people in one party / group, you included
 const MAX_GROUPS = 10;               // groups one person can make
@@ -346,7 +347,9 @@ export class Presence extends DurableObject {
   lookup(uuids) {
     const now = Date.now();
     this.prune(now);
-    return uuids.filter((u) => { const o = this.online.get(u); return o && o.pub; });
+    // "uses Tempest" only for a recent check-in (clients check in every 2 min), so someone who closed the game
+    // (or had it killed) stops showing the logo within about 3 minutes
+    return uuids.filter((u) => { const o = this.online.get(u); return o && o.pub && now - o.seen < LOGO_FRESH_MS; });
   }
 
   /** Online Tempest users among uuids, plus their cosmetics. */

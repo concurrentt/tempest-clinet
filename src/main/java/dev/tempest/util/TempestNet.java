@@ -43,7 +43,7 @@ public final class TempestNet {
      */
     public static final String DEFAULT_URL = "https://tempest-backend.imamunchlmaoii.workers.dev";
 
-    private static final long HEARTBEAT_MS = 120_000, LOOKUP_MS = 30_000, CACHE_MS = 300_000, RECHECK_MS = 60_000;
+    private static final long HEARTBEAT_MS = 120_000, LOOKUP_MS = 30_000, CACHE_MS = 120_000, RECHECK_MS = 60_000;
 
     private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8)).build();
     /** uuid -> time we last learned they use Tempest */

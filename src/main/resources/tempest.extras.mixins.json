@@ -23,6 +23,7 @@
     "ActionBarCombatMixin",
     "FullbrightLightmapMixin",
     "ClientWorldCrystalMixin",
+    "GameRendererPostAccessor",
     "BlockEntityDistanceMixin",
     "ParticleManagerMixin",
     "ParticleRendererMixin",

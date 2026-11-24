@@ -333,9 +333,13 @@ public class TempestTitleScreen extends Screen {
             MenuKit.tile(ctx, tr, x + 12, y + 12, 34, name, e);
         }
         Draw.text(ctx, tr, Draw.ellipsize(tr, name, profW - 70), x + 54, y + 16, MenuKit.fa(Draw.TEXT, e), false);
-        float sp = Draw.hoverProgress("title_switch", Draw.hit(mx, my, profX + 54, profY + 26, profW - 64, 12));
-        Draw.text(ctx, tr, "⇄ Switch account", x + 54, y + 29,
-                MenuKit.fa(Draw.lerpColor(Draw.DIM2, Draw.withAlpha(Draw.accent(), 0xFF), sp), e), false);
+        if (ACCOUNT_SWITCHER) {
+            float sp = Draw.hoverProgress("title_switch", Draw.hit(mx, my, profX + 54, profY + 26, profW - 64, 12));
+            Draw.text(ctx, tr, "⇄ Switch account", x + 54, y + 29,
+                    MenuKit.fa(Draw.lerpColor(Draw.DIM2, Draw.withAlpha(Draw.accent(), 0xFF), sp), e), false);
+        } else {
+            Draw.text(ctx, tr, "Tempest v" + version(), x + 54, y + 29, MenuKit.fa(Draw.DIM2, e), false);
+        }
         ctx.fill(x + 10, y + 54, x + profW - 10, y + 55, MenuKit.fa(Draw.border(), e));
         int bx = x + 10, bw = (profW - 28) / 2;
         smallButton(ctx, tr, "title_cust", bx, y + 64, bw, 20, "Customize", mx, my, e);
@@ -344,6 +348,9 @@ public class TempestTitleScreen extends Screen {
         smallButton(ctx, tr, "title_hud", bx, y + 88, bw, 20, "Edit HUD", mx, my, e);
         smallButton(ctx, tr, "title_theme", bx + bw + 8, y + 88, bw, 20, "Theme", mx, my, e);
     }
+
+    /** Account switcher hidden for now: Microsoft/Mojang need an approved app ID that players can't get for free. */
+    private static final boolean ACCOUNT_SWITCHER = false;
 
     /** {x, y, w, h} of the small account chip shown top-right when the profile card doesn't fit. */
     private int[] accountChip(TextRenderer tr) {
@@ -362,7 +369,7 @@ public class TempestTitleScreen extends Screen {
         net.minecraft.util.Identifier head = dev.tempest.util.PlayerHeads.get(uuid);
         if (head != null) ctx.drawTexture(net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED, head, b[0] + 4, b[1] + 3, 0f, 0f, 12, 12, 32, 32, 32, 32, MenuKit.fa(0xFFFFFFFF, e));
         Draw.text(ctx, tr, playerName(), b[0] + 20, b[1] + 5, MenuKit.fa(Draw.lerpColor(0xFFC9CCD6, 0xFFFFFFFF, p), e), false);
-        Draw.text(ctx, tr, "⇄", b[0] + b[2] - 11, b[1] + 5, MenuKit.fa(Draw.withAlpha(Draw.accent(), 0xFF), e), false);
+        if (ACCOUNT_SWITCHER) Draw.text(ctx, tr, "⇄", b[0] + b[2] - 11, b[1] + 5, MenuKit.fa(Draw.withAlpha(Draw.accent(), 0xFF), e), false);
     }
 
     private void smallButton(DrawContext ctx, TextRenderer tr, String key, int x, int y, int w, int h, String label, int mx, int my, float e) {
@@ -451,10 +458,10 @@ public class TempestTitleScreen extends Screen {
         }
         if (!sideCards) {
             int[] ch = accountChip(textRenderer);
-            if (Draw.hit(mx, my, ch[0], ch[1], ch[2], ch[3])) { client.setScreen(new AccountsScreen(this)); return true; }
+            if (ACCOUNT_SWITCHER && Draw.hit(mx, my, ch[0], ch[1], ch[2], ch[3])) { client.setScreen(new AccountsScreen(this)); return true; }
         }
         if (sideCards) {
-            if (Draw.hit(mx, my, profX + 54, profY + 26, profW - 64, 12)) { client.setScreen(new AccountsScreen(this)); return true; }
+            if (ACCOUNT_SWITCHER && Draw.hit(mx, my, profX + 54, profY + 26, profW - 64, 12)) { client.setScreen(new AccountsScreen(this)); return true; }
             List<FavoriteServer> favs = TempestConfig.get().favoriteServers;
             int rows = Math.min(favs.size(), 4);
             for (int i = 0; i < rows; i++) {

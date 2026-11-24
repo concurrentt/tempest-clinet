@@ -26,7 +26,7 @@ if errorlevel 1 (
   echo Nothing new to commit.
 )
 rem Bring in anything changed on GitHub (e.g. a README edited on the website) before pushing.
-git pull --rebase origin main
+git pull --rebase --autostash origin main
 if errorlevel 1 (
   echo.
   echo PULL FAILED: GitHub has changes that clash with yours.

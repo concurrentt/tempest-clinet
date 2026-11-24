@@ -2,6 +2,8 @@
 - Clientside Crystals: hitting a crystal right after placing it no longer feels delayed - the hit goes to the server's
   real crystal (straight away, or the instant it appears) instead of being lost on the stand-in.
 - Minecraft's own menus (Options, Video, Controls...): flat rectangle buttons and sliders on the see-through background.
+- Updates: "Check for updates" button on the main menu (bottom left), and "Check" in Client Settings works in game.
+  A new version shows a pop-up (and a chat line in game); a manual check also tells you when you're up to date.
 - Zoom: new "Zoom Sensitivity %" setting for mouse speed while zoomed.
 - Totem Pop Counter: "Reset Pop Counts Key" - bind a key (in its settings or Controls) to clear pop counts.
 - Social menu: new Messages tab - chat with Tempest friends right in the menu, even when they're on another server.

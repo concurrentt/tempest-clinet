@@ -1,3 +1,12 @@
+## 0.21.21 - Nine Right Shift menu styles
+- Right Shift (and Mods on the title screen) now opens a new menu, and you can pick from nine styles with the Style
+  button in its top-right corner - the picker shows a picture of each, your choice is saved:
+  Orbit Ring (default, categories on a turning ring around the Tempest logo), Radial Wheel (hold Right Shift,
+  point, let go), Command Palette (type to find and toggle anything), Sidebar Drawer (slides in while you play),
+  Quick Toggles (big tiles for starred mods), Dock (icon bar along the bottom), Constellation (mods as stars),
+  Storm Cards (a hand of cards that flip over) and Split Hub (your player next to the categories).
+- Every category opens the new mod list: glass capsules with switches; right-click any mod for its options.
+
 ## 0.21.20 - Discord emoji in chat, player card fixes
 - Discord emoji in chat: :sob:, :skull:, :joy:, :fire: and 1,900 other Discord / GitHub names - or a real emoji
   someone pastes - show as the emoji picture, in full colour.

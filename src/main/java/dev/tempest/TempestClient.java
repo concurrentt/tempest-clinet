@@ -64,7 +64,7 @@ public class TempestClient implements ClientModInitializer {
             dev.tempest.modules.KillEffectsModule.tick(client);
             dev.tempest.util.PingTracker.tick(client);
             while (openMenuKey.wasPressed()) {
-                if (client.currentScreen == null) client.setScreen(new TempestMenuScreen(null));
+                if (client.currentScreen == null) client.setScreen(dev.tempest.gui.ExpMenus.open(null));
             }
             CombatTracker.tick(client);
             PlaytimeTracker.tick(client);

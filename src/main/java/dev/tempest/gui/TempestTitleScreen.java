@@ -453,7 +453,7 @@ public class TempestTitleScreen extends Screen {
             switch (b.id()) {
                 case "single" -> client.setScreen(new TempestSinglePlayerScreen(this));
                 case "multi" -> client.setScreen(new TempestMultiplayerScreen(this));
-                case "mods" -> client.setScreen(new TempestMenuScreen(this));
+                case "mods" -> client.setScreen(ExpMenus.open(this));
                 case "visuals", "promo" -> client.setScreen(ClickGuiScreen.openTo(dev.tempest.module.Category.VISUALS, this));
                 case "options" -> client.setScreen(new OptionsScreen(this, client.options));
                 case "quit" -> client.scheduleStop();
@@ -476,7 +476,7 @@ public class TempestTitleScreen extends Screen {
                 }
             }
             int bx = profX + 10, bw = (profW - 28) / 2;
-            if (Draw.hit(mx, my, bx, profY + 64, bw, 20)) { client.setScreen(new TempestMenuScreen(this)); return true; }
+            if (Draw.hit(mx, my, bx, profY + 64, bw, 20)) { client.setScreen(ExpMenus.open(this)); return true; }
             if (Draw.hit(mx, my, bx + bw + 8, profY + 64, bw, 20)) { client.setScreen(new SocialScreen(this)); return true; }
             if (Draw.hit(mx, my, bx, profY + 88, bw, 20)) { client.setScreen(new HudEditorScreen(this)); return true; }
             if (Draw.hit(mx, my, bx + bw + 8, profY + 88, bw, 20)) { client.setScreen(new ThemeScreen(this)); return true; }

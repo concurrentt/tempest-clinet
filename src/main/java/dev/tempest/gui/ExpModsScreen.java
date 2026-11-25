@@ -22,7 +22,7 @@ import java.util.Locale;
  * purple night as glass capsules in two columns. Each capsule has a round orb with the mod's icon (it fills with your
  * accent colour and glows when the mod is on), the name and a line about it, and a switch. A row of round category
  * buttons runs along the top. Click a capsule to turn the mod on or off; right-click it or press its gear for its
- * options (they open in the normal settings page).
+ * options (they open right here; where depends on the menu style).
  */
 public class ExpModsScreen extends Screen {
     private static final Category[] CATS = Category.values();
@@ -35,6 +35,19 @@ public class ExpModsScreen extends Screen {
     private double scroll, scrollTarget;
     private final long openedAt = System.nanoTime();
     private long lastFrame = System.nanoTime();
+
+    /*
+     * Options open inside this screen, and each style shows them its own way:
+     * Orbit Ring - a card that zooms up in the middle; Radial Wheel - a sheet that slides up from the bottom;
+     * anything else (Split Hub, Constellation) - a panel that slides in from the right edge.
+     */
+    private ExpSettings opts;
+    private final String look = switch (ExpMenus.current()) {
+        case "orbit" -> "zoom";
+        case "radial" -> "sheet";
+        default -> "side";
+    };
+    private static final float OPTS_SECS = 0.26f;
 
     public ExpModsScreen(Category filter, Screen parent, String search) {
         super(Text.literal("Mods"));
@@ -128,10 +141,56 @@ public class ExpModsScreen extends Screen {
     public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) { }
 
     @Override
-    public void removed() { MenuBlur.restore(); }
+    public void removed() {
+        MenuBlur.restore();
+        if (opts != null) opts.close();
+    }
 
     @Override
     public void render(DrawContext ctx, int mx, int my, float delta) {
+        if (opts != null && opts.gone(OPTS_SECS)) opts = null;
+        if (opts == null) { renderMain(ctx, mx, my, delta); return; }
+        renderMain(ctx, -9999, -9999, delta);
+        TextRenderer tr = textRenderer;
+        float p = MenuKit.ease(opts.progress(OPTS_SECS));
+        boolean live = p >= 1f && !opts.closing();
+        ctx.fill(0, 0, width, height, MenuKit.fa(0x90060410, p));
+        int[] r = optsRect();
+        switch (look) {
+            case "zoom" -> {
+                if (live) { opts.render(ctx, tr, r[0], r[1], r[2], r[3], mx, my, 1f, true); break; }
+                float k = 0.85f + 0.15f * p;
+                var m = ctx.getMatrices();
+                m.pushMatrix();
+                m.translate(r[0] + r[2] / 2f, r[1] + r[3] / 2f);
+                m.scale(k, k);
+                opts.render(ctx, tr, -r[2] / 2, -r[3] / 2, r[2], r[3], mx, my, p, false);
+                m.popMatrix();
+            }
+            case "sheet" -> opts.render(ctx, tr, r[0], r[1] + Math.round((1f - p) * (r[3] + 20)), r[2], r[3], mx, my, Math.max(0.01f, p), live);
+            default -> opts.render(ctx, tr, r[0] + Math.round((1f - p) * (r[2] + 20)), r[1], r[2], r[3], mx, my, Math.max(0.01f, p), live);
+        }
+    }
+
+    /** Where the options sit for this style: {x, y, w, h}. */
+    private int[] optsRect() {
+        return switch (look) {
+            case "zoom" -> {
+                int w = Math.min(300, width - 40), h = Math.min(300, height - 50);
+                yield new int[]{width / 2 - w / 2, height / 2 - h / 2, w, h};
+            }
+            case "sheet" -> {
+                int w = Math.min(contentW(), 440), h = Math.min(Math.round(height * 0.62f), 300);
+                yield new int[]{width / 2 - w / 2, height - h + 10, w, h};    // runs off the bottom, like a sheet
+            }
+            default -> {
+                int w = Math.min(240, Math.max(180, width / 3));
+                yield new int[]{width - w - 8, 8, w, height - 16};
+            }
+        };
+    }
+
+    private void renderMain(DrawContext ctx, int mx, int my, float delta) {
         long now = System.nanoTime();
         float dt = Math.min(0.1f, (now - lastFrame) / 1e9f);
         lastFrame = now;
@@ -263,6 +322,11 @@ public class ExpModsScreen extends Screen {
     @Override
     public boolean mouseClicked(Click click, boolean doubled) {
         double mx = click.x(), my = click.y();
+        if (opts != null) {
+            if (opts.closing() || opts.progress(OPTS_SECS) < 1f) return true;
+            if (!opts.mouseClicked(mx, my, click.button()) || opts.closeRequested) opts.startClosing();
+            return true;
+        }
         int by = chipsY();
         if (Draw.hit(mx, my, x0(), by, CHIP, CHIP)) { close(); return true; }
         for (int i = 0; i < chipCount(); i++) {
@@ -290,6 +354,14 @@ public class ExpModsScreen extends Screen {
 
     /** A mod's options open in the normal settings page (it has every kind of setting); Esc brings you back here. */
     private void openOptions(Module m) {
+        if (search != null) search.setFocused(false);
+        setFocused(null);
+        opts = new ExpSettings(m, false);
+    }
+
+    /** The old way: the normal settings page (kept for reference). */
+    @SuppressWarnings("unused")
+    private void openClickGui(Module m) {
         if (client == null) return;
         ClickGuiScreen gui = ClickGuiScreen.openTo(m.getCategory(), this);
         client.setScreen(gui);
@@ -302,12 +374,17 @@ public class ExpModsScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
+        if (opts != null) { opts.mouseScrolled(mouseX, mouseY, vertical); return true; }
         scrollTarget -= vertical * 40;
         return true;
     }
 
     @Override
     public boolean keyPressed(KeyInput input) {
+        if (opts != null) {
+            if (opts.keyPressed(input.key())) return true;
+            if (input.key() == 256) { opts.startClosing(); return true; }       // Esc
+        }
         if (input.key() == GLFW.GLFW_KEY_RIGHT_SHIFT && !search.isFocused()) {
             if (client != null) client.setScreen(null);
             return true;
@@ -319,7 +396,20 @@ public class ExpModsScreen extends Screen {
     public boolean shouldPause() { return false; }
 
     @Override
+    public boolean mouseDragged(Click click, double dx, double dy) {
+        if (opts != null && opts.mouseDragged(click.x(), click.y())) return true;
+        return super.mouseDragged(click, dx, dy);
+    }
+
+    @Override
+    public boolean mouseReleased(Click click) {
+        if (opts != null) opts.mouseReleased();
+        return super.mouseReleased(click);
+    }
+
+    @Override
     public void close() {
+        if (opts != null && !opts.closing()) { opts.startClosing(); return; }
         if (client != null) client.setScreen(parent);
     }
 }

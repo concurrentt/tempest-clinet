@@ -22,6 +22,8 @@ public class ExpDockScreen extends Screen {
     private double scroll;
     private final long openedAt = System.nanoTime();
     private final float[] sizes = new float[ExpKit.CATS.length + 2];
+    private ExpSettings opts;                                      // a mod's settings, slid out to the right of the card
+    private static final float OPTS_SECS = 0.22f;
 
     public ExpDockScreen(Screen parent) {
         super(Text.literal("Tempest"));
@@ -112,13 +114,41 @@ public class ExpDockScreen extends Screen {
                 int ry = cy + 26 + i * ROW_H - (int) scroll;
                 if (ry + ROW_H < cy + 26 || ry > cy + 26 + listH) continue;
                 boolean hv = Draw.hit(mx, my, cx + 10, ry, cw - 20, ROW_H) && my >= cy + 26 && my < cy + 26 + listH;
-                ExpKit.modRow(ctx, tr, mods.get(i), cx + 10, ry, cw - 20, ROW_H, hv, 1f);
+                boolean shown = opts != null && !opts.closing() && opts.mod == mods.get(i);
+                if (shown) Draw.ring(ctx, cx + 6, ry, cw - 12, ROW_H, 6, Draw.withAlpha(Draw.accent(), 0xC0));
+                ExpKit.modRow(ctx, tr, mods.get(i), cx + 10, ry, cw - 20, ROW_H, hv || shown, 1f);
             }
             ctx.disableScissor();
+            drawOptions(ctx, tr, mx, my);
         }
         ExpKit.styleButton(ctx, textRenderer, width, mx, my);
         super.render(ctx, mx, my, delta);
     }
+
+    /** Settings panel beside the pop-up card: to its right, or its left when there is no room. {x, y, w, h} */
+    private int[] optsRect() {
+        int[] r = cardRect();
+        int w = Math.min(210, width - 20);
+        int x = r[0] + r[2] + 8;
+        if (x + w > width - 6) x = Math.max(6, r[0] - 8 - w);
+        int h = Math.max(r[3], Math.min(250, r[1] + r[3] - 34));
+        return new int[]{x, r[1] + r[3] - h, w, h};
+    }
+
+    private boolean rightSide() { return optsRect()[0] > cardRect()[0]; }
+
+    private void drawOptions(DrawContext ctx, TextRenderer tr, int mx, int my) {
+        if (opts == null) return;
+        if (opts.gone(OPTS_SECS)) { opts = null; return; }
+        float p = MenuKit.ease(opts.progress(OPTS_SECS));
+        int[] o = optsRect();
+        int slide = Math.round((1f - p) * 18) * (rightSide() ? -1 : 1);     // comes out from behind the card
+        ctx.enableScissor(rightSide() ? cardRect()[0] + cardRect()[2] + 2 : 0, 0, rightSide() ? width : cardRect()[0] - 2, height);
+        opts.render(ctx, tr, o[0] + slide, o[1], o[2], o[3], mx, my, p, p >= 1f && !opts.closing());
+        ctx.disableScissor();
+    }
+
+    private void closeOptions() { if (opts != null) opts.startClosing(); }
 
     private int[] cardRect() {
         int idx = open.ordinal();
@@ -135,12 +165,16 @@ public class ExpDockScreen extends Screen {
     public boolean mouseClicked(Click click, boolean doubled) {
         if (ExpKit.clickStyleButton(this, parent, click.x(), click.y())) return true;
         double mx = click.x(), my = click.y();
+        if (opts != null && !opts.closing() && opts.mouseClicked(mx, my, click.button())) {
+            if (opts.closeRequested) closeOptions();
+            return true;
+        }
         float[] lx = lefts();
         int dy = baseY();
         for (int i = 0; i < count(); i++) {
             int s = Math.round(sizes[i]);
             if (!Draw.hit(mx, my, Math.round(lx[i]), dy - 6 - s, s, s)) continue;
-            if (i < ExpKit.CATS.length) { open = open == ExpKit.CATS[i] ? null : ExpKit.CATS[i]; scroll = 0; }
+            if (i < ExpKit.CATS.length) { open = open == ExpKit.CATS[i] ? null : ExpKit.CATS[i]; scroll = 0; if (opts != null) opts.close(); opts = null; }
             else if (client != null) client.setScreen(i == ExpKit.CATS.length ? new SocialScreen(this) : new HudEditorScreen(this));
             return true;
         }
@@ -151,13 +185,19 @@ public class ExpDockScreen extends Screen {
                     List<Module> mods = ExpKit.mods(open);
                     int i = (int) ((my - r[1] - 26 + scroll) / ROW_H);
                     if (i >= 0 && i < mods.size()) {
-                        if (click.button() == 1) ExpKit.openOptions(this, mods.get(i));
-                        else ExpKit.toggle(mods.get(i));
+                        Module m = mods.get(i);
+                        if (click.button() == 1) {
+                            if (opts != null && !opts.closing() && opts.mod == m) closeOptions();
+                            else { if (opts != null) opts.close(); opts = new ExpSettings(m, false); }
+                        } else ExpKit.toggle(m);
                     }
                 }
                 return true;
             }
+            if (opts != null && !opts.closing()) { closeOptions(); return true; }
             open = null;
+            if (opts != null) opts.close();
+            opts = null;
             return true;
         }
         close();
@@ -166,6 +206,7 @@ public class ExpDockScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
+        if (opts != null && opts.mouseScrolled(mouseX, mouseY, vertical)) return true;
         scroll -= vertical * 24;
         return true;
     }
@@ -173,5 +214,29 @@ public class ExpDockScreen extends Screen {
     @Override public boolean shouldPause() { return false; }
 
     @Override
-    public void close() { if (client != null) client.setScreen(parent); }
+    public boolean mouseDragged(Click click, double dx, double dy) {
+        if (opts != null && opts.mouseDragged(click.x(), click.y())) return true;
+        return super.mouseDragged(click, dx, dy);
+    }
+
+    @Override
+    public boolean mouseReleased(Click click) {
+        if (opts != null) opts.mouseReleased();
+        return super.mouseReleased(click);
+    }
+
+    @Override
+    public boolean keyPressed(net.minecraft.client.input.KeyInput input) {
+        if (opts != null && opts.keyPressed(input.key())) return true;
+        return super.keyPressed(input);
+    }
+
+    @Override
+    public void removed() { if (opts != null) opts.close(); }
+
+    @Override
+    public void close() {
+        if (opts != null && !opts.closing()) { closeOptions(); return; }
+        if (client != null) client.setScreen(parent);
+    }
 }

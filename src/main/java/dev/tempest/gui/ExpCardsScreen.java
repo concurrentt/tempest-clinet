@@ -26,6 +26,8 @@ public class ExpCardsScreen extends Screen {
     private boolean closing;
     private long flipAt;
     private int first;                        // first visible row on the back
+    private ExpSettings opts;                 // a mod's settings: the open card flips over once more to show them
+    private static final float OPTS_SECS = 0.4f;
 
     public ExpCardsScreen(Screen parent) {
         super(Text.literal("Tempest"));
@@ -82,7 +84,10 @@ public class ExpCardsScreen extends Screen {
     public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) { }
 
     @Override
-    public void removed() { MenuBlur.restore(); }
+    public void removed() {
+        MenuBlur.restore();
+        if (opts != null) opts.close();
+    }
 
     @Override
     public void render(DrawContext ctx, int mx, int my, float delta) {
@@ -112,7 +117,9 @@ public class ExpCardsScreen extends Screen {
             int w = Math.round(cw() + (bw() - cw()) * p), h = Math.round(ch() + (bh() - ch()) * p);
             float turn = Math.abs((float) Math.cos(fl * Math.PI));
             boolean back = fl > 0.5f;
-            if (fl >= 1f) {
+            if (fl >= 1f && opts != null) {
+                drawOptionsFlip(ctx, tr, mx, my, e);
+            } else if (fl >= 1f) {
                 backCard(ctx, tr, flipped, bx(), by(), bw(), bh(), mx, my, true, e);
             } else {
                 var m = ctx.getMatrices();
@@ -125,11 +132,30 @@ public class ExpCardsScreen extends Screen {
             }
         }
 
-        String hint = flipped >= 0 ? "Click a mod to toggle   Right-click for options   Click outside to put it back"
+        String hint = opts != null ? "Esc or the arrow to turn the card back"
+                : flipped >= 0 ? "Click a mod to toggle   Right-click for options   Click outside to put it back"
                 : "Hover a card to lift it, click to flip it over";
         Draw.text(ctx, tr, hint, width / 2 - Draw.textW(tr, hint) / 2, height - 16, MenuKit.fa(0x90FFFFFF, e), false);
         ExpKit.styleButton(ctx, textRenderer, width, mx, my);
         super.render(ctx, mx, my, delta);
+    }
+
+    /** The open card turning over again: its mod list on one side, the chosen mod's settings on the other. */
+    private void drawOptionsFlip(DrawContext ctx, TextRenderer tr, int mx, int my, float e) {
+        if (opts.gone(OPTS_SECS)) { opts = null; backCard(ctx, tr, flipped, bx(), by(), bw(), bh(), mx, my, true, e); return; }
+        float p = opts.progress(OPTS_SECS);
+        if (p >= 1f && !opts.closing()) {
+            opts.render(ctx, tr, bx(), by(), bw(), bh(), mx, my, e, true);
+            return;
+        }
+        float turn = Math.abs((float) Math.cos(p * Math.PI));
+        var m = ctx.getMatrices();
+        m.pushMatrix();
+        m.translate(bx() + bw() / 2, by() + bh() / 2);
+        m.scale(Math.max(0.02f, turn), 1f);
+        if (p < 0.5f) backCard(ctx, tr, flipped, -bw() / 2, -bh() / 2, bw(), bh(), mx, my, false, e);
+        else opts.render(ctx, tr, -bw() / 2, -bh() / 2, bw(), bh(), mx, my, e, false);
+        m.popMatrix();
     }
 
     /** Face of card i: icon in a lit circle, the name and how many of its mods are on. */
@@ -203,13 +229,18 @@ public class ExpCardsScreen extends Screen {
         double mx = click.x(), my = click.y();
         if (flipped >= 0) {
             if (closing || flip() < 1f) return true;
+            if (opts != null) {
+                if (opts.closing() || opts.progress(OPTS_SECS) < 1f) return true;
+                if (!opts.mouseClicked(mx, my, click.button()) || opts.closeRequested) opts.startClosing();
+                return true;
+            }
             int x = bx(), y = by();
             if (!Draw.hit(mx, my, x, y, bw(), bh())) { closing = true; flipAt = System.nanoTime(); return true; }
             List<Module> mods = ExpKit.mods(ExpKit.CATS[flipped]);
             int k = (int) Math.floor((my - (y + HEAD_H)) / ROW_H);
             if (k >= 0 && k < rows() && first + k < mods.size() && mx >= x + 10 && mx < x + bw() - 10) {
                 Module m = mods.get(first + k);
-                if (click.button() == 1) ExpKit.openOptions(this, m);
+                if (click.button() == 1) opts = new ExpSettings(m, true);
                 else ExpKit.toggle(m);
             }
             return true;
@@ -221,6 +252,7 @@ public class ExpCardsScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
+        if (opts != null) { opts.mouseScrolled(mouseX, mouseY, vertical); return true; }
         if (flipped >= 0) first += vertical > 0 ? -1 : 1;
         if (first < 0) first = 0;
         return true;
@@ -229,7 +261,27 @@ public class ExpCardsScreen extends Screen {
     @Override public boolean shouldPause() { return false; }
 
     @Override
+    public boolean mouseDragged(Click click, double dx, double dy) {
+        if (opts != null && opts.mouseDragged(click.x(), click.y())) return true;
+        return super.mouseDragged(click, dx, dy);
+    }
+
+    @Override
+    public boolean mouseReleased(Click click) {
+        if (opts != null) opts.mouseReleased();
+        return super.mouseReleased(click);
+    }
+
+    @Override
+    public boolean keyPressed(net.minecraft.client.input.KeyInput input) {
+        if (opts != null && opts.keyPressed(input.key())) return true;
+        return super.keyPressed(input);
+    }
+
+    @Override
     public void close() {
+        if (opts != null && !opts.closing()) { opts.startClosing(); return; }
+        if (opts != null) return;
         if (flipped >= 0 && !closing) { closing = true; flipAt = System.nanoTime(); return; }
         if (client != null) client.setScreen(parent);
     }

@@ -127,6 +127,8 @@ public final class PackLooks {
             tex("ender_pearl", "PvP", "Ender Pearls", Items.ENDER_PEARL, "textures/item/ender_pearl.png", null, null,
                     "textures/item/ender_pearl.png", "textures/item/ender_eye.png"),
             tex("golden_apple", "PvP", "Golden Apples", Items.GOLDEN_APPLE, "textures/item/golden_apple.png", null, null, "textures/item/golden_apple.png"),
+            tex("xp_bottle", "PvP", "XP Bottles", Items.EXPERIENCE_BOTTLE, "textures/item/experience_bottle.png", null, null,
+                    "textures/item/experience_bottle.png"),
             tex("shield", "PvP", "Shields", Items.SHIELD, "textures/entity/shield_base_nopattern.png", new int[]{1, 1, 12, 22}, null,
                     "textures/entity/shield_base_nopattern.png", "textures/entity/shield_base.png"),
             tex("bows", "PvP", "Bows", Items.BOW, "textures/item/bow.png", null, null,

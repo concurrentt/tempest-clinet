@@ -1,3 +1,12 @@
+## 0.21.23 - Settings inside every menu style, XP Bottles in the Editor
+- Mod settings now open inside every Right Shift style, each its own way (right-click a mod, or its gear):
+  Dock - a panel slides out to the right of the card; Sidebar Drawer - pushes in over the list like a second page;
+  Storm Cards - the card flips over again; Constellation - a panel grows out of the star; Orbit Ring - a card
+  zooms up in the middle; Radial Wheel - a sheet slides up from the bottom; Split Hub - a panel slides in from the
+  right edge. Switches, sliders, modes, keybinds, buttons and colours all work there. Classic keeps the full page.
+- Tempest Editor: XP Bottles can be customized now (PvP group) - any colour style, a custom colour, or the bottle
+  from one of your packs. It changes the bottle in your hand, your hotbar and when it's thrown.
+
 ## 0.21.22 - Classic menu is back, sharper text, new Storm Cards
 - Emoji autocomplete in chat, like Discord: type a colon and two letters (":so") and a list of matching emoji pops
   up above the chat box. Tab or Enter picks one, Up / Down moves, Esc hides it, or just click one.

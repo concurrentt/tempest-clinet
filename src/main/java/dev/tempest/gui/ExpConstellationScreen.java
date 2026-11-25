@@ -24,6 +24,10 @@ public class ExpConstellationScreen extends Screen {
     private boolean dragging, dragMoved;
     private double lastX, lastY;
     private final long openedAt = System.nanoTime();
+    private ExpSettings opts;                 // a mod's settings: a panel that grows out of its star
+    private int optCat, optMod;               // which star it belongs to
+    private boolean eaten;                    // the press went to the panel, so the release does nothing
+    private static final float OPTS_SECS = 0.25f;
 
     public ExpConstellationScreen(Screen parent) {
         super(Text.literal("Tempest"));
@@ -66,7 +70,10 @@ public class ExpConstellationScreen extends Screen {
     public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) { }
 
     @Override
-    public void removed() { MenuBlur.restore(); }
+    public void removed() {
+        MenuBlur.restore();
+        if (opts != null) opts.close();
+    }
 
     @Override
     public void render(DrawContext ctx, int mx, int my, float delta) {
@@ -106,8 +113,10 @@ public class ExpConstellationScreen extends Screen {
             Draw.text(ctx, tr, name, cx - Draw.textW(tr, name) / 2, cy + Math.round(48 * Math.min(1.4f, zoom) * 0.8f), MenuKit.fa(Draw.lerpColor(0xB0FFFFFF, 0xFFFFFFFF, hp), e), false);
         }
 
+        drawOptions(ctx, tr, mx, my, e);
+
         // tooltip
-        if (h != null) {
+        if (h != null && opts == null) {
             Category cat = ExpKit.CATS[h[0]];
             String a, b;
             if (h[1] < 0) { a = ExpKit.title(cat); b = ExpKit.countLine(cat) + ". Click to open"; }
@@ -127,6 +136,39 @@ public class ExpConstellationScreen extends Screen {
         super.render(ctx, mx, my, delta);
     }
 
+    /** Where the open star is on screen, and the panel rect next to it: {starX, starY, x, y, w, h}. */
+    private int[] optsLayout() {
+        List<Module> mods = ExpKit.mods(ExpKit.CATS[optCat]);
+        float[] p = modPos(optCat, Math.min(optMod, mods.size() - 1), mods.size(), opts.mod);
+        int px = Math.round(sx(p[0])), py = Math.round(sy(p[1]));
+        int w = Math.min(210, width - 20), h = Math.min(250, height - 40);
+        int x = px + 18;
+        if (x + w > width - 8) x = px - 18 - w;
+        x = Math.max(8, Math.min(width - w - 8, x));
+        int y = Math.max(10, Math.min(height - h - 24, py - h / 2));
+        return new int[]{px, py, x, y, w, h};
+    }
+
+    private void drawOptions(DrawContext ctx, TextRenderer tr, int mx, int my, float e) {
+        if (opts == null) return;
+        if (opts.gone(OPTS_SECS)) { opts = null; return; }
+        float p = MenuKit.ease(opts.progress(OPTS_SECS));
+        int[] l = optsLayout();
+        int ex = l[2] > l[0] ? l[2] : l[2] + l[4];               // the panel edge facing the star
+        line(ctx, l[0], l[1], l[0] + Math.round((ex - l[0]) * p), l[1] + Math.round((l[3] + 20 - l[1]) * p), MenuKit.fa(0x90C8BEFF, p));
+        TempestLoading.drawGlow(ctx, l[0], l[1], 30, Draw.accent(), 0.6f * p);
+        boolean live = p >= 1f && !opts.closing();
+        if (live) { opts.render(ctx, tr, l[2], l[3], l[4], l[5], mx, my, e, true); return; }
+        // grows out of the star
+        float k = 0.35f + 0.65f * p;
+        var m = ctx.getMatrices();
+        m.pushMatrix();
+        m.translate(l[0] + (l[2] - l[0]) * k, l[1] + (l[3] - l[1]) * k);
+        m.scale(k, k);
+        opts.render(ctx, tr, 0, 0, l[4], l[5], mx, my, p, false);
+        m.popMatrix();
+    }
+
     /** Dotted line (DrawContext only fills rectangles). */
     private static void line(DrawContext ctx, int x0, int y0, int x1, int y1, int col) {
         double len = Math.hypot(x1 - x0, y1 - y0);
@@ -140,6 +182,17 @@ public class ExpConstellationScreen extends Screen {
     @Override
     public boolean mouseClicked(Click click, boolean doubled) {
         if (ExpKit.clickStyleButton(this, parent, click.x(), click.y())) return true;
+        eaten = false;
+        if (opts != null && !opts.closing()) {
+            if (opts.mouseClicked(click.x(), click.y(), click.button())) {
+                if (opts.closeRequested) opts.startClosing();
+                eaten = true;
+                return true;
+            }
+            opts.startClosing();                       // clicking the sky puts the panel away
+            eaten = true;
+            return true;
+        }
         dragging = true;
         dragMoved = false;
         lastX = click.x();
@@ -149,6 +202,7 @@ public class ExpConstellationScreen extends Screen {
 
     @Override
     public boolean mouseDragged(Click click, double dx, double dy) {
+        if (opts != null && opts.mouseDragged(click.x(), click.y())) return true;
         if (!dragging) return false;
         if (Math.abs(click.x() - lastX) + Math.abs(click.y() - lastY) > 2 || dragMoved) {
             dragMoved = true;
@@ -162,6 +216,8 @@ public class ExpConstellationScreen extends Screen {
 
     @Override
     public boolean mouseReleased(Click click) {
+        if (opts != null) opts.mouseReleased();
+        if (eaten) { eaten = false; dragging = false; return true; }
         boolean wasDrag = dragMoved;
         dragging = false;
         dragMoved = false;
@@ -172,7 +228,7 @@ public class ExpConstellationScreen extends Screen {
         if (h[1] < 0) client.setScreen(new ExpModsScreen(cat, this, ""));
         else {
             Module m = ExpKit.mods(cat).get(h[1]);
-            if (click.button() == 1) ExpKit.openOptions(this, m);
+            if (click.button() == 1) { opts = new ExpSettings(m, false); optCat = h[0]; optMod = h[1]; }
             else ExpKit.toggle(m);
         }
         return true;
@@ -180,6 +236,7 @@ public class ExpConstellationScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
+        if (opts != null && opts.mouseScrolled(mouseX, mouseY, vertical)) return true;
         float old = zoom;
         zoom = Math.max(0.7f, Math.min(3f, zoom * (vertical > 0 ? 1.15f : 1 / 1.15f)));
         // keep the point under the mouse still
@@ -192,5 +249,14 @@ public class ExpConstellationScreen extends Screen {
     @Override public boolean shouldPause() { return false; }
 
     @Override
-    public void close() { if (client != null) client.setScreen(parent); }
+    public boolean keyPressed(net.minecraft.client.input.KeyInput input) {
+        if (opts != null && opts.keyPressed(input.key())) return true;
+        return super.keyPressed(input);
+    }
+
+    @Override
+    public void close() {
+        if (opts != null && !opts.closing()) { opts.startClosing(); return; }
+        if (client != null) client.setScreen(parent);
+    }
 }

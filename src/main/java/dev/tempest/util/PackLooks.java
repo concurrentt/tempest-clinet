@@ -108,8 +108,8 @@ public final class PackLooks {
         return new Category(id, "Sounds", name, icon, "", null, new String[0], null, events);
     }
 
-    public static final String[] GROUPS = {"PvP", "Blocks", "Gear", "HUD", "Misc", "Effects", "Sounds"};
-    public static final Item[] GROUP_ICONS = {Items.END_CRYSTAL, Items.OBSIDIAN, Items.NETHERITE_CHESTPLATE, Items.CHEST,
+    public static final String[] GROUPS = {"PvP", "Blocks", "Gear", "HUD", "Menus", "Misc", "Effects", "Sounds"};
+    public static final Item[] GROUP_ICONS = {Items.END_CRYSTAL, Items.OBSIDIAN, Items.NETHERITE_CHESTPLATE, Items.TARGET, Items.CHEST,
             Items.ENCHANTED_BOOK, Items.FIREWORK_ROCKET, Items.NOTE_BLOCK};
 
     private static final String HEART = "textures/gui/sprites/hud/heart/";
@@ -166,13 +166,23 @@ public final class PackLooks {
 
             tex("crosshair", "HUD", "Crosshair", Items.TARGET, "textures/gui/sprites/hud/crosshair.png", null, "invert",
                     "textures/gui/sprites/hud/crosshair.png"),
-            tex("gui", "HUD", "Inventory GUIs", Items.CHEST, C + "inventory.png", new int[]{0, 0, 176, 166}, "clear",
+            tex("gui", "Menus", "Inventory GUIs", Items.CHEST, C + "inventory.png", new int[]{0, 0, 176, 166}, "clear",
                     C + "inventory.png", C + "generic_54.png", C + "shulker_box.png", C + "crafting_table.png", C + "furnace.png",
                     C + "blast_furnace.png", C + "smoker.png", C + "anvil.png", C + "enchanting_table.png", C + "dispenser.png",
                     C + "hopper.png", C + "brewing_stand.png", C + "smithing.png", C + "grindstone.png", C + "stonecutter.png",
                     C + "beacon.png", C + "villager.png", C + "loom.png", C + "cartography_table.png", C + "horse.png",
-                    C + "crafter.png", C + "creative_inventory/tab_items.png",
+                    C + "crafter.png", C + "nautilus.png", C + "gamemode_switcher.png", "textures/gui/recipe_book.png",
+                    "dir:textures/gui/sprites/container/creative_inventory/tab_", "dir:textures/gui/sprites/recipe_book/tab",
+                    C + "creative_inventory/tab_items.png",
                     C + "creative_inventory/tab_inventory.png", C + "creative_inventory/tab_item_search.png"),
+            tex("buttons", "Menus", "Buttons & Sliders", Items.STONE_BUTTON, "textures/gui/sprites/widget/button.png", null, "clear",
+                    "dir:textures/gui/sprites/widget/"),
+            tex("tooltips", "Menus", "Tooltips", Items.PAPER, "textures/gui/sprites/tooltip/background.png", null, "clear",
+                    "textures/gui/sprites/tooltip/background.png", "textures/gui/sprites/tooltip/frame.png"),
+            tex("books", "Menus", "Books & Advancements", Items.WRITABLE_BOOK, "textures/gui/book.png", new int[]{20, 1, 146, 180}, "clear",
+                    "textures/gui/book.png", "textures/gui/advancements/window.png", "dir:textures/gui/sprites/advancements/"),
+            tex("toasts", "Menus", "Toasts", Items.BELL, "textures/gui/sprites/toast/advancement.png", null, "clear",
+                    "dir:textures/gui/sprites/toast/"),
             tex("hearts", "HUD", "Hearts", Items.RED_DYE, HEART + "full.png", null, null,
                     HEART + "full.png", HEART + "half.png", HEART + "full_blinking.png", HEART + "half_blinking.png",
                     HEART + "hardcore_full.png", HEART + "hardcore_half.png", HEART + "hardcore_full_blinking.png", HEART + "hardcore_half_blinking.png"),
@@ -408,7 +418,7 @@ public final class PackLooks {
      */
     public static Img render(Category cat, Identifier id, Look look) {
         Img img = renderLook(cat, id, look);
-        if (!look.clear() || !"gui".equals(cat.id())) return img;
+        if (!look.clear() || !"clear".equals(cat.toggle())) return img;
         if (img == null) img = base(id);
         return img == null ? null : fade(img, look.opacity());
     }

@@ -1,3 +1,16 @@
+## 0.21.25 - Every menu in the Tempest Editor, hovering items
+- Tempest Editor has a new Menus group, so every kind of menu can get a look and be made see-through (Transparent
+  switch + Opacity slider on each):
+  - Inventory GUIs (moved here from HUD) now also cover the creative tabs, the recipe book, the nautilus
+    inventory and the F3 + F4 game mode switcher.
+  - Buttons & Sliders: every button, slider, checkbox, text box, tab and scroll bar.
+  - Tooltips: the box that shows when you hover an item.
+  - Books & Advancements: book pages, the advancements window and its tabs and frames.
+  - Toasts: the pop-ups in the corner (advancements, recipes, tutorials).
+- Item Physics has a new Style setting: Flat (lying on the ground, like before) or Hover - dropped items float
+  above the ground and bob up and down smoothly. Hover Height, Bob Height, Bob Speed and Spin While Hovering are
+  all adjustable.
+
 ## 0.21.24 - Blur behind every menu, shimmering Constellation, new Dock and Orbit Ring backgrounds
 - Tempest Editor -> HUD -> Inventory GUIs: new Transparent switch and an Opacity slider (5-100%), so every
   container screen - inventory, chests, shulkers, furnaces, crafting, anvil, enchanting, brewing, villagers, loom,

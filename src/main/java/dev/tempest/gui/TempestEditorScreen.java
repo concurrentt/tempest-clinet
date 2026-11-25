@@ -199,9 +199,9 @@ public class TempestEditorScreen extends Screen {
     // ----- hub
     private static final String[][] SHORTCUTS = {{"gear", "Configs"}, {"layers", "My Packs"}, {"wings", "Cosmetics"}, {"brush", "Painter"}};
     /** One simple line icon per group (Icons atlas, tinted), same order as PackLooks.GROUPS. */
-    private static final String[] GROUP_ICONS = {"crosshair", "cube", "chestplate", "layout", "grid", "sparkles", "note"};
+    private static final String[] GROUP_ICONS = {"crosshair", "cube", "chestplate", "layout", "board", "grid", "sparkles", "note"};
     /** Each group's colour (group page header wash). */
-    private static final int[] GROUP_GLOW = {0xFF5C6C, 0x7BD651, 0x5EE6FF, 0xFFD34D, 0xB06CFF, 0xFFB347, 0x5AB4FF};
+    private static final int[] GROUP_GLOW = {0xFF5C6C, 0x7BD651, 0x5EE6FF, 0xFFD34D, 0x4DE0B8, 0xB06CFF, 0xFFB347, 0x5AB4FF};
 
     private static String groupIcon(int g) { return GROUP_ICONS[Math.max(0, Math.min(g, GROUP_ICONS.length - 1))]; }
 

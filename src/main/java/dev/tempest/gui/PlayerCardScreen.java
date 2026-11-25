@@ -25,7 +25,8 @@ import java.util.UUID;
 /**
  * Player Card (middle click a player): the player standing on the left (their real model, turning to follow your
  * mouse), their name and whether they use Tempest, then their tiers the way tier sites show them - a round icon
- * per game mode with the tier underneath (MCTiers: every mode, unranked ones dimmed; NovaTiers: ranked modes).
+ * per game mode with the tier underneath (MCTiers: every mode, unranked ones with a plain ring and "-";
+ * NovaTiers: ranked modes).
  * Add Friend / Message and Close at the bottom. Esc or clicking outside closes it.
  */
 public class PlayerCardScreen extends Screen {
@@ -33,6 +34,9 @@ public class PlayerCardScreen extends Screen {
     /** MCTiers modes in the order mctiers.net shows them: {api id, name}. */
     private static final String[][] MC_MODES = {{"vanilla", "Vanilla"}, {"uhc", "UHC"}, {"pot", "Pot"}, {"nethop", "NethPot"},
             {"smp", "SMP"}, {"sword", "Sword"}, {"axe", "Axe"}, {"mace", "Mace"}, {"spear", "Spear"}};
+
+    /** True while the card draws its player model, so the name tag above them is left off. */
+    public static volatile boolean drawingModel;
 
     private final UUID id;
     private final String name;
@@ -81,7 +85,12 @@ public class PlayerCardScreen extends Screen {
         TempestLoading.drawGlow(ctx, mxL + mw / 2, y + h - 36, 34, Draw.accent() & 0xFFFFFF, 0.22f);
         AbstractClientPlayerEntity p = entity();
         if (p != null) {
-            InventoryScreen.drawEntity(ctx, mxL, y + 14, mxL + mw, y + h - 26, Math.min(62, (h - 40) / 2), 0.0625f, mx, my, p);
+            drawingModel = true;
+            try {
+                InventoryScreen.drawEntity(ctx, mxL, y + 14, mxL + mw, y + h - 26, Math.min(62, (h - 40) / 2), 0.0625f, mx, my, p);
+            } finally {
+                drawingModel = false;
+            }
         } else {
             Identifier head = PlayerHeads.get(id);
             int hs = 48, hx = mxL + (mw - hs) / 2, hy = y + (h - hs) / 2 - 8;
@@ -160,12 +169,10 @@ public class PlayerCardScreen extends Screen {
                 Draw.centered(ctx, tr, t, cx + CIRCLE / 2, cy + CIRCLE + 4, r.level() <= 2 ? 0xFF101218 : 0xFFFFFFFF);
                 if (hv) hoverTip = m[1] + " · " + t + (r.peakLevel() > 0 && r.peakScore() < r.score() ? "  (peak " + r.peakLabel() + ")" : "");
             } else {
-                Draw.roundRect(ctx, cx, cy, CIRCLE, CIRCLE, CIRCLE / 2, 0x40101218);
-                Draw.ring(ctx, cx, cy, CIRCLE, CIRCLE, CIRCLE / 2, hv ? 0x70FFFFFF : 0x30FFFFFF);
-                if (hv) {
-                    ctx.drawItem(new ItemStack(item(m[0])), cx + 3, cy + 3);
-                    hoverTip = m[1] + " · not ranked";
-                }
+                Draw.roundRect(ctx, cx, cy, CIRCLE, CIRCLE, CIRCLE / 2, 0x60101218);
+                Draw.ring(ctx, cx, cy, CIRCLE, CIRCLE, CIRCLE / 2, hv ? 0x80FFFFFF : 0x38FFFFFF);
+                ctx.drawItem(new ItemStack(item(m[0])), cx + 3, cy + 3);
+                if (hv) hoverTip = m[1] + " · not ranked";
                 Draw.roundRect(ctx, cx + 1, cy + CIRCLE + 2, CIRCLE - 2, 11, 4, 0x40202430);
                 Draw.centered(ctx, tr, "-", cx + CIRCLE / 2, cy + CIRCLE + 4, 0xFF6B7080);
             }

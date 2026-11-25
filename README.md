@@ -1,3 +1,9 @@
+## 0.21.20 - Discord emoji in chat, player card fixes
+- Discord emoji in chat: :sob:, :skull:, :joy:, :fire: and 1,900 other Discord / GitHub names - or a real emoji
+  someone pastes - show as the emoji picture, in full colour.
+- Player Card: every MCTiers mode shows its icon (unranked ones with a plain ring and "-"), and the name tag no
+  longer floats above the player model.
+
 ## 0.21.19 - Tempest-style accounts screen, roomier Tempest Editor
 - Switch account now opens a Tempest-style account list: player heads, Log in / Edit / Remove, search and
   + Add account, in the same glass panel as the rest of Tempest. In-Game Account Switcher still does the sign-in.
@@ -277,3 +283,7 @@ Tempest bundles [In-Game Account Switcher](https://modrinth.com/mod/in-game-acco
 VidTu), unmodified, under the GNU LGPL v3 or later. It ships as its own jar nested inside Tempest's; its license and
 source are at https://github.com/The-Fireplace-Minecraft-Mods/In-Game-Account-Switcher. To use a different version,
 put that IAS jar in your mods folder - Fabric loads the newer one.
+
+Chat emoji are [Twemoji](https://github.com/jdecked/twemoji) graphics (© Twitter, Inc. and other contributors),
+licensed under CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0/); they were resized and packed into a font
+sheet by tools/make_emoji_font.py. Emoji names come from GitHub's [gemoji](https://github.com/github/gemoji) (MIT).

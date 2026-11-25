@@ -27,7 +27,7 @@ public abstract class ChatHudMixin implements dev.tempest.util.ChatRefresher {
             method = "addMessage(Lnet/minecraft/text/Text;Lnet/minecraft/network/message/MessageSignatureData;Lnet/minecraft/client/gui/hud/MessageIndicator;)V",
             at = @At("HEAD"), argsOnly = true)
     private Text tempest$process(Text message) {
-        if (dev.tempest.util.TempestChat.adding) return message;   // our own Tempest chat line: leave it exactly as is
+        if (dev.tempest.util.TempestChat.adding) return dev.tempest.util.Emojis.apply(message);   // Tempest chat line: only emoji
         Text out = message;
         String raw = message.getString();
         dev.tempest.modules.ChatTabsModule.onMessage(raw);
@@ -43,7 +43,7 @@ public abstract class ChatHudMixin implements dev.tempest.util.ChatRefresher {
                 MessageStackingModule.count = 1;
             }
         }
-        return ChatUpgradesModule.decorate(ChatMentionsModule.process(out, raw), raw);
+        return dev.tempest.util.Emojis.apply(ChatUpgradesModule.decorate(ChatMentionsModule.process(out, raw), raw));
     }
 
     @Override

@@ -25,11 +25,13 @@ public final class MenuKit {
 
     /** Text scaled up (or down) around a centre x. Uses the 2D matrix stack, like the HUD modules do. */
     public static void scaledCentered(DrawContext c, TextRenderer tr, Text t, float cx, float y, float scale, int col, boolean shadow) {
-        int w = Draw.textW(tr, t);
+        if (Math.abs(scale - 1f) < 0.01f) { Draw.text(c, tr, t, Math.round(cx - Draw.textW(tr, t) / 2f), Math.round(y), col, shadow); return; }
+        t = Draw.uiScaled(t, scale);
+        int w = tr.getWidth(t);
         c.getMatrices().pushMatrix();
-        c.getMatrices().translate(cx - w * scale / 2f, y);
+        c.getMatrices().translate(Draw.snap(cx - w * scale / 2f), Draw.snap(y));
         c.getMatrices().scale(scale, scale);
-        Draw.text(c, tr, t, 0, 0, col, shadow);
+        c.drawText(tr, t, 0, 0, col, shadow);
         c.getMatrices().popMatrix();
     }
 
@@ -119,10 +121,12 @@ public final class MenuKit {
 
     /** Text scaled up from its top-left corner. */
     public static void scaledLeft(DrawContext c, TextRenderer tr, Text t, float x, float y, float scale, int col, boolean shadow) {
+        if (Math.abs(scale - 1f) < 0.01f) { Draw.text(c, tr, t, Math.round(x), Math.round(y), col, shadow); return; }
+        t = Draw.uiScaled(t, scale);
         c.getMatrices().pushMatrix();
-        c.getMatrices().translate(x, y);
+        c.getMatrices().translate(Draw.snap(x), Draw.snap(y));
         c.getMatrices().scale(scale, scale);
-        Draw.text(c, tr, t, 0, 0, col, shadow);
+        c.drawText(tr, t, 0, 0, col, shadow);
         c.getMatrices().popMatrix();
     }
 

@@ -99,6 +99,7 @@ public class TempestMenuScreen extends Screen {
         float ef = intro(0.25f);
         String hint = "Right Shift or Esc to close";
         Draw.text(ctx, tr, hint, cx - Draw.textW(tr, hint) / 2, height - 16, MenuKit.fa(0x90FFFFFF, ef), false);
+        ExpKit.styleButton(ctx, tr, width, mx, my);
 
         super.render(ctx, mx, my, delta);
     }
@@ -170,6 +171,7 @@ public class TempestMenuScreen extends Screen {
     @Override
     public boolean mouseClicked(Click click, boolean doubled) {
         double mx = click.x(), my = click.y();
+        if (ExpKit.clickStyleButton(this, parent, mx, my)) return true;
         int ry = rowY();
         if (Draw.hit(mx, my, midX(), ry, MID_W, BTN_H)) {
             if (client != null) client.setScreen(new ClickGuiScreen(this));

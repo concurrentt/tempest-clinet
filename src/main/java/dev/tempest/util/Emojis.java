@@ -10,10 +10,14 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Discord-style emoji in chat: ":sob:" (and a real 😭) shows the emoji picture. The pictures are Twemoji
@@ -53,6 +57,38 @@ public final class Emojis {
     public static String glyph(String name) {
         load();
         return NAMES.get(name.toLowerCase(Locale.ROOT));
+    }
+
+    private static List<String> sorted;                                   // every name, shortest first
+
+    /**
+     * Names for the chat autocomplete, best first: names that start with {@code query}, then names that contain it.
+     * One name per emoji (aliases like "+1" / "thumbsup" show once), at most {@code limit}.
+     */
+    public static List<String> suggest(String query, int limit) {
+        load();
+        if (sorted == null) {
+            List<String> all = new ArrayList<>(NAMES.keySet());
+            all.sort((a, b) -> a.length() != b.length() ? Integer.compare(a.length(), b.length()) : a.compareTo(b));
+            sorted = all;
+        }
+        String q = query.toLowerCase(Locale.ROOT);
+        List<String> out = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        for (int pass = 0; pass < 2 && out.size() < limit; pass++) {
+            for (String n : sorted) {
+                if (out.size() >= limit) break;
+                boolean hit = pass == 0 ? n.startsWith(q) : (!n.startsWith(q) && n.contains(q));
+                if (hit && seen.add(NAMES.get(n))) out.add(n);
+            }
+        }
+        return out;
+    }
+
+    /** The emoji picture for a name, as text (empty if the name is unknown). */
+    public static Text icon(String name) {
+        String g = glyph(name);
+        return g == null ? Text.empty() : Text.literal(g).setStyle(Style.EMPTY.withFont(FONT).withColor(0xFFFFFF).withShadowColor(0));
     }
 
     /** Returns the message with :names: and emoji characters drawn as emoji pictures (the same Text if none). */

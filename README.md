@@ -1,3 +1,14 @@
+## 0.21.22 - Classic menu is back, sharper text, new Storm Cards
+- Emoji autocomplete in chat, like Discord: type a colon and two letters (":so") and a list of matching emoji pops
+  up above the chat box. Tab or Enter picks one, Up / Down moves, Esc hides it, or just click one.
+- The original Tempest menu is back as the "Classic" style (first in the Style picker), and it has the Style
+  button too, so you can switch back and forth.
+- Removed the Command Palette and Quick Toggles styles (if you were using one, you get Orbit Ring).
+- Sharper Tempest text everywhere: the UI font is now drawn at your exact GUI scale, so letters land on whole
+  screen pixels instead of being shrunk from a bigger copy. Big titles get their own sharp size too.
+- Storm Cards redone: the cards sit fully on screen in a neat arc above the hint, stand upright so their text is
+  crisp, show an icon, the name and an "on / total" count, and the open card has a header and a scroll bar.
+
 ## 0.21.21 - Nine Right Shift menu styles
 - Right Shift (and Mods on the title screen) now opens a new menu, and you can pick from nine styles with the Style
   button in its top-right corner - the picker shows a picture of each, your choice is saved:

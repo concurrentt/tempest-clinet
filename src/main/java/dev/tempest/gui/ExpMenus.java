@@ -18,11 +18,10 @@ public final class ExpMenus {
     public record Style(String id, String name, String line, Function<Screen, Screen> make) { }
 
     public static final List<Style> STYLES = List.of(
+            new Style("classic", "Classic", "The original Tempest menu", TempestMenuScreen::new),
             new Style("orbit", "Orbit Ring", "Categories on a turning ring around the logo", ExpOrbitScreen::new),
             new Style("radial", "Radial Wheel", "Hold Right Shift, point, let go", ExpRadialScreen::new),
-            new Style("palette", "Command Palette", "Type to find and toggle anything", ExpPaletteScreen::new),
             new Style("drawer", "Sidebar Drawer", "Slides in while you keep playing", ExpDrawerScreen::new),
-            new Style("quick", "Quick Toggles", "Big tiles for your starred mods", ExpQuickScreen::new),
             new Style("dock", "Dock", "Icon bar along the bottom", ExpDockScreen::new),
             new Style("constellation", "Constellation", "Mods as stars, bright ones are on", ExpConstellationScreen::new),
             new Style("cards", "Storm Cards", "A hand of cards that flip over", ExpCardsScreen::new),

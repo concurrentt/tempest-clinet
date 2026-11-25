@@ -37,7 +37,45 @@ public final class Draw {
      * HUD use it; chat, signs and vanilla screens keep Minecraft's font.
      */
     public static final Identifier UI_FONT = Identifier.of("tempest", "ui");
-    private static final StyleSpriteSource UI = new StyleSpriteSource.Font(UI_FONT);
+
+    /*
+     * Minecraft samples font atlases with NEAREST filtering, so a TTF glyph is only sharp when one glyph texel lands on
+     * one screen pixel. One font file per oversample (font/ui_x1.json .. ui_x8.json) lets us pick the one that matches
+     * the GUI scale (and the extra scale of big titles), instead of shrinking a 6x bitmap, which looked blurry.
+     */
+    private static final StyleSpriteSource[] UI_BY_OVERSAMPLE = new StyleSpriteSource[9];
+
+    private static StyleSpriteSource uiSource(int oversample) {
+        int o = Math.max(1, Math.min(8, oversample));
+        StyleSpriteSource s = UI_BY_OVERSAMPLE[o];
+        if (s == null) UI_BY_OVERSAMPLE[o] = s = new StyleSpriteSource.Font(Identifier.of("tempest", "ui_x" + o));
+        return s;
+    }
+
+    /** The window's GUI scale (2 if the window isn't up yet). */
+    public static int guiScale() {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc == null || mc.getWindow() == null) return 2;
+        return Math.max(1, mc.getWindow().getScaleFactor());
+    }
+
+    private static boolean isUiFont(StyleSpriteSource f) {
+        return f instanceof StyleSpriteSource.Font font && font.id().getNamespace().equals("tempest") && font.id().getPath().startsWith("ui");
+    }
+
+    /** Text that will be drawn {@code scale}x bigger: swaps the UI font for the copy whose texels match that size. */
+    public static Text uiScaled(Text t, float scale) {
+        if (!smoothFont()) return t;
+        StyleSpriteSource want = uiSource(Math.round(guiScale() * scale));
+        if (isUiFont(t.getStyle().getFont())) return t.copy().styled(s -> s.withFont(want));
+        return Text.empty().styled(s -> s.withFont(want)).append(t);
+    }
+
+    /** Rounds a GUI coordinate to the nearest real screen pixel, so text and icons don't land between pixels. */
+    public static float snap(float v) {
+        int k = guiScale();
+        return Math.round(v * k) / (float) k;
+    }
 
     public static boolean smoothFont() {
         ClientSettingsModule m = dev.tempest.module.ModuleManager.get(ClientSettingsModule.class);
@@ -46,7 +84,9 @@ public final class Draw {
 
     /** Text in the UI font (parts that pick their own font, like icons, keep it). */
     public static Text ui(Text t) {
-        return smoothFont() ? Text.empty().styled(s -> s.withFont(UI)).append(t) : t;
+        if (!smoothFont()) return t;
+        StyleSpriteSource f = uiSource(guiScale());
+        return Text.empty().styled(s -> s.withFont(f)).append(t);
     }
 
     public static Text uiText(String s) { return ui(Text.literal(s)); }

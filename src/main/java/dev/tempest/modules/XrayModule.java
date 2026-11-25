@@ -11,10 +11,10 @@ import net.minecraft.fluid.Fluids;
 import net.minecraft.registry.Registries;
 
 /**
- * Xray: chunks are rebuilt without any block that is not on the list (mixin/SectionBuilderXrayMixin), and what is
+ * Xray: while chunks are built, every block not on the list reads as air (mixin/ChunkRegionXrayMixin), and what is
  * left is drawn fully lit (mixin/XrayLightMixin, plus Fullbright's gamma boost). Works with the vanilla chunk
- * builder, including Fabric API's Indigo renderer; Sodium builds chunks its own way and skips these hooks, so the
- * player gets a chat message if xray is on but no chunk ever went through the hook.
+ * builder and Fabric API's Indigo renderer; Sodium builds chunks from its own copy of the world and skips the
+ * hook, so the player gets a chat message if xray is on but no chunk ever went through it.
  */
 public final class XrayModule extends Module {
     private final BoolSetting ores = add(new BoolSetting("ores", "Ores", true));
@@ -33,7 +33,7 @@ public final class XrayModule extends Module {
     /** Block -> shown, filled as chunks are built (the answer only changes with the settings). */
     private static final java.util.concurrent.ConcurrentHashMap<net.minecraft.block.Block, Boolean> SHOWS = new java.util.concurrent.ConcurrentHashMap<>();
 
-    /** Set by SectionBuilderXrayMixin whenever a chunk is built with xray on - proof the hook is running. */
+    /** Set by ChunkRegionXrayMixin whenever a chunk is built with xray on - proof the hook is running. */
     public static volatile boolean hooked;
     private long inWorldSince;
     private boolean warned;
@@ -96,6 +96,13 @@ public final class XrayModule extends Module {
         if (m.storage.get() && (path.endsWith("chest") || path.equals("barrel") || path.endsWith("shulker_box"))) return true;
         if (m.spawners.get() && (path.equals("spawner") || path.equals("trial_spawner"))) return true;
         return false;
+    }
+
+    /** Keep this block in the chunk mesh? Shown blocks, plus lava blocks when "Lava" is on. */
+    public static boolean keepInChunk(BlockState state) {
+        if (shows(state)) return true;
+        FluidState fluid = state.getFluidState();
+        return !fluid.isEmpty() && showsFluid(fluid);
     }
 
     /** Kept for the face-culling hooks: an ore is anything xray shows. */

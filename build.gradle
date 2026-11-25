@@ -7,11 +7,24 @@ version = project.mod_version
 group = project.maven_group
 base { archivesName = project.archives_base_name }
 
+repositories {
+    // Modrinth's Maven, only for In-Game Account Switcher
+    exclusiveContent {
+        forRepository { maven { name = "Modrinth"; url = "https://api.modrinth.com/maven" } }
+        filter { includeGroup "maven.modrinth" }
+    }
+}
+
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    // In-Game Account Switcher 9.0.6+1.21.11 (Fabric), LGPL-3.0-or-later: shipped inside the Tempest jar,
+    // unmodified, as its own nested jar. The "Switch account" button opens it by reflection (util/Ias), so it
+    // isn't needed to compile - and it can't be: IAS is built with a newer Loom than this project uses.
+    include "maven.modrinth:cudtvDnd:${project.ias_version}"
 }
 
 processResources {

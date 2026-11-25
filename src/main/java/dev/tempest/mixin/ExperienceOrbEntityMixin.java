@@ -10,10 +10,20 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
 
+/**
+ * Clumps: nearby XP orbs merge into one. In 1.21.11 an orb's XP lives in synced data (getValue / setValue) instead
+ * of the old "amount" field, which made this mixin fail to load.
+ */
 @Mixin(ExperienceOrbEntity.class)
 public abstract class ExperienceOrbEntityMixin {
-    @Shadow private int amount;
     @Shadow private int pickingCount;
+
+    @Shadow public abstract int getValue();
+
+    @Shadow
+    private void setValue(int value) {
+        throw new AssertionError();
+    }
 
     @Inject(method = "tick", at = @At("HEAD"))
     private void tempest$clump(CallbackInfo ci) {
@@ -29,13 +39,13 @@ public abstract class ExperienceOrbEntityMixin {
         );
         if (nearby.isEmpty()) return;
 
+        int total = getValue();
         for (ExperienceOrbEntity other : nearby) {
             if (other.isRemoved()) continue;
-            // Merge smaller/younger orbs into this one
-            ExperienceOrbEntityMixin mix = (ExperienceOrbEntityMixin) (Object) other;
-            this.amount += mix.amount;
-            this.pickingCount += mix.pickingCount;
+            total += other.getValue();
+            this.pickingCount += ((ExperienceOrbEntityMixin) (Object) other).pickingCount;
             other.discard();
         }
+        setValue(total);
     }
 }

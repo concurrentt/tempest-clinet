@@ -1,12 +1,11 @@
-## 0.21.17 - Player cards, armor alerts, per-server setups, auto reconnect
-- Middle click a player for their card: face, whether they use Tempest, MCTiers / NovaTiers, and Add Friend / Message.
-- New: Armor Break Alert (PvP) - a warning and a sound when any armor piece you wear drops below a set durability.
-- New: Per-Server Setups (Client) - pick a saved config for a server and it loads every time you join that server.
-- Reconnect: when a server is full (or restarting / queueing) Tempest retries every few seconds until you get in,
-  with a countdown and a Cancel button. "Auto Reconnect On Any Kick" retries for any reason.
-- The game window is now called "Tempest Client 1.21.11".
-- Fixed: Xray hid nothing. It now hooks the chunk builder itself (Fabric's renderer skipped the old hook), stops cave
-  culling from hiding buried ores, and everything left is fully lit. With Sodium installed it says so in chat.
+## 0.21.18 - Xray and Fullbright fixed, account switcher, realistic menus and sky
+- Fixed: Xray hid nothing. While chunks are built, every block that isn't on the list now reads as air, so ores
+  keep all their faces and buried ores aren't culled; everything left is fully lit. This works alongside Fabric's
+  Indigo renderer (which blocked the earlier hook) and no longer changes block opacity game-wide. With Sodium
+  installed it says so in chat.
+- Fixed: two Xray mixins and the XP orb clumping mixin failed to load on 1.21.11 (outdated method signatures).
+- Account switching is back: "Switch account" on the title screen opens In-Game Account Switcher, which now comes
+  inside the Tempest jar - nothing extra to install. Add Microsoft or offline accounts and switch without restarting.
 - Fullbright uses gamma again: the lightmap gets the Strength value (15 = 1500% brightness) while your Brightness
   slider and options.txt keep your real setting. No more Night Vision tint.
 - Realistic main menu themes: all six backgrounds re-rendered like photographs. Nebula is a deep-space hydrogen
@@ -18,6 +17,14 @@
   lower edge and rays. Stars have true colours, twinkle gently (more near the horizon) and fade low in the sky,
   as does the Milky Way. Scene colours are now natural (no neon purple).
 - New art tools: tools/make_menu_real.py and tools/make_sky_real.py (replace make_menu_hq.py / make_sky_textures.py).
+
+## 0.21.17 - Player cards, armor alerts, per-server setups, auto reconnect
+- Middle click a player for their card: face, whether they use Tempest, MCTiers / NovaTiers, and Add Friend / Message.
+- New: Armor Break Alert (PvP) - a warning and a sound when any armor piece you wear drops below a set durability.
+- New: Per-Server Setups (Client) - pick a saved config for a server and it loads every time you join that server.
+- Reconnect: when a server is full (or restarting / queueing) Tempest retries every few seconds until you get in,
+  with a countdown and a Cancel button. "Auto Reconnect On Any Kick" retries for any reason.
+- The game window is now called "Tempest Client 1.21.11".
 
 ## 0.21.16 - Color Saturation
 - New: Color Saturation (Visuals) - make the game more vivid (up to 200%) or wash it out to black and white (0%).
@@ -254,3 +261,10 @@
 - Downloads only from that repo's release page over HTTPS, checks the SHA-256 against GitHub's digest, then swaps the jar after Minecraft closes. If anything fails, the old jar stays put.
 - Settings → GUI & Profiles: "Check For Updates" toggle and a "Check now" button.
 - GitHub workflow: no longer needs gradlew; tagged builds are stamped with the tag's version.
+
+## Credits
+
+Tempest bundles [In-Game Account Switcher](https://modrinth.com/mod/in-game-account-switcher) (© The_Fireplace,
+VidTu), unmodified, under the GNU LGPL v3 or later. It ships as its own jar nested inside Tempest's; its license and
+source are at https://github.com/The-Fireplace-Minecraft-Mods/In-Game-Account-Switcher. To use a different version,
+put that IAS jar in your mods folder - Fabric loads the newer one.

@@ -11,7 +11,7 @@
     "InGameOverlayRendererMixin",
     "BlockRenderManagerMixin",
     "XrayLightMixin",
-    "SectionBuilderXrayMixin",
+    "ChunkRegionXrayMixin",
     "EntityRendererNametagMixin",
     "LivingEntityRendererLabelMixin",
     "SimpleOptionAccessor",

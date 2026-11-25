@@ -349,8 +349,13 @@ public class TempestTitleScreen extends Screen {
         smallButton(ctx, tr, "title_theme", bx + bw + 8, y + 88, bw, 20, "Theme", mx, my, e);
     }
 
-    /** Account switcher hidden for now: Microsoft/Mojang need an approved app ID that players can't get for free. */
-    private static final boolean ACCOUNT_SWITCHER = false;
+    /** Switch account opens In-Game Account Switcher, bundled in the Tempest jar (see util/Ias). */
+    private static final boolean ACCOUNT_SWITCHER = dev.tempest.util.Ias.available();
+
+    private void openAccounts() {
+        Screen s = dev.tempest.util.Ias.screen(this);
+        if (s != null) client.setScreen(s);
+    }
 
     /** {x, y, w, h} of the small account chip shown top-right when the profile card doesn't fit. */
     private int[] accountChip(TextRenderer tr) {
@@ -458,10 +463,10 @@ public class TempestTitleScreen extends Screen {
         }
         if (!sideCards) {
             int[] ch = accountChip(textRenderer);
-            if (ACCOUNT_SWITCHER && Draw.hit(mx, my, ch[0], ch[1], ch[2], ch[3])) { client.setScreen(new AccountsScreen(this)); return true; }
+            if (ACCOUNT_SWITCHER && Draw.hit(mx, my, ch[0], ch[1], ch[2], ch[3])) { openAccounts(); return true; }
         }
         if (sideCards) {
-            if (ACCOUNT_SWITCHER && Draw.hit(mx, my, profX + 54, profY + 26, profW - 64, 12)) { client.setScreen(new AccountsScreen(this)); return true; }
+            if (ACCOUNT_SWITCHER && Draw.hit(mx, my, profX + 54, profY + 26, profW - 64, 12)) { openAccounts(); return true; }
             List<FavoriteServer> favs = TempestConfig.get().favoriteServers;
             int rows = Math.min(favs.size(), 4);
             for (int i = 0; i < rows; i++) {

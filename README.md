@@ -1,3 +1,12 @@
+## 0.21.19 - Tempest-style accounts screen, roomier Tempest Editor
+- Switch account now opens a Tempest-style account list: player heads, Log in / Edit / Remove, search and
+  + Add account, in the same glass panel as the rest of Tempest. In-Game Account Switcher still does the sign-in.
+- Tempest Editor: roomier main page - one panel with the groups as big cards (simple line icons that light up in
+  your accent colour), and Configs / My Packs / Cosmetics / Painter as an even row underneath.
+- Player Card (middle click a player): bigger card with the player standing on the left (turns to follow your
+  mouse) and their tiers like the tier sites - a round icon per MCTiers mode with its tier underneath (unranked
+  modes dimmed, hover for the mode and peak), plus their ranked NovaTiers modes.
+
 ## 0.21.18 - Xray and Fullbright fixed, account switcher, realistic menus and sky
 - Fixed: Xray hid nothing. While chunks are built, every block that isn't on the list now reads as air, so ores
   keep all their faces and buried ores aren't culled; everything left is fully lit. This works alongside Fabric's

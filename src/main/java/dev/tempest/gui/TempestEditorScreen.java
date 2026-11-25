@@ -197,69 +197,89 @@ public class TempestEditorScreen extends Screen {
     }
 
     // ----- hub
-    private static final int TILE = 84, TILE_GAP = 8;
-    private static final String[][] SHORTCUTS = {{"short_configs", "Configs"}, {"short_packs", "My Packs"}, {"short_cosmetics", "Cosmetics"}, {"short_painter", "Painter"}};
-
-    /** Full-colour icons for this page (textures/gui/editor_icons.png, made by tools/make_editor_icons.py). */
-    private static final Identifier HUB_ICONS = Identifier.of("tempest", "textures/gui/editor_icons.png");
-    private static final String[] HUB_NAMES = {"group_pvp", "group_blocks", "group_gear", "group_hud", "group_misc", "group_effects",
-            "group_sounds", "short_configs", "short_packs", "short_cosmetics", "short_painter"};
-    /** Each group's colour (tile glow on hover). */
+    private static final String[][] SHORTCUTS = {{"gear", "Configs"}, {"layers", "My Packs"}, {"wings", "Cosmetics"}, {"brush", "Painter"}};
+    /** One simple line icon per group (Icons atlas, tinted), same order as PackLooks.GROUPS. */
+    private static final String[] GROUP_ICONS = {"crosshair", "cube", "chestplate", "layout", "grid", "sparkles", "note"};
+    /** Each group's colour (group page header wash). */
     private static final int[] GROUP_GLOW = {0xFF5C6C, 0x7BD651, 0x5EE6FF, 0xFFD34D, 0xB06CFF, 0xFFB347, 0x5AB4FF};
 
-    private static void hubIcon(DrawContext ctx, String name, int x, int y, int size, float alpha) {
-        int i = java.util.Arrays.asList(HUB_NAMES).indexOf(name);
-        if (i < 0) return;
-        ctx.drawTexture(RenderPipelines.GUI_TEXTURED, HUB_ICONS, x, y, (i % 8) * 64f, (i / 8) * 64f, size, size, 64, 64, 512, 128,
-                MenuKit.fa(0xFFFFFFFF, alpha));
+    private static String groupIcon(int g) { return GROUP_ICONS[Math.max(0, Math.min(g, GROUP_ICONS.length - 1))]; }
+
+    // hub layout: one glass panel - header, a grid of group cards (4 per row), a divider, a row of quick links
+    private static final int HUB_PAD = 16, CARD_GAP = 10, GCARD_H = 66, LINK_H = 24, HUB_HEAD = 44;
+    private int hubCols() { return hubW() >= 460 ? 4 : 3; }
+    private int hubRows() { return (PackLooks.GROUPS.length + hubCols() - 1) / hubCols(); }
+    private int hubW() { return Math.min(width - 32, 560); }
+    private int hubH() { return HUB_HEAD + hubRows() * (GCARD_H + CARD_GAP) - CARD_GAP + 34 + LINK_H + 30; }
+    private int hubX() { return (width - hubW()) / 2; }
+    private int hubY() { return Math.max(8, (height - hubH()) / 2); }
+    private int cardW() { return (hubW() - 2 * HUB_PAD - (hubCols() - 1) * CARD_GAP) / hubCols(); }
+
+    /** {x, y, w, h} of group card i; a short last row is centred. */
+    private int[] cardRect(int i) {
+        int cols = hubCols(), cw = cardW(), row = i / cols, col = i % cols;
+        int inRow = Math.min(cols, PackLooks.GROUPS.length - row * cols);
+        int rowW = inRow * cw + (inRow - 1) * CARD_GAP;
+        int x = hubX() + (hubW() - rowW) / 2 + col * (cw + CARD_GAP);
+        int y = hubY() + HUB_HEAD + row * (GCARD_H + CARD_GAP);
+        return new int[]{x, y, cw, GCARD_H};
     }
 
-    private int tilesX() { return width / 2 - (PackLooks.GROUPS.length * (TILE + TILE_GAP) - TILE_GAP) / 2; }
-    private int tilesY() { return height / 2 - 30; }
-    /** Category buttons: one row of plain rectangles (icon + name), all the same width. */
-    private static final int CAT_H = 24;
-    private int tileSize() { return Math.min(96, (width - 24 - (PackLooks.GROUPS.length - 1) * TILE_GAP) / PackLooks.GROUPS.length); }
+    private int linksY() { return hubY() + HUB_HEAD + hubRows() * (GCARD_H + CARD_GAP) - CARD_GAP + 30; }
 
-    // shortcut buttons under the tiles: one row of small pills (icon + label), each sized to its label
-    private static final int SHORT_H = 20, SHORT_GAP = 6;
-    private int shortY() { return tilesY() + CAT_H + 10; }
-    private int shortW(int i) { return 8 + 12 + 5 + Draw.textW(textRenderer, SHORTCUTS[i][1]) + 9; }
-    private int shortX(int i) {
-        int total = (SHORTCUTS.length - 1) * SHORT_GAP;
-        for (int k = 0; k < SHORTCUTS.length; k++) total += shortW(k);
-        int x = width / 2 - total / 2;
-        for (int k = 0; k < i; k++) x += shortW(k) + SHORT_GAP;
-        return x;
+    /** {x, y, w, h} of quick link i: the four share the panel width evenly. */
+    private int[] linkRect(int i) {
+        int n = SHORTCUTS.length, inner = hubW() - 2 * HUB_PAD;
+        int lw = (inner - (n - 1) * 8) / n;
+        return new int[]{hubX() + HUB_PAD + i * (lw + 8), linksY(), lw, LINK_H};
     }
 
-    /** The hub: a plain title, one row of flat category tiles, a row of small shortcut pills and one line of status. */
+    /** The hub: a glass panel with the groups as roomy cards and the shortcuts underneath. */
     private void renderHub(DrawContext ctx, TextRenderer tr, int mx, int my, float e) {
-        int ts = tileSize(), n = PackLooks.GROUPS.length;
-        int tx0 = width / 2 - (n * (ts + TILE_GAP) - TILE_GAP) / 2, ty = tilesY();
-        Draw.centered(ctx, tr, "Tempest Editor", width / 2, ty - 16, MenuKit.fa(0xFFE6E8EF, e));
-
-        for (int i = 0; i < n; i++) {
-            int x = tx0 + i * (ts + TILE_GAP);
-            boolean hv = Draw.hit(mx, my, x, ty, ts, CAT_H);
-            float p = Draw.hoverProgress("ed_tile" + i, hv);
-            VanillaStyle.button(ctx, x, ty, ts, CAT_H, p > 0.5f, true);
-            hubIcon(ctx, HUB_NAMES[i], x + 6, ty + (CAT_H - 12) / 2, 12, e);
-            Draw.text(ctx, tr, Draw.trim(tr, PackLooks.GROUPS[i], ts - 26), x + 22, ty + (CAT_H - 8) / 2, MenuKit.fa(Draw.lerpColor(0xFFC8CCD8, 0xFFFFFFFF, p), e), false);
-            if (groupChanged(i)) ctx.fill(x + ts - 5, ty + 3, x + ts - 3, ty + 5, MenuKit.fa(Draw.accent(), e));
+        int x = hubX(), y = hubY(), w = hubW(), h = hubH();
+        Draw.shadow(ctx, x, y, w, h, 12, 12);
+        Draw.glass(ctx, x, y, w, h, 12, MenuKit.fa(0xE40F1117, e), MenuKit.fa(0x40FFFFFF, e));
+        Draw.roundRectV(ctx, x + 1, y + 1, w - 2, 38, 11, MenuKit.fa(Draw.withAlpha(Draw.accent(), 0x24), e), Draw.withAlpha(Draw.accent(), 0x00));
+        Draw.text(ctx, tr, Draw.bold("Tempest Editor"), x + HUB_PAD, y + 12, MenuKit.fa(0xFFFFFFFF, e), false);
+        Draw.text(ctx, tr, "Pick what you want to restyle", x + HUB_PAD, y + 24, MenuKit.fa(0xFF8B90A0, e), false);
+        boolean dirty = dirty();
+        if (dirty) {
+            String st = "● Not applied yet";
+            Draw.text(ctx, tr, st, x + w - HUB_PAD - Draw.textW(tr, st), y + 18, MenuKit.fa(0xFFFFD27A, e), false);
         }
 
-        int by = shortY();
+        int accent = Draw.withAlpha(Draw.accent(), 0xFF);
+        for (int i = 0; i < PackLooks.GROUPS.length; i++) {
+            int[] r = cardRect(i);
+            boolean hv = Draw.hit(mx, my, r[0], r[1], r[2], r[3]);
+            float p = Draw.hoverProgress("ed_card" + i, hv);
+            Draw.panel(ctx, r[0], r[1] - Math.round(p * 2), r[2], r[3], 8,
+                    MenuKit.fa(Draw.lerpColor(0xB0171920, 0xE0222531, p), e),
+                    MenuKit.fa(Draw.lerpColor(0x24FFFFFF, Draw.withAlpha(Draw.accent(), 0xC0), p), e));
+            int cy = r[1] - Math.round(p * 2);
+            Icons.draw(ctx, groupIcon(i), r[0] + r[2] / 2 - 10, cy + 14, 20, MenuKit.fa(Draw.lerpColor(0xFFB8BDCC, accent, p), e));
+            Draw.centered(ctx, tr, Draw.trim(tr, PackLooks.GROUPS[i], r[2] - 12), r[0] + r[2] / 2, cy + 42,
+                    MenuKit.fa(Draw.lerpColor(0xFFD6D9E2, 0xFFFFFFFF, p), e));
+            if (groupChanged(i)) Draw.roundRect(ctx, r[0] + r[2] - 10, cy + 6, 4, 4, 2, MenuKit.fa(accent, e));
+        }
+
+        int ly = linksY();
+        Draw.hairline(ctx, x + HUB_PAD, ly - 16, w - 2 * HUB_PAD, 0xFFFFFF, 0x30);
         for (int i = 0; i < SHORTCUTS.length; i++) {
-            int x = shortX(i), w = shortW(i);
-            boolean hv = Draw.hit(mx, my, x, by, w, SHORT_H);
-            float p = Draw.hoverProgress("ed_short" + i, hv);
-            VanillaStyle.button(ctx, x, by, w, SHORT_H, p > 0.5f, true);
-            hubIcon(ctx, SHORTCUTS[i][0], x + 8, by + (SHORT_H - 12) / 2, 12, e);
-            Draw.text(ctx, tr, SHORTCUTS[i][1], x + 8 + 12 + 5, by + (SHORT_H - 8) / 2, MenuKit.fa(Draw.lerpColor(0xFFC8CCD8, 0xFFFFFFFF, p), e), false);
+            int[] r = linkRect(i);
+            boolean hv = Draw.hit(mx, my, r[0], r[1], r[2], r[3]);
+            float p = Draw.hoverProgress("ed_link" + i, hv);
+            Draw.panel(ctx, r[0], r[1], r[2], r[3], 6,
+                    MenuKit.fa(Draw.lerpColor(0x80181A22, 0xD0262935, p), e),
+                    MenuKit.fa(Draw.lerpColor(0x26FFFFFF, 0x60FFFFFF, p), e));
+            String label = SHORTCUTS[i][1];
+            int cw = 12 + 6 + Draw.textW(tr, label), cx = r[0] + (r[2] - cw) / 2;
+            Icons.draw(ctx, SHORTCUTS[i][0], cx, r[1] + (r[3] - 12) / 2, 12, MenuKit.fa(Draw.lerpColor(0xFF9AA0B2, 0xFFFFFFFF, p), e));
+            Draw.text(ctx, tr, label, cx + 18, r[1] + (r[3] - 8) / 2, MenuKit.fa(Draw.lerpColor(0xFFC8CCD8, 0xFFFFFFFF, p), e), false);
         }
+
         boolean recent = System.currentTimeMillis() - statusAt < 8000 && !status.isEmpty();
-        String info = recent ? status : dirty() ? "You have looks that aren't applied yet" : "";
-        if (!info.isEmpty()) Draw.centered(ctx, tr, info, width / 2, by + SHORT_H + 12, MenuKit.fa(dirty() ? 0xFFFFD27A : 0x99FFFFFF, e));
+        if (recent) Draw.centered(ctx, tr, Draw.trim(tr, status, w - 24), x + w / 2, y + h - 16, MenuKit.fa(0xCCFFFFFF, e));
         Draw.text(ctx, tr, "Esc to close", 8, height - 14, 0x80FFFFFF, false);
     }
 
@@ -284,7 +304,7 @@ public class TempestEditorScreen extends Screen {
         boolean backHv = Draw.hit(mx, my, x + 10, y + 7, 46, 18);
         Draw.panel(ctx, x + 10, y + 7, 46, 18, 5, backHv ? 0xEC2A2C33 : 0xD81A1B20, 0x40FFFFFF);
         Draw.centered(ctx, tr, "< Back", x + 33, y + 12, 0xFFE4E6EC);
-        hubIcon(ctx, HUB_NAMES[group], x + 63, y + 7, 18, 1f);
+        Icons.draw(ctx, groupIcon(group), x + 64, y + 8, 16, 0xFFFFFFFF);
         Draw.text(ctx, tr, Draw.bold(PackLooks.GROUPS[group]), x + 84, y + 7, 0xFFFFFFFF, false);
         Draw.text(ctx, tr, "Pick a look, then press Apply", x + 84, y + 17, 0xFF8B90A0, false);
         boolean dirty = dirty();
@@ -577,17 +597,17 @@ public class TempestEditorScreen extends Screen {
     }
 
     private boolean clickHub(double mx, double my) {
-        int ts = tileSize(), n = PackLooks.GROUPS.length;
-        int tx0 = width / 2 - (n * (ts + TILE_GAP) - TILE_GAP) / 2, ty = tilesY();
-        for (int i = 0; i < n; i++) {
-            if (Draw.hit(mx, my, tx0 + i * (ts + TILE_GAP), ty, ts, CAT_H)) {
+        for (int i = 0; i < PackLooks.GROUPS.length; i++) {
+            int[] r = cardRect(i);
+            if (Draw.hit(mx, my, r[0], r[1], r[2], r[3])) {
                 group = i;
                 openCategory(PackLooks.inGroup(PackLooks.GROUPS[i]).get(0));
                 return true;
             }
         }
         for (int i = 0; i < SHORTCUTS.length; i++) {
-            if (!Draw.hit(mx, my, shortX(i), shortY(), shortW(i), SHORT_H) || client == null) continue;
+            int[] r = linkRect(i);
+            if (!Draw.hit(mx, my, r[0], r[1], r[2], r[3]) || client == null) continue;
             switch (i) {
                 case 0 -> client.setScreen(new ConfigsScreen(this));
                 case 1 -> {

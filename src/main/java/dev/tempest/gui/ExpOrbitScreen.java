@@ -205,15 +205,50 @@ public class ExpOrbitScreen extends Screen {
     /** Purple night: blurred world (or the menu wallpaper), a violet wash, stars and slow falling sparkles. */
     private void background(DrawContext ctx, float t, float e) {
         paintBackground(ctx, width, height, cx(), ringY(), t, e);
+        // a pool of light under the ring, squashed into an ellipse like a floor
+        var m = ctx.getMatrices();
+        m.pushMatrix();
+        m.translate(cx(), ringY() + frontSize() * 0.4f);
+        m.scale(1f, 0.22f);
+        TempestLoading.drawGlow(ctx, 0, 0, Math.round(radius() * 2.9f), Draw.accent(), 0.34f * e);
+        TempestLoading.drawGlow(ctx, 0, 0, Math.round(radius() * 1.4f), 0xB9A8FF, 0.22f * e);
+        m.popMatrix();
+        // the ring's track: a dotted orbit, brighter in front, with a glint running round it
+        int dots = 160;
+        float glint = (t * 0.11f) % 1f;
+        for (int i = 0; i < dots; i++) {
+            float f = i / (float) dots;
+            float a = (float) (f * Math.PI * 2);
+            float d01 = ((float) Math.cos(a) + 1f) / 2f;
+            int x = Math.round(cx() + radius() * (float) Math.sin(a));
+            int y = Math.round(ringY() - (1f - d01) * frontSize() * 0.95f);
+            float dd = Math.abs(((f - glint) % 1f + 1.5f) % 1f - 0.5f);
+            float gl = Math.max(0f, 1f - dd * 16f);
+            int al = Math.min(255, Math.round((0x14 + 0x46 * d01 + 0xC0 * gl * gl) * e));
+            ctx.fill(x, y, x + 1, y + 1, al << 24 | 0xD8CCFF);
+            if (gl > 0.6f) ctx.fill(x - 1, y, x + 2, y + 1, Math.round(al * 0.5f) << 24 | 0xD8CCFF);
+        }
     }
 
     /** The Exp background, shared with the Exp mod list. */
     static void paintBackground(DrawContext ctx, int width, int height, int glowX, int glowY, float t, float e) {
         net.minecraft.client.MinecraftClient client = net.minecraft.client.MinecraftClient.getInstance();
         if (client.world == null) Draw.menuBackground(ctx, width, height);
-        else MenuBlur.apply(ctx);
-        ctx.fillGradient(0, 0, width, height, MenuKit.fa(0xC02A1466, e), MenuKit.fa(0xB0403252, e));
-        TempestLoading.drawGlow(ctx, glowX, glowY, Math.round(Math.max(width, height) * 1.2f), 0x7A4DFF, 0.30f * e);
+        MenuBlur.apply(ctx);                                   // blur the game, or the wallpaper on the title screen
+        ctx.fillGradient(0, 0, width, height, MenuKit.fa(0xC81A0E4A, e), MenuKit.fa(0xB83A2458, e));
+        // slow drifting nebula clouds in a few hues, so the night has depth instead of one flat wash
+        int big = Math.max(width, height);
+        for (int k = 0; k < 5; k++) {
+            float ph = t * (0.035f + hash(k * 11 + 1) * 0.03f) + k * 1.9f;
+            int nx = Math.round(width * (0.15f + 0.7f * hash(k * 11 + 2)) + (float) Math.sin(ph) * width * 0.08f);
+            int ny = Math.round(height * (0.15f + 0.7f * hash(k * 11 + 3)) + (float) Math.cos(ph * 1.3f) * height * 0.06f);
+            int col = k % 3 == 0 ? 0x6A3CFF : k % 3 == 1 ? 0xC04BD8 : 0x2E7BE0;
+            float breathe = 0.75f + 0.25f * (float) Math.sin(t * 0.4f + k * 2.1f);
+            TempestLoading.drawGlow(ctx, nx, ny, Math.round(big * (0.55f + 0.35f * hash(k * 11 + 4))), col, 0.16f * breathe * e);
+        }
+        TempestLoading.drawGlow(ctx, glowX, glowY, Math.round(big * 1.2f), 0x7A4DFF, 0.26f * e);
+        // darker corners pull the eye to the middle
+        vignette(ctx, width, height, e);
 
         // stars: fixed spots that twinkle
         for (int k = 0; k < 70; k++) {
@@ -230,6 +265,18 @@ public class ExpOrbitScreen extends Screen {
             float tw = 0.4f + 0.6f * (0.5f + 0.5f * (float) Math.sin(t * 2.3f + k * 1.7f));
             int col = k % 3 == 0 ? 0xC8B8FF : k % 3 == 1 ? 0xFFFFFF : 0x9EE6D2;
             sparkle(ctx, Math.round(sx), Math.round(sy), hash(k * 7 + 5) < 0.4f ? 2 : 1, Draw.withAlpha(col, Math.round(0xE0 * tw * e)));
+        }
+    }
+
+    /** Soft dark edges: four gradients along the sides. */
+    static void vignette(DrawContext ctx, int width, int height, float e) {
+        int vw = Math.max(40, width / 6), vh = Math.max(30, height / 5);
+        ctx.fillGradient(0, 0, width, vh, MenuKit.fa(0x70050312, e), 0x00050312);
+        ctx.fillGradient(0, height - vh, width, height, 0x00050312, MenuKit.fa(0x80050312, e));
+        for (int i = 0; i < vw; i++) {
+            int a = Math.round(0x60 * (1f - i / (float) vw) * (1f - i / (float) vw) * e);
+            ctx.fill(i, 0, i + 1, height, a << 24 | 0x050312);
+            ctx.fill(width - 1 - i, 0, width - i, height, a << 24 | 0x050312);
         }
     }
 

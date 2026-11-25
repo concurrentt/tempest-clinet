@@ -61,7 +61,7 @@ public class ExpDockScreen extends Screen {
     @Override
     public void render(DrawContext ctx, int mx, int my, float delta) {
         TextRenderer tr = textRenderer;
-        if (client != null && client.world == null) ExpOrbitScreen.paintBackground(ctx, width, height, width / 2, height / 2, MenuKit.time(), 1f);
+        backdrop(ctx, rise());
         // magnify by distance from the mouse (only while it's near the dock)
         float[] base = new float[count()];
         float total = count() * BASE + (count() - 1) * GAP, x0 = width / 2f - total / 2f;
@@ -75,7 +75,11 @@ public class ExpDockScreen extends Screen {
         float[] lx = lefts();
         float dockW = lx[count() - 1] + sizes[count() - 1] - lx[0] + 20;
         int dy = baseY();
-        ExpKit.glass(ctx, Math.round(lx[0] - 10), dy - BASE - 12, Math.round(dockW), BASE + 18, 12, 1f);
+        int gx = Math.round(lx[0] - 10), gy = dy - BASE - 12, gw = Math.round(dockW), gh = BASE + 18;
+        ExpKit.glass(ctx, gx, gy, gw, gh, 12, 1f);
+        // frosted sheen on the top half and a bright rim, like a real glass shelf
+        Draw.roundRectV(ctx, gx + 1, gy + 1, gw - 2, gh / 2, 11, 0x1CFFFFFF, 0x00FFFFFF);
+        ctx.fill(gx + 12, gy + 1, gx + gw - 12, gy + 2, 0x50FFFFFF);
 
         int hovered = -1;
         for (int i = 0; i < count(); i++) {
@@ -123,6 +127,26 @@ public class ExpDockScreen extends Screen {
         }
         ExpKit.styleButton(ctx, textRenderer, width, mx, my);
         super.render(ctx, mx, my, delta);
+    }
+
+    /**
+     * Behind the dock: the game (or the title wallpaper) blurred, darkening toward the bottom, a pool of accent light
+     * the dock sits in, and soft dark edges.
+     */
+    private void backdrop(DrawContext ctx, float e) {
+        if (client != null && client.world == null) Draw.menuBackground(ctx, width, height);
+        boolean blurred = MenuBlur.apply(ctx);
+        ctx.fillGradient(0, 0, width, height, MenuKit.fa(blurred ? 0x18080614 : 0x28080614, e), MenuKit.fa(0x98080614, e));
+        float t = MenuKit.time();
+        var m = ctx.getMatrices();
+        m.pushMatrix();
+        m.translate(width / 2f, baseY() - BASE / 2f - 6);
+        m.scale(1f, 0.28f);
+        float breathe = 0.85f + 0.15f * (float) Math.sin(t * 0.9f);
+        TempestLoading.drawGlow(ctx, 0, 0, Math.round(width * 1.0f), Draw.accent(), 0.50f * breathe * e);
+        TempestLoading.drawGlow(ctx, 0, 0, Math.round(width * 0.45f), 0xE8E0FF, 0.12f * e);
+        m.popMatrix();
+        ExpOrbitScreen.vignette(ctx, width, height, 0.8f * e);
     }
 
     /** Settings panel beside the pop-up card: to its right, or its left when there is no room. {x, y, w, h} */
@@ -232,7 +256,10 @@ public class ExpDockScreen extends Screen {
     }
 
     @Override
-    public void removed() { if (opts != null) opts.close(); }
+    public void removed() {
+        MenuBlur.restore();
+        if (opts != null) opts.close();
+    }
 
     @Override
     public void close() {

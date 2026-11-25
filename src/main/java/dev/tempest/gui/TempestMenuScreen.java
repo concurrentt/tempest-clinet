@@ -65,8 +65,10 @@ public class TempestMenuScreen extends Screen {
     public void render(DrawContext ctx, int mx, int my, float delta) {
         TextRenderer tr = textRenderer;
         float e = intro();
-        if (client != null && client.world == null) Draw.menuBackground(ctx, width, height);
-        else {
+        if (client != null && client.world == null) {
+            Draw.menuBackground(ctx, width, height);
+            MenuBlur.apply(ctx);
+        } else {
             // blur the world (GUI & Configs -> Menu Blur), then darken it - less when blurred - most of all behind the menu
             boolean blurred = MenuBlur.apply(ctx);
             ctx.fillGradient(0, 0, width, height, MenuKit.fa(blurred ? 0x48000000 : 0x70000000, e), MenuKit.fa(blurred ? 0x30000000 : 0x50000000, e));

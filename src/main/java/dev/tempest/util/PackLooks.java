@@ -166,11 +166,12 @@ public final class PackLooks {
 
             tex("crosshair", "HUD", "Crosshair", Items.TARGET, "textures/gui/sprites/hud/crosshair.png", null, "invert",
                     "textures/gui/sprites/hud/crosshair.png"),
-            tex("gui", "HUD", "Inventory GUI", Items.CHEST, C + "inventory.png", new int[]{0, 0, 176, 166}, null,
+            tex("gui", "HUD", "Inventory GUIs", Items.CHEST, C + "inventory.png", new int[]{0, 0, 176, 166}, "clear",
                     C + "inventory.png", C + "generic_54.png", C + "shulker_box.png", C + "crafting_table.png", C + "furnace.png",
                     C + "blast_furnace.png", C + "smoker.png", C + "anvil.png", C + "enchanting_table.png", C + "dispenser.png",
                     C + "hopper.png", C + "brewing_stand.png", C + "smithing.png", C + "grindstone.png", C + "stonecutter.png",
-                    C + "beacon.png", C + "villager.png", C + "creative_inventory/tab_items.png",
+                    C + "beacon.png", C + "villager.png", C + "loom.png", C + "cartography_table.png", C + "horse.png",
+                    C + "crafter.png", C + "creative_inventory/tab_items.png",
                     C + "creative_inventory/tab_inventory.png", C + "creative_inventory/tab_item_search.png"),
             tex("hearts", "HUD", "Hearts", Items.RED_DYE, HEART + "full.png", null, null,
                     HEART + "full.png", HEART + "half.png", HEART + "full_blinking.png", HEART + "half_blinking.png",
@@ -272,12 +273,21 @@ public final class PackLooks {
     }
 
     // ------------------------------------------------------------------ looks (what you picked)
-    /** look: "Vanilla", a style name, "Custom", or "pack:&lt;profile id&gt;"; color is for Custom; glintOff hides the glint. */
-    public record Look(String look, int color, boolean glintOff) {
+    /**
+     * look: "Vanilla", a style name, "Custom", or "pack:&lt;profile id&gt;"; color is for Custom; glintOff hides the glint;
+     * clear makes container GUIs see-through at {@code opacity} percent (5..100).
+     */
+    public record Look(String look, int color, boolean glintOff, boolean clear, int opacity) {
+        public static final int DEFAULT_OPACITY = 60;
         public static final Look VANILLA = new Look("Vanilla", 0xE0486A, false);
-        public Look withLook(String l) { return new Look(l, color, glintOff); }
-        public Look withColor(int c) { return new Look("Custom", c & 0xFFFFFF, glintOff); }
-        public Look withGlintOff(boolean off) { return new Look(look, color, off); }
+        public Look(String look, int color, boolean glintOff) { this(look, color, glintOff, false, DEFAULT_OPACITY); }
+        public Look withLook(String l) { return new Look(l, color, glintOff, clear, opacity); }
+        public Look withColor(int c) { return new Look("Custom", c & 0xFFFFFF, glintOff, clear, opacity); }
+        public Look withGlintOff(boolean off) { return new Look(look, color, off, clear, opacity); }
+        public Look withClear(boolean on) { return new Look(look, color, glintOff, on, opacity); }
+        public Look withOpacity(int pct) { return new Look(look, color, glintOff, clear, Math.max(5, Math.min(100, pct))); }
+        /** Anything different from plain vanilla? */
+        public boolean changed() { return !look.equals("Vanilla") || glintOff || clear; }
     }
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -296,7 +306,9 @@ public final class PackLooks {
                         JsonObject v = e.getValue().getAsJsonObject();
                         applied.put(e.getKey(), new Look(v.has("look") ? v.get("look").getAsString() : "Vanilla",
                                 v.has("color") ? v.get("color").getAsInt() : Look.VANILLA.color,
-                                v.has("glintOff") && v.get("glintOff").getAsBoolean()));
+                                v.has("glintOff") && v.get("glintOff").getAsBoolean(),
+                                v.has("clear") && v.get("clear").getAsBoolean(),
+                                v.has("opacity") ? v.get("opacity").getAsInt() : Look.DEFAULT_OPACITY));
                     }
                 }
             } catch (Exception ignored) { }
@@ -306,7 +318,8 @@ public final class PackLooks {
 
     /** Same result in game (the colour only matters for Custom). */
     public static boolean same(Look a, Look b) {
-        return a.look().equals(b.look()) && a.glintOff() == b.glintOff() && (!a.look().equals("Custom") || a.color() == b.color());
+        return a.look().equals(b.look()) && a.glintOff() == b.glintOff() && (!a.look().equals("Custom") || a.color() == b.color())
+                && a.clear() == b.clear() && (!a.clear() || a.opacity() == b.opacity());
     }
 
     public static Look appliedLook(String cat) { return applied().getOrDefault(cat, Look.VANILLA); }
@@ -318,6 +331,7 @@ public final class PackLooks {
             v.addProperty("look", e.getValue().look());
             v.addProperty("color", e.getValue().color());
             if (e.getValue().glintOff()) v.addProperty("glintOff", true);
+            if (e.getValue().clear()) { v.addProperty("clear", true); v.addProperty("opacity", e.getValue().opacity()); }
             o.add(e.getKey(), v);
         }
         try { Files.writeString(file(), GSON.toJson(o), StandardCharsets.UTF_8); } catch (Exception ignored) { }
@@ -388,8 +402,30 @@ public final class PackLooks {
         return out;
     }
 
-    /** One texture of a category with a look applied (null = leave it to vanilla). */
+    /**
+     * One texture of a category with a look applied (null = leave it to vanilla). Container GUIs set to Transparent
+     * get every pixel's opacity scaled down afterwards (on top of whatever look they have).
+     */
     public static Img render(Category cat, Identifier id, Look look) {
+        Img img = renderLook(cat, id, look);
+        if (!look.clear() || !"gui".equals(cat.id())) return img;
+        if (img == null) img = base(id);
+        return img == null ? null : fade(img, look.opacity());
+    }
+
+    /** Multiplies every pixel's alpha by pct / 100. */
+    public static Img fade(Img img, int pct) {
+        float k = Math.max(0, Math.min(100, pct)) / 100f;
+        int[] p = img.px.clone();
+        for (int i = 0; i < p.length; i++) {
+            int a = p[i] >>> 24;
+            if (a == 0) continue;
+            p[i] = (Math.round(a * k) << 24) | (p[i] & 0xFFFFFF);
+        }
+        return new Img(img.w, img.h, p);
+    }
+
+    private static Img renderLook(Category cat, Identifier id, Look look) {
         if (cat.toggle != null && cat.toggle.equals("glint") && look.glintOff()) {
             Img b = base(id);
             return b == null ? null : new Img(b.w, b.h, new int[b.w * b.h]);   // fully transparent: no glint
@@ -462,7 +498,7 @@ public final class PackLooks {
                     return "Couldn't write " + path + ": " + e.getMessage();
                 }
             }
-            if (want.look().equals("Vanilla") && !want.glintOff()) applied().remove(cat.id); else applied().put(cat.id, want);
+            if (!want.changed()) applied().remove(cat.id); else applied().put(cat.id, want);
         }
         if (soundsChanged) {
             try { writeSounds(applied()); } catch (Exception e) { return "Couldn't write sounds: " + e.getMessage(); }

@@ -1,3 +1,20 @@
+## 0.21.24 - Blur behind every menu, shimmering Constellation, new Dock and Orbit Ring backgrounds
+- Tempest Editor -> HUD -> Inventory GUIs: new Transparent switch and an Opacity slider (5-100%), so every
+  container screen - inventory, chests, shulkers, furnaces, crafting, anvil, enchanting, brewing, villagers, loom,
+  horse, creative tabs and more - can be see-through. Works on top of any look (a colour style or a pack's GUI).
+- Every Right Shift style now blurs what's behind it - the game, or the wallpaper on the title screen (Dock and
+  Sidebar Drawer didn't blur before, and the Classic menu now blurs on the title screen too). GUI & Configs ->
+  Menu Blur still sets how strong it is, or turns it off.
+- Richer night behind the menus: slow drifting nebula clouds in violet, pink and blue, and softly darkened edges.
+- Orbit Ring: a pool of light under the ring and a dotted orbit track with a glint that runs round it.
+- Dock: sits in a glowing pool of your accent colour, the screen darkens gently toward it, and the dock has a
+  frosted glass sheen.
+- Constellation: stars really shimmer now - light spikes that pulse, each star twinkles at its own pace and
+  flares now and then, sparks run along the lines to stars that are on, every constellation has its own tint,
+  category stars send out soft ripples, and a shooting star crosses the sky every few seconds.
+- Mod settings: the colour dots no longer run past the edge of narrow panels (like the Sidebar Drawer's) - they
+  sit a little closer together when there isn't room.
+
 ## 0.21.23 - Settings inside every menu style, XP Bottles in the Editor
 - Mod settings now open inside every Right Shift style, each its own way (right-click a mod, or its gear):
   Dock - a panel slides out to the right of the card; Sidebar Drawer - pushes in over the list like a second page;

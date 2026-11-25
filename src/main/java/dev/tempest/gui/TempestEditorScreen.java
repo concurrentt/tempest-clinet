@@ -78,7 +78,7 @@ public class TempestEditorScreen extends Screen {
     private boolean groupChanged(int g) {
         for (Category c : PackLooks.inGroup(PackLooks.GROUPS[g])) {
             Look l = PackLooks.appliedLook(c.id());
-            if (!l.look().equals("Vanilla") || l.glintOff()) return true;
+            if (l.changed()) return true;
         }
         return false;
     }
@@ -329,7 +329,7 @@ public class TempestEditorScreen extends Screen {
             item(ctx, c.icon(), x + 21, ry + 10, 0.75f);
             Draw.text(ctx, tr, Draw.ellipsize(tr, c.name(), SIDE_W - 34), x + 32, ry + 6, sel ? 0xFFFFFFFF : 0xFFC9CCD6, false);
             Look l = PackLooks.appliedLook(c.id());
-            if (!l.look().equals("Vanilla") || l.glintOff()) Draw.circle(ctx, x + SIDE_W + 3, ry + 10, 2, Draw.accent());
+            if (l.changed()) Draw.circle(ctx, x + SIDE_W + 3, ry + 10, 2, Draw.accent());
         }
         if (cat == null) return;
 
@@ -356,11 +356,13 @@ public class TempestEditorScreen extends Screen {
         // drop zone
         if (!cat.isSound()) {
             int dy = ty + 20;
-            Draw.panel(ctx, mx0, dy, mw, 16, 4, 0x60181A22, Draw.withAlpha(Draw.accent(), 0x60));
-            Draw.text(ctx, tr, Draw.ellipsize(tr, "↓ Drop a screenshot here to copy its colour onto " + cat.name(), mw - 70), mx0 + 6, dy + 4, 0xFFC9CCD6, false);
-            boolean hv = Draw.hit(mx, my, mx0 + mw - 58, dy + 1, 56, 14);
-            Draw.panel(ctx, mx0 + mw - 58, dy + 1, 56, 14, 4, hv ? 0xEC2A2C33 : 0xD81A1B20, 0x40FFFFFF);
-            Draw.centered(ctx, tr, "Choose…", mx0 + mw - 30, dy + 4, 0xFFE4E6EC);
+            int dw = dropW();
+            Draw.panel(ctx, mx0, dy, dw, 16, 4, 0x60181A22, Draw.withAlpha(Draw.accent(), 0x60));
+            Draw.text(ctx, tr, Draw.ellipsize(tr, "↓ Drop a screenshot here to copy its colour onto " + cat.name(), dw - 70), mx0 + 6, dy + 4, 0xFFC9CCD6, false);
+            boolean hv = Draw.hit(mx, my, mx0 + dw - 58, dy + 1, 56, 14);
+            Draw.panel(ctx, mx0 + dw - 58, dy + 1, 56, 14, 4, hv ? 0xEC2A2C33 : 0xD81A1B20, 0x40FFFFFF);
+            Draw.centered(ctx, tr, "Choose…", mx0 + dw - 30, dy + 4, 0xFFE4E6EC);
+            if (hasOpacity()) drawOpacity(ctx, tr, dy, mx, my);
         }
 
         // grid
@@ -446,6 +448,40 @@ public class TempestEditorScreen extends Screen {
         return Math.max(0, rows * (CARD_H + GAP) - GAP - gridH());
     }
 
+    // ----- see-through GUIs: opacity slider next to the screenshot drop zone
+    private static final int OP_W = 146;
+    private boolean opDrag;
+
+    private boolean hasOpacity() { return cat != null && "clear".equals(cat.toggle()); }
+    private int dropW() { return mainW() - (hasOpacity() ? OP_W + 6 : 0); }
+    private int opX() { return mainX() + mainW() - OP_W; }
+    private int opTrackX() { return opX() + 50; }
+    private static final int OP_TRACK = 60;
+
+    private void drawOpacity(DrawContext ctx, TextRenderer tr, int y, int mx, int my) {
+        Look l = pendingLook(cat);
+        boolean on = l.clear();
+        int x = opX();
+        Draw.panel(ctx, x, y, OP_W, 16, 4, on ? 0x80181A22 : 0x50181A22, on ? Draw.withAlpha(Draw.accent(), 0x80) : 0x30FFFFFF);
+        Draw.text(ctx, tr, "Opacity", x + 6, y + 4, on ? 0xFFE4E6EC : 0x80E4E6EC, false);
+        int tx = opTrackX(), ty = y + 6;
+        Draw.roundRect(ctx, tx, ty, OP_TRACK, 4, 2, on ? 0xFF3A4254 : 0x803A4254);
+        int fw = Math.round(OP_TRACK * (l.opacity() - 5) / 95f);
+        if (fw > 0) Draw.roundRect(ctx, tx, ty, Math.max(4, fw), 4, 2, on ? Draw.accent() : Draw.withAlpha(Draw.accent(), 0x60));
+        boolean hv = Draw.hit(mx, my, tx - 4, y, OP_TRACK + 8, 16);
+        if (on && (hv || opDrag)) Draw.circle(ctx, tx + fw, ty + 2, 7, Draw.withAlpha(Draw.accent(), 0x40));
+        Draw.circle(ctx, tx + fw, ty + 2, 5, on ? 0xFFFFFFFF : 0x90FFFFFF);
+        String v = l.opacity() + "%";
+        Draw.text(ctx, tr, v, x + OP_W - 6 - Draw.textW(tr, v), y + 4, on ? Draw.accent() | 0xFF000000 : 0x80FFFFFF, false);
+    }
+
+    /** Sets the opacity from the mouse (and switches Transparent on, since that's what you're adjusting). */
+    private void dragOpacity(double mx) {
+        int pct = 5 + (int) Math.round(Math.max(0, Math.min(1, (mx - opTrackX()) / (double) OP_TRACK)) * 95);
+        pct = Math.round(pct / 5f) * 5;
+        pending.put(cat.id(), pendingLook(cat).withClear(true).withOpacity(pct));
+    }
+
     // ----- toggles
     private String toggleLabel() {
         if (cat == null || cat.toggle() == null) return null;
@@ -453,6 +489,7 @@ public class TempestEditorScreen extends Screen {
             case "explosions" -> "Explosion Particles";
             case "glint" -> "Enchant Glint";
             case "invert" -> "Invert colours";
+            case "clear" -> "Transparent";
             default -> null;
         };
     }
@@ -462,6 +499,7 @@ public class TempestEditorScreen extends Screen {
             case "explosions" -> ParticleFilterModule.explosionsShown();
             case "glint" -> !pendingLook(cat).glintOff();
             case "invert" -> PackLooks.invertCrosshair();
+            case "clear" -> pendingLook(cat).clear();
             default -> false;
         };
     }
@@ -471,6 +509,7 @@ public class TempestEditorScreen extends Screen {
             case "explosions" -> { ParticleFilterModule.setExplosionsShown(!ParticleFilterModule.explosionsShown()); TempestConfig.save(); }
             case "glint" -> pending.put(cat.id(), pendingLook(cat).withGlintOff(!pendingLook(cat).glintOff()));
             case "invert" -> PackLooks.setInvertCrosshair(!PackLooks.invertCrosshair());
+            case "clear" -> pending.put(cat.id(), pendingLook(cat).withClear(!pendingLook(cat).clear()));
             default -> { }
         }
     }
@@ -579,7 +618,8 @@ public class TempestEditorScreen extends Screen {
             rx -= 34;
             if (Draw.hit(mx, my, rx - 6 - Draw.textW(textRenderer, toggleLabel()), ty, Draw.textW(textRenderer, toggleLabel()) + 40, 16)) { flipToggle(); return true; }
         }
-        if (!cat.isSound() && Draw.hit(mx, my, mx0 + mw - 58, ty + 21, 56, 14)) { chooseFile(); return true; }
+        if (!cat.isSound() && Draw.hit(mx, my, mx0 + dropW() - 58, ty + 21, 56, 14)) { chooseFile(); return true; }
+        if (hasOpacity() && Draw.hit(mx, my, opTrackX() - 6, ty + 20, OP_TRACK + 12, 16)) { opDrag = true; dragOpacity(mx); return true; }
         // cards
         if (Draw.hit(mx, my, mx0, gridY(), mw, gridH())) {
             List<Option> opts = options();
@@ -681,12 +721,14 @@ public class TempestEditorScreen extends Screen {
     @Override
     public boolean mouseDragged(Click click, double dx, double dy) {
         if (picker && pickDrag != 0) { pickerDrag(click.x(), click.y()); return true; }
+        if (opDrag && hasOpacity()) { dragOpacity(click.x()); return true; }
         return super.mouseDragged(click, dx, dy);
     }
 
     @Override
     public boolean mouseReleased(Click click) {
         pickDrag = 0;
+        opDrag = false;
         return super.mouseReleased(click);
     }
 

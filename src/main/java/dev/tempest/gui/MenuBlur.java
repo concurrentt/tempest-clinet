@@ -14,11 +14,14 @@ public final class MenuBlur {
 
     private MenuBlur() { }
 
-    /** Blurs everything drawn so far (the world and HUD). Returns false when blur is off or there's no world. */
+    /**
+     * Blurs everything drawn so far: the world and HUD in game, or the menu wallpaper on the title screen.
+     * Returns false when Menu Blur is set to Off.
+     */
     public static boolean apply(DrawContext ctx) {
         MinecraftClient c = MinecraftClient.getInstance();
         int strength = ClientSettingsModule.menuBlur();
-        if (strength <= 0 || c.world == null) return false;
+        if (strength <= 0) return false;
         try {
             var opt = c.options.getMenuBackgroundBlurriness();
             if (saved == null) saved = opt.getValue();

@@ -84,31 +84,61 @@ public class ExpConstellationScreen extends Screen {
         ctx.fill(0, 0, width, height, MenuKit.fa(0x50060414, e));
         int[] h = dragMoved ? null : hit(mx, my);
 
+        shootingStars(ctx, t, e);
+
         for (int ci = 0; ci < ExpKit.CATS.length; ci++) {
             Category cat = ExpKit.CATS[ci];
             float[] c = catPos(ci);
             int cx = Math.round(sx(c[0])), cy = Math.round(sy(c[1]));
+            int tint = TINTS[ci % TINTS.length];
+            float z = Math.min(2f, zoom);
             List<Module> mods = ExpKit.mods(cat);
             for (int j = 0; j < mods.size(); j++) {
                 Module m = mods.get(j);
                 float[] p = modPos(ci, j, mods.size(), m);
                 int px = Math.round(sx(p[0])), py = Math.round(sy(p[1]));
-                line(ctx, cx, cy, px, py, MenuKit.fa(m.isEnabled() ? 0x50B4AAFF : 0x22B4AAFF, e));
+                boolean lit = m.isEnabled();
+                line(ctx, cx, cy, px, py, MenuKit.fa(lit ? Draw.withAlpha(tint, 0x48) : 0x1EB4AAFF, e));
+                float seed = ((m.getId().hashCode() >>> 4) & 1023) / 1023f;
+                if (lit) {
+                    // a spark of light running out along the line to every star that's on
+                    float f = (t * (0.28f + seed * 0.2f) + seed) % 1f;
+                    int lx = Math.round(cx + (px - cx) * f), ly = Math.round(cy + (py - cy) * f);
+                    int la = Math.round(0xC0 * (float) Math.sin(Math.PI * f) * e);
+                    ctx.fill(lx, ly, lx + 1, ly + 1, la << 24 | (tint & 0xFFFFFF));
+                    if (la > 0x60) { ctx.fill(lx - 1, ly, lx + 2, ly + 1, (la / 3) << 24 | (tint & 0xFFFFFF)); ctx.fill(lx, ly - 1, lx + 1, ly + 2, (la / 3) << 24 | (tint & 0xFFFFFF)); }
+                }
                 boolean hv = h != null && h[0] == ci && h[1] == j;
-                float on = Draw.hoverProgress("expc_" + m.getId(), m.isEnabled());
-                float tw = 0.75f + 0.25f * (float) Math.sin(t * 2.4f + j * 1.3f + ci);
-                if (on > 0.05f) TempestLoading.drawGlow(ctx, px, py, Math.round(18 * zoom), 0xC8BEFF, 0.5f * on * tw * e);
-                int r = Math.max(1, Math.round((on > 0.5f ? 2.2f : 1.4f) * Math.min(2f, zoom) + (hv ? 1 : 0)));
-                Draw.circle(ctx, px, py, r, MenuKit.fa(Draw.withAlpha(0xFFFFFF, on > 0.5f ? 0xFF : 0x8C), e));
+                float on = Draw.hoverProgress("expc_" + m.getId(), lit);
+                // twinkle: two waves at the star's own speeds, so no two stars pulse together
+                float tw = 0.62f + 0.24f * (float) Math.sin(t * (1.2f + seed * 2.2f) + seed * 40f)
+                        + 0.14f * (float) Math.sin(t * (3.4f + seed * 3.1f) + seed * 17f);
+                // every few seconds each star flares for a moment
+                float period = 4.5f + seed * 5f, ph = (t + seed * period) % period;
+                float flare = ph < 0.7f ? (float) Math.sin(Math.PI * ph / 0.7f) : 0f;
+                int col = Draw.lerpColor(0xFFFFFFFF, tint | 0xFF000000, 0.35f);
+                if (on > 0.05f) TempestLoading.drawGlow(ctx, px, py, Math.round((18 + 14 * flare) * zoom), tint, (0.42f * tw + 0.35f * flare) * on * e);
+                int r = Math.max(1, Math.round((on > 0.5f ? 1.8f : 1.1f) * z + (hv ? 1 : 0)));
+                float bright = on > 0.5f ? 0.75f + 0.25f * tw : 0.35f + 0.25f * tw;
+                int spike = Math.round((on > 0.5f ? 3.5f : 1.5f) * z * (0.7f + 0.3f * tw) + flare * (on > 0.5f ? 7f : 4f));
+                shimmer(ctx, px, py, r, spike, flare, col, Math.min(1f, bright + flare * 0.5f) * e);
                 if (zoom >= 1.8f && !hv) {
                     String l = m.getName();
-                    MenuKit.scaledCentered(ctx, tr, Draw.uiText(l), px, py + r + 3, 0.6f, MenuKit.fa(0x90FFFFFF, e), false);
+                    MenuKit.scaledCentered(ctx, tr, Draw.uiText(l), px, py + r + 4, 0.6f, MenuKit.fa(0x90FFFFFF, e), false);
                 }
             }
             boolean hv = h != null && h[0] == ci && h[1] == -1;
             float hp = Draw.hoverProgress("expc_cat" + ci, hv);
-            TempestLoading.drawGlow(ctx, cx, cy, Math.round((44 + 20 * hp) * Math.min(2f, zoom)), Draw.accent(), (0.5f + 0.3f * hp) * e);
-            Draw.circle(ctx, cx, cy, Math.round((3.5f + hp) * Math.min(2f, zoom)), MenuKit.fa(0xFFFFFFFF, e));
+            float breathe = 0.85f + 0.15f * (float) Math.sin(t * 1.1f + ci * 0.8f);
+            TempestLoading.drawGlow(ctx, cx, cy, Math.round((44 + 20 * hp) * z), Draw.accent(), (0.45f + 0.3f * hp) * breathe * e);
+            TempestLoading.drawGlow(ctx, cx, cy, Math.round(18 * z), tint, 0.5f * e);
+            // a soft ring that keeps rippling outward from each category star
+            for (int k = 0; k < 2; k++) {
+                float q = ((t * 0.35f + ci * 0.37f + k * 0.5f) % 1f);
+                int rr = Math.round((5 + q * 22) * z) / 2 * 2;            // even sizes only: fewer cached ring textures
+                Draw.ring(ctx, cx - rr, cy - rr, rr * 2, rr * 2, rr, MenuKit.fa(Draw.withAlpha(tint, Math.round(0x70 * (1f - q) * (1f - q))), e));
+            }
+            shimmer(ctx, cx, cy, Math.round((2.5f + hp) * z), Math.round((9 + 4 * hp) * z * breathe), 0.4f + 0.6f * hp, 0xFFFFFFFF, e);
             String name = ExpKit.title(cat);
             Draw.text(ctx, tr, name, cx - Draw.textW(tr, name) / 2, cy + Math.round(48 * Math.min(1.4f, zoom) * 0.8f), MenuKit.fa(Draw.lerpColor(0xB0FFFFFF, 0xFFFFFFFF, hp), e), false);
         }
@@ -167,6 +197,69 @@ public class ExpConstellationScreen extends Screen {
         m.scale(k, k);
         opts.render(ctx, tr, 0, 0, l[4], l[5], mx, my, p, false);
         m.popMatrix();
+    }
+
+    /** A soft tint per category, so each constellation has its own colour. */
+    private static final int[] TINTS = {0xB9A8FF, 0x8EC5FF, 0xFFB3E6, 0x9EF0D6, 0xFFE3A8, 0xC8B8FF, 0x8FE3FF, 0xFFC2A8};
+
+    /**
+     * A star that shimmers: a bright core with four light spikes that fade out from it (longer while it flares),
+     * plus faint diagonal spikes during a flare.
+     */
+    private static void shimmer(DrawContext ctx, int x, int y, int r, int len, float flare, int col, float a) {
+        if (a <= 0.01f) return;
+        int rgb = col & 0xFFFFFF;
+        for (int i = 1; i <= len; i++) {
+            float f = 1f - i / (float) (len + 1);
+            int al = Math.round(0xE0 * f * f * a);
+            if (al <= 2) continue;
+            int c = al << 24 | rgb;
+            ctx.fill(x + r + i - 1, y, x + r + i, y + 1, c);
+            ctx.fill(x - r - i + 1, y, x - r - i + 2, y + 1, c);
+            ctx.fill(x, y + r + i - 1, x + 1, y + r + i, c);
+            ctx.fill(x, y - r - i + 1, x + 1, y - r - i + 2, c);
+        }
+        if (flare > 0.2f) {
+            int dl = Math.round(len * 0.45f);
+            for (int i = 1; i <= dl; i++) {
+                int al = Math.round(0x90 * (1f - i / (float) (dl + 1)) * flare * a);
+                int c = al << 24 | rgb;
+                ctx.fill(x + i, y + i, x + i + 1, y + i + 1, c);
+                ctx.fill(x - i, y + i, x - i + 1, y + i + 1, c);
+                ctx.fill(x + i, y - i, x + i + 1, y - i + 1, c);
+                ctx.fill(x - i, y - i, x - i + 1, y - i + 1, c);
+            }
+        }
+        Draw.circle(ctx, x, y, r, Math.round(255 * Math.min(1f, a)) << 24 | rgb);
+    }
+
+    /** Now and then a shooting star streaks across the sky. */
+    private void shootingStars(DrawContext ctx, float t, float e) {
+        float every = 6.5f, dur = 0.9f;
+        int n = (int) (t / every);
+        float ph = t - n * every;
+        if (ph > dur) return;
+        float p = ph / dur;
+        float x0 = (0.2f + 0.7f * h(n * 3 + 1)) * width, y0 = (0.05f + 0.35f * h(n * 3 + 2)) * height;
+        float dx = -(0.25f + 0.15f * h(n * 3 + 3)) * width, dy = 0.22f * height;
+        float hx = x0 + dx * p, hy = y0 + dy * p;
+        float fade = (float) Math.sin(Math.PI * p);
+        int tail = 34;
+        for (int i = 0; i < tail; i++) {
+            float k = i / (float) tail;
+            int x = Math.round(hx - dx * 0.12f * k), y = Math.round(hy - dy * 0.12f * k);
+            int al = Math.round(0xE0 * (1f - k) * (1f - k) * fade * e);
+            ctx.fill(x, y, x + 1, y + 1, al << 24 | 0xFFFFFF);
+        }
+        TempestLoading.drawGlow(ctx, Math.round(hx), Math.round(hy), 14, 0xDCD4FF, 0.6f * fade * e);
+    }
+
+    private static float h(int i) {
+        int x = i * 0x27D4EB2D;
+        x ^= x >>> 15;
+        x *= 0x85EBCA6B;
+        x ^= x >>> 13;
+        return (x & 0xFFFFFF) / (float) 0x1000000;
     }
 
     /** Dotted line (DrawContext only fills rectangles). */

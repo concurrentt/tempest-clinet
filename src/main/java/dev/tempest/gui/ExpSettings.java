@@ -200,13 +200,13 @@ final class ExpSettings {
             Draw.roundRect(ctx, x + w - 20, y + 3, 14, 10, 4, MenuKit.fa(c.get(), a));
             boolean inPalette = false;
             for (int k = 0; k < ColorSetting.PALETTE.length; k++) {
-                int sx = swatchX(x, k), sy = y + 16;
+                int sx = swatchX(x, w, k), sy = y + 16;
                 int col = ColorSetting.PALETTE[k];
                 if (col == c.get()) { Draw.circle(ctx, sx + SWATCH / 2, sy + SWATCH / 2, SWATCH / 2 + 1, MenuKit.fa(0xFFFFFFFF, a)); inPalette = true; }
                 Draw.circle(ctx, sx + SWATCH / 2, sy + SWATCH / 2, SWATCH / 2 - 1, MenuKit.fa(col, a));
             }
             // last swatch: a rainbow dot that opens the hue strip (ringed when the colour is a custom one)
-            int kx = swatchX(x, ColorSetting.PALETTE.length), ky = y + 16;
+            int kx = swatchX(x, w, ColorSetting.PALETTE.length), ky = y + 16;
             if (!inPalette || hueOpen == c) Draw.circle(ctx, kx + SWATCH / 2, ky + SWATCH / 2, SWATCH / 2 + 1, MenuKit.fa(0xFFFFFFFF, a));
             for (int dx = 0; dx < SWATCH - 2; dx++) ctx.fill(kx + 1 + dx, ky + 2, kx + 2 + dx, ky + SWATCH - 2, MenuKit.fa(Draw.hsvToRgb(dx / (float) (SWATCH - 2), 0.8f, 1f), a));
             if (hueOpen == c) {
@@ -220,7 +220,12 @@ final class ExpSettings {
         }
     }
 
-    private static int swatchX(int x, int k) { return x + 6 + k * (SWATCH + 4); }
+    /** Swatch k in a colour row of width w: 16px apart, closer together when the panel is narrow. */
+    private static int swatchX(int x, int w, int k) {
+        int n = ColorSetting.PALETTE.length + 1;
+        int step = Math.max(SWATCH + 1, Math.min(SWATCH + 4, (w - 12 - SWATCH) / (n - 1)));
+        return x + 6 + k * step;
+    }
 
     // ---------------------------------------------------------------- input
     /** Returns true if the click landed on the panel (it always eats those). */
@@ -263,7 +268,7 @@ final class ExpSettings {
                 return;
             }
             for (int k = 0; k <= ColorSetting.PALETTE.length; k++) {
-                if (!Draw.hit(mx, my, swatchX(x, k) - 1, y + 15, SWATCH + 2, SWATCH + 2)) continue;
+                if (!Draw.hit(mx, my, swatchX(x, w, k) - 1, y + 15, SWATCH + 2, SWATCH + 2)) continue;
                 if (k < ColorSetting.PALETTE.length) { c.set(ColorSetting.PALETTE[k]); hueOpen = null; }
                 else hueOpen = hueOpen == c ? null : c;
                 return;

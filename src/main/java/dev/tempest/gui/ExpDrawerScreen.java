@@ -12,7 +12,7 @@ import java.util.List;
 
 /**
  * EXPERIMENTAL Right Shift menu: a drawer that slides in from the right edge while the game stays visible on the
- * left (it isn't blurred or darkened). Category tabs run across the top of the drawer, mods are a scrolling list
+ * left (blurred a little, by the Menu Blur setting). Category tabs run across the top of the drawer, mods are a scrolling list
  * with switches. Click a row to toggle, right-click for options; click the game side to close.
  */
 public class ExpDrawerScreen extends Screen {
@@ -47,7 +47,9 @@ public class ExpDrawerScreen extends Screen {
     public void render(DrawContext ctx, int mx, int my, float delta) {
         TextRenderer tr = textRenderer;
         float e = slide();
-        if (client != null && client.world == null) ExpOrbitScreen.paintBackground(ctx, width, height, width / 3, height / 2, MenuKit.time(), 1f);
+        if (client != null && client.world == null) Draw.menuBackground(ctx, width, height);
+        MenuBlur.apply(ctx);
+        ctx.fillGradient(0, 0, width, height, MenuKit.fa(0x20080614, e), MenuKit.fa(0x50080614, e));
         int x = dx(), w = dw();
         Draw.shadow(ctx, x, 0, w + 20, height, 0, 14);
         ctx.fill(x, 0, width, height, 0xE8120E22);
@@ -152,7 +154,10 @@ public class ExpDrawerScreen extends Screen {
     }
 
     @Override
-    public void removed() { if (opts != null) opts.close(); }
+    public void removed() {
+        MenuBlur.restore();
+        if (opts != null) opts.close();
+    }
 
     @Override
     public void close() {

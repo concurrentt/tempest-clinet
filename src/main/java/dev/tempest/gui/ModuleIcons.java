@@ -48,6 +48,8 @@ public final class ModuleIcons {
         MODULES.put("fps_saver", Items.REDSTONE);
         MODULES.put("combat_timer", Items.CLOCK);
         MODULES.put("saturation", Items.RED_DYE);
+        MODULES.put("armor_alert", Items.IRON_CHESTPLATE);
+        MODULES.put("server_setups", Items.WRITABLE_BOOK);
         MODULES.put("light_levels", Items.TORCH);
         MODULES.put("mouse_tweaks", Items.HOPPER);
         MODULES.put("shulker_preview", Items.SHULKER_BOX);

@@ -3,11 +3,11 @@
   "scenes": [
     {
       "name": "Deep Space",
-      "top": "#03040A",
-      "horizon": "#0A0E20",
+      "top": "#020308",
+      "horizon": "#0A111E",
       "glow": {
-        "color": "#22346E",
-        "alpha": 0.45
+        "color": "#1A2838",
+        "alpha": 0.35
       },
       "stars": {
         "count": 2400,
@@ -24,22 +24,22 @@
           "az": 35,
           "el": 42,
           "size": 38,
-          "color": "#4C6CFF",
-          "alpha": 0.34
+          "color": "#FF5C7A",
+          "alpha": 0.2
         },
         {
           "az": 350,
           "el": 58,
           "size": 30,
-          "color": "#B45CFF",
-          "alpha": 0.26
+          "color": "#6C8CFF",
+          "alpha": 0.14
         },
         {
           "az": 200,
           "el": 35,
           "size": 34,
-          "color": "#3CA8FF",
-          "alpha": 0.24
+          "color": "#4CC8D0",
+          "alpha": 0.12
         }
       ],
       "meteors": {
@@ -77,8 +77,8 @@
           "az": 120,
           "el": 50,
           "size": 30,
-          "color": "#7C4CFF",
-          "alpha": 0.14
+          "color": "#5C6CFF",
+          "alpha": 0.1
         }
       ],
       "blackHole": {
@@ -103,8 +103,8 @@
       "top": "#040A1C",
       "horizon": "#0B2036",
       "glow": {
-        "color": "#1C6B5A",
-        "alpha": 0.45
+        "color": "#163A30",
+        "alpha": 0.4
       },
       "stars": {
         "count": 1700,
@@ -123,11 +123,11 @@
           "base": 22,
           "height": 26,
           "colors": [
-            "#C27CFF",
-            "#8C5CFF",
-            "#4C7CFF"
+            "#5CE68C",
+            "#B4407A",
+            "#6A3C9C"
           ],
-          "alpha": 0.55,
+          "alpha": 0.4,
           "speed": 0.6
         },
         {
@@ -136,9 +136,9 @@
           "base": 10,
           "height": 32,
           "colors": [
-            "#6CFFB0",
-            "#2EE6A0",
-            "#A45CFF"
+            "#8CFFA0",
+            "#3CE68C",
+            "#C0407A"
           ],
           "alpha": 1.0,
           "speed": 1.0
@@ -163,7 +163,7 @@
         "brightness": 1.0
       },
       "milkyWay": {
-        "alpha": 1.5,
+        "alpha": 1.15,
         "width": 22,
         "angle": 60,
         "tint": "#FFE6CC"
@@ -173,15 +173,15 @@
           "az": 165,
           "el": 46,
           "size": 30,
-          "color": "#FF5CB4",
-          "alpha": 0.28
+          "color": "#FF5C7A",
+          "alpha": 0.18
         },
         {
           "az": 130,
           "el": 30,
           "size": 34,
-          "color": "#4C8CFF",
-          "alpha": 0.24
+          "color": "#6C8CFF",
+          "alpha": 0.14
         }
       ],
       "meteors": {
@@ -241,15 +241,15 @@
     },
     {
       "name": "Nebula",
-      "top": "#0B0616",
-      "horizon": "#231238",
+      "top": "#07040C",
+      "horizon": "#1A0C18",
       "glow": {
-        "color": "#5A2A7A",
-        "alpha": 0.45
+        "color": "#4A1A2A",
+        "alpha": 0.4
       },
       "stars": {
         "count": 2000,
-        "tint": "#F4ECFF",
+        "tint": "#FFF4F0",
         "brightness": 1.0
       },
       "milkyWay": {
@@ -262,36 +262,36 @@
           "az": 10,
           "el": 45,
           "size": 56,
-          "color": "#B45CFF",
-          "alpha": 0.63
+          "color": "#FF4C6C",
+          "alpha": 0.5
         },
         {
           "az": 330,
           "el": 30,
           "size": 40,
-          "color": "#FF5CB4",
-          "alpha": 0.54
+          "color": "#FF7C8C",
+          "alpha": 0.4
         },
         {
           "az": 50,
           "el": 28,
           "size": 38,
-          "color": "#4C7CFF",
-          "alpha": 0.54
+          "color": "#6C8CFF",
+          "alpha": 0.32
         },
         {
           "az": 25,
           "el": 66,
           "size": 34,
-          "color": "#3CE6D0",
-          "alpha": 0.39
+          "color": "#4CC8C8",
+          "alpha": 0.3
         },
         {
           "az": 200,
           "el": 40,
           "size": 44,
-          "color": "#7C5CFF",
-          "alpha": 0.45
+          "color": "#C84C7C",
+          "alpha": 0.36
         }
       ],
       "meteors": {
@@ -326,11 +326,11 @@
     },
     {
       "name": "Blood Moon",
-      "top": "#0E0406",
-      "horizon": "#30080E",
+      "top": "#06040A",
+      "horizon": "#1A0C10",
       "glow": {
-        "color": "#6A1210",
-        "alpha": 0.55
+        "color": "#3A1410",
+        "alpha": 0.45
       },
       "stars": {
         "count": 1300,
@@ -347,18 +347,18 @@
           "az": 140,
           "el": 40,
           "size": 46,
-          "color": "#FF2A2A",
-          "alpha": 0.16
+          "color": "#C83A2A",
+          "alpha": 0.1
         }
       ],
       "moons": [
         {
           "az": 120,
           "el": 32,
-          "size": 20,
-          "tint": "#FF6A50",
-          "glow": "#FF2A1A",
-          "glowAlpha": 0.55
+          "size": 16,
+          "tint": "#D8683C",
+          "glow": "#8A2A14",
+          "glowAlpha": 0.35
         }
       ],
       "meteors": {

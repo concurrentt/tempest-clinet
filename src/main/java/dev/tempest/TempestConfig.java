@@ -50,6 +50,8 @@ public class TempestConfig {
     public String accountsClientId = "";
     /** Name of the config last loaded or saved (shown as active in the Configs screen). */
     public String activeConfig = "";
+    /** Per-Server Setups: server host -> config name loaded automatically when you join it. */
+    public Map<String, String> serverConfigs = new LinkedHashMap<>();
 
     /** Chat Macros: keys that send a chat message or command. */
     public List<ChatMacro> chatMacros = new ArrayList<>();

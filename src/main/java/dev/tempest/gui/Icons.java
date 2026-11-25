@@ -35,7 +35,7 @@ public final class Icons {
                 {"zoom", "magnifier"}, {"fullbright", "sun"}, {"freelook", "eye"},
                 {"who_am_i", "idcard"}, {"capes", "cape"}, {"cinematic", "film_camera"}, {"waypoints", "pin"},
                 {"item_physics", "box"}, {"time_changer", "sun_moon"}, {"block_outline", "cube"}, {"motion_blur", "motion"},
-                {"xray", "xray"}, {"anti_leak", "lock"}, {"fly_speed", "wings"}, {"fps_saver", "gauge"}, {"combat_timer", "hourglass"}, {"saturation", "palette"}, {"light_levels", "sun"}, {"mouse_tweaks", "mouse"}, {"shulker_preview", "backpack"},
+                {"xray", "xray"}, {"anti_leak", "lock"}, {"fly_speed", "wings"}, {"fps_saver", "gauge"}, {"combat_timer", "hourglass"}, {"saturation", "palette"}, {"armor_alert", "chestplate"}, {"server_setups", "servers"}, {"light_levels", "sun"}, {"mouse_tweaks", "mouse"}, {"shulker_preview", "backpack"},
                 {"toggle_sprint", "runner"}, {"reconnect", "refresh"}, {"armor_swap", "swap"}, {"tooltip_info", "info"},
                 {"screenshot_tools", "camera"}, {"streamer_mode", "broadcast"}, {"quick_servers", "servers"},
                 {"low_fire", "flame"}, {"smooth_hotbar", "hotbar"}, {"particle_filter", "sparkles"}, {"custom_fov", "fov"},

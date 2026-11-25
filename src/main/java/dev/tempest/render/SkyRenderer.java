@@ -246,8 +246,9 @@ public final class SkyRenderer {
                 float mm = r.nextFloat();
                 starMag[i] = mm * mm * mm * mm;
                 starPhase[i] = r.nextFloat() * 6.28f;
+                // colours of real stars by temperature (blackbody): orange giants, yellow-white suns, white, blue-white
                 float c = r.nextFloat();
-                starTint[i] = c < 0.12f ? 0xFFD2A8 : c < 0.28f ? 0xAFC4FF : c < 0.31f ? 0xFFB0B0 : 0xFFFFFF;
+                starTint[i] = c < 0.16f ? 0xFFC48A : c < 0.42f ? 0xFFE6C8 : c < 0.70f ? 0xFFF6EC : c < 0.90f ? 0xF2F4FF : 0xC4D4FF;
             }
         }
         int tint = SkyScenes.rgb(st.tint);
@@ -259,13 +260,27 @@ public final class SkyRenderer {
             for (int i = 0; i < n; i++) {
                 boolean isBig = starMag[i] > 0.82f;
                 if (isBig != (pass == 1)) continue;
-                float twk = 1f - 0.45f * (0.5f + 0.5f * (float) Math.sin(time * (1.1f + starMag[i] * 3.5f) + starPhase[i]));
-                float al = clamp01((0.30f + 0.70f * starMag[i]) * twk * bright);
+                // real twinkling is quick and slight overhead, stronger low down (more air in the way)
+                float low = 1f - clamp01(starDir[i][1] / 0.5f);
+                float amp = 0.08f + 0.30f * low * low;
+                float twk = 1f - amp * (0.5f + 0.5f * (float) Math.sin(time * (2.3f + starMag[i] * 4.0f) + starPhase[i])
+                        * (float) Math.sin(time * 0.71f + starPhase[i] * 3f));
+                float al = clamp01((0.30f + 0.70f * starMag[i]) * twk * bright * extinction(starDir[i][1]));
                 float half = isBig ? span(0.9 + 0.5 * starMag[i]) : span(0.16 + 0.30 * starMag[i]);
                 sprite(b, starDir[i], starBasis[i][0], starBasis[i][1], half, half, argb(mul(starTint[i], tint), al), FULL_UV);
             }
             end(b, tex);
         }
+    }
+
+    /**
+     * How much light from a point at height y (sin of its elevation) gets through the atmosphere: nearly all
+     * overhead, a quarter at the horizon, nothing a little below it.
+     */
+    private static float extinction(float y) {
+        if (y < -0.05f) return 0f;
+        float e = clamp01((y + 0.05f) / 0.40f);
+        return 0.25f * clamp01((y + 0.05f) / 0.05f) + 0.75f * e * (2f - e);
     }
 
     /** Multiplies two RGB colours channel by channel. */
@@ -287,7 +302,8 @@ public final class SkyRenderer {
         float halfW = (float) Math.tan(Math.toRadians(mw.width));
         final int segs = 72;
         BufferBuilder b = begin(MILKY);
-        int col = argb(SkyScenes.rgb(mw.tint), clamp01(0.85f * mw.alpha * a));
+        int tintRgb = SkyScenes.rgb(mw.tint);
+        float base = clamp01(0.85f * mw.alpha * a);
         for (int i = 0; i < segs; i++) {
             double p0 = i * Math.PI * 2 / segs, p1 = (i + 1) * Math.PI * 2 / segs;
             float[] c0 = add(scale(u0, (float) Math.cos(p0)), scale(v0, (float) Math.sin(p0)));
@@ -298,7 +314,10 @@ public final class SkyRenderer {
             float[] p = {
                     b0[0] * R, b0[1] * R, b0[2] * R, b1[0] * R, b1[1] * R, b1[2] * R,
                     a1[0] * R, a1[1] * R, a1[2] * R, a0[0] * R, a0[1] * R, a0[2] * R};
-            quad(b, p, new float[]{uA, 1, uB, 1, uB, 0, uA, 0}, col, col, col, col);
+            // fades and warms toward the horizon, like starlight through more air
+            quad(b, p, new float[]{uA, 1, uB, 1, uB, 0, uA, 0},
+                    lowSky(tintRgb, base, b0[1]), lowSky(tintRgb, base, b1[1]),
+                    lowSky(tintRgb, base, a1[1]), lowSky(tintRgb, base, a0[1]));
         }
         end(b, MILKY);
 
@@ -315,6 +334,13 @@ public final class SkyRenderer {
             sprite(g, v0, span(mw.width * 0.9), argb(0xFFF1DC, clamp01(0.35f * k * a)));
             end(g, GLOW);
         }
+    }
+
+    /** A colour as seen at height y: dimmer and redder near the horizon. */
+    private static int lowSky(int rgb, float alpha, float y) {
+        float ext = extinction(y);
+        int warm = lerp(0xFFC8A0, 0xFFFFFF, clamp01(ext * 1.6f - 0.3f));
+        return argb(mul(rgb, warm), alpha * ext);
     }
 
     // ======================================================================== nebula

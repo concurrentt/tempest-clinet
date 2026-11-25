@@ -42,6 +42,7 @@ public class ModuleManager {
         register(new AlertsModule());
         register(new TierTaggerModule());
         register(new CombatTimerModule());
+        register(new ArmorAlertModule());
         // Render - camera and world
         register(new ZoomModule());
         register(new FreelookModule());
@@ -83,6 +84,7 @@ public class ModuleManager {
         register(new AntiLeakModule());
         register(new FlySpeedModule());
         register(new LightLevelsModule());
+        register(new ServerSetupsModule());
         // Chat
         register(new ChatTabsModule());
         register(new ChatUpgradesModule());

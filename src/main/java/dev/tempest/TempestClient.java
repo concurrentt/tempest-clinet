@@ -93,6 +93,7 @@ public class TempestClient implements ClientModInitializer {
             }
             WaypointsModule wp = ModuleManager.get(WaypointsModule.class);
             if (wp != null && wp.isEnabled()) wp.render(ctx);
+            dev.tempest.modules.ArmorAlertModule.render(ctx);
         });
 
         ItemTooltipCallback.EVENT.register((stack, tooltipContext, tooltipType, lines) -> {
@@ -102,6 +103,7 @@ public class TempestClient implements ClientModInitializer {
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             ReconnectModule.remember(client.getCurrentServerEntry());
+            dev.tempest.modules.ServerSetupsModule.onJoin(client);
             PlaytimeTracker.onJoin(client);
             WorldLoadingHooks.onJoin();
         });

@@ -11,9 +11,10 @@ import net.minecraft.fluid.Fluids;
 import net.minecraft.registry.Registries;
 
 /**
- * Xray: chunks are rebuilt without any block that is not on the list (mixin/BlockRenderManagerMixin), and what is
- * left is drawn fully lit (mixin/XrayLightMixin). Works with the vanilla renderer; renderer mods like Sodium
- * build chunks their own way and skip these hooks.
+ * Xray: chunks are rebuilt without any block that is not on the list (mixin/SectionBuilderXrayMixin), and what is
+ * left is drawn fully lit (mixin/XrayLightMixin, plus Fullbright's gamma boost). Works with the vanilla chunk
+ * builder, including Fabric API's Indigo renderer; Sodium builds chunks its own way and skips these hooks, so the
+ * player gets a chat message if xray is on but no chunk ever went through the hook.
  */
 public final class XrayModule extends Module {
     private final BoolSetting ores = add(new BoolSetting("ores", "Ores", true));
@@ -32,7 +33,12 @@ public final class XrayModule extends Module {
     /** Block -> shown, filled as chunks are built (the answer only changes with the settings). */
     private static final java.util.concurrent.ConcurrentHashMap<net.minecraft.block.Block, Boolean> SHOWS = new java.util.concurrent.ConcurrentHashMap<>();
 
-    @Override public void onEnable() { SHOWS.clear(); rebuild(); }
+    /** Set by SectionBuilderXrayMixin whenever a chunk is built with xray on - proof the hook is running. */
+    public static volatile boolean hooked;
+    private long inWorldSince;
+    private boolean warned;
+
+    @Override public void onEnable() { SHOWS.clear(); hooked = false; inWorldSince = 0; warned = false; rebuild(); }
     @Override public void onDisable() { rebuild(); }
 
     /** Rebuild the chunks whenever a setting changes while xray is on. */
@@ -44,6 +50,18 @@ public final class XrayModule extends Module {
             applied = now;
             SHOWS.clear();
             if (!first && isEnabled()) rebuild();
+        }
+
+        // A few seconds in a world with no chunk built through the hook: say why instead of silently doing nothing.
+        if (c.world == null) { inWorldSince = 0; return; }
+        if (inWorldSince == 0) inWorldSince = System.currentTimeMillis();
+        if (!warned && !hooked && System.currentTimeMillis() - inWorldSince > 4000) {
+            warned = true;
+            if (net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("sodium")) {
+                dev.tempest.util.Chat.info("Xray can't hide blocks while Sodium is installed - Sodium builds chunks its own way.");
+            } else {
+                dev.tempest.util.Chat.info("Xray couldn't hook the chunk builder - check the game log for Tempest mixin errors.");
+            }
         }
     }
 

@@ -14,8 +14,10 @@ import net.minecraft.util.hit.HitResult;
 /** Middle click a player to send them a Tempest friend request (they glow once they accept). */
 public final class MiddleClickFriendModule extends Module {
     public MiddleClickFriendModule() {
-        super("middle_click_friend", "Middle Click Friend", "Middle click a player to send them a Tempest friend request.", Category.CLIENT, false);
+        super("middle_click_friend", "Middle Click Player", "Middle click a player to see their card: tiers, Tempest, add friend.", Category.CLIENT, true);
     }
+
+    private final dev.tempest.module.BoolSetting card = add(new dev.tempest.module.BoolSetting("card", "Show Player Card", true));
 
     public static boolean onMiddleClick(MinecraftClient c) {
         if (!ModuleManager.enabled(MiddleClickFriendModule.class)) return false;
@@ -26,6 +28,11 @@ public final class MiddleClickFriendModule extends Module {
         if (player == c.player) return false;
 
         String name = player.getName().getString();
+        MiddleClickFriendModule m = ModuleManager.get(MiddleClickFriendModule.class);
+        if (m != null && m.card.get()) {
+            c.setScreen(new dev.tempest.gui.PlayerCardScreen(player.getUuid(), name));
+            return true;
+        }
         if (Social.isFriend(player.getUuid())) {
             Chat.info(name + " is already your friend.");
         } else if (player.getUuid().version() != 4) {

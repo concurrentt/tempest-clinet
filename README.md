@@ -1,3 +1,24 @@
+## 0.21.17 - Player cards, armor alerts, per-server setups, auto reconnect
+- Middle click a player for their card: face, whether they use Tempest, MCTiers / NovaTiers, and Add Friend / Message.
+- New: Armor Break Alert (PvP) - a warning and a sound when any armor piece you wear drops below a set durability.
+- New: Per-Server Setups (Client) - pick a saved config for a server and it loads every time you join that server.
+- Reconnect: when a server is full (or restarting / queueing) Tempest retries every few seconds until you get in,
+  with a countdown and a Cancel button. "Auto Reconnect On Any Kick" retries for any reason.
+- The game window is now called "Tempest Client 1.21.11".
+- Fixed: Xray hid nothing. It now hooks the chunk builder itself (Fabric's renderer skipped the old hook), stops cave
+  culling from hiding buried ores, and everything left is fully lit. With Sodium installed it says so in chat.
+- Fullbright uses gamma again: the lightmap gets the Strength value (15 = 1500% brightness) while your Brightness
+  slider and options.txt keep your real setting. No more Night Vision tint.
+- Realistic main menu themes: all six backgrounds re-rendered like photographs. Nebula is a deep-space hydrogen
+  cloud with dust pillars; Galaxy is the Milky Way's core over layered mountains; Aurora has folded curtains over
+  snowy peaks and a lake; Black Hole is ray traced (real light bending, a Doppler-bright disk, the lensed Milky
+  Way around it); Ringed Planet has lit bands, ring shadows and moons; Blood Moon is a copper total eclipse.
+- Realistic Custom Sky: a real-looking Moon (seas, craters, rays), a Milky Way with star clouds and dust lanes,
+  shaded planets with ring shadows, a turbulent accretion disk and lensed arc, softer nebulae, aurora with a bright
+  lower edge and rays. Stars have true colours, twinkle gently (more near the horizon) and fade low in the sky,
+  as does the Milky Way. Scene colours are now natural (no neon purple).
+- New art tools: tools/make_menu_real.py and tools/make_sky_real.py (replace make_menu_hq.py / make_sky_textures.py).
+
 ## 0.21.16 - Color Saturation
 - New: Color Saturation (Visuals) - make the game more vivid (up to 200%) or wash it out to black and white (0%).
   A full-screen effect on your screen only; it steps aside while the game uses its own (spectating a creeper etc.).
